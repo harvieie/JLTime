@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>行琳时光</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui, sans-serif;}
+        body{background-color:#ffffff;color:#333;padding:20px;}
+        .header-wrap{
+            max-width:800px;margin:0 auto 40px;
+            text-align:center;
+        }
+        .page-title{
+            font-size:42px;
+            font-family:"Comic Sans MS","ZCOOL KuaiLe","PingFang SC","Microsoft YaHei",sans-serif;
+            color:#2c3e50;
+            cursor:pointer;
+            display:inline-block;
+            letter-spacing:4px;
+            font-weight:900;
+            -webkit-text-stroke:1px #2c3e50;
+            -webkit-text-fill-color:transparent;
+            letter-spacing:6px;
+        }
+        .page-title:hover{
+            -webkit-text-stroke-color:#3b82f6;
+        }
+        .filter-box{
+            max-width:800px;margin:0 auto 30px;padding:16px;background:#f7f9fc;border-radius:14px;
+            display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:center;
+            border:1px solid #eef2f7;
+        }
+        .filter-box label{font-weight:500;color:#444;}
+        select, button, input, textarea{padding:8px 12px;border:1px solid #dde5ee;border-radius:10px;font-size:14px;background:#fff;color:#333;}
+        select{max-height:200px;overflow-y:auto;}
+        input{flex:1;min-width:180px;}
+        button{background:#3b82f6;color:#fff;border:none;cursor:pointer;transition:0.2s;}
+        button:hover{background:#2563eb;}
+        button.danger{background:#ef4444;}
+        button.danger:hover{background:#dc2626;}
+        button.success{background:#10b981;}
+        button.success:hover{background:#059669;}
+        button.export{background:#8b5cf6;}
+        button.export:hover{background:#7c3aed;}
+        button.checked-mode{background:#f59e0b;}
+        button.checked-mode:hover{background:#d97706;}
+        button.ghost{background:transparent;color:#fff;border:1px solid #ffffff80;}
+        button.ghost:hover{background:#ffffff20;}
+        .tip-small{font-size:12px;color:#888;}
+        .search-result-tip{max-width:800px;margin:0 auto 16px;text-align:center;color:#666;display:none;}
+
+        /* 双轨蜿蜒小路时间轴 */
+        .timeline{
+            max-width:800px;margin:0 auto;position:relative;padding:40px 0;
+        }
+        .timeline-path{
+            position:absolute;left:50%;top:0;bottom:0;width:52px;transform:translateX(-50%);
+            pointer-events:none;z-index:0;
+        }
+        .timeline-path svg{width:100%;height:100%;display:block;overflow:visible;}
+
+        .timeline-item{
+            width:50%;position:relative;z-index:1;
+            padding-bottom:60px;
+        }
+        .timeline-item.left{padding-right:50px;text-align:right;}
+        .timeline-item.right{margin-left:50%;padding-left:50px;}
+
+        /* 彩色线条型脚印 */
+        .footprint{
+            position:absolute;top:12px;z-index:3;
+            width:34px;height:44px;
+        }
+        .timeline-item.left .footprint{
+            right:-17px;
+            color:#ff7850;
+            transform: rotate(-8deg);
+        }
+        .timeline-item.right .footprint{
+            left:-17px;
+            color:#23c4c9;
+            transform: rotate(8deg);
+        }
+
+        .card{
+            background:#fff;padding:14px;border-radius:16px;
+            box-shadow:0 4px 18px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+            border:1px solid #eef2f7;
+            transition:transform 0.25s, box-shadow 0.25s;
+            position:relative;
+            text-align:left;
+        }
+        .card:hover{transform:translateY(-4px);box-shadow:0 10px 24px rgba(0,0,0,0.09);}
+        .card img{width:100%;border-radius:12px;object-fit:cover;max-height:320px;cursor:pointer;}
+        .card .date{font-weight:bold;color:#3b82f6;margin:8px 0;cursor:pointer;font-size:15px;}
+        .card .date:hover{text-decoration:underline;}
+        .card .desc{
+            color:#555;line-height:1.65;cursor:pointer;text-indent:2em;
+        }
+        .card .desc:hover{color:#3b82f6;}
+        .card-action{margin-top:10px;display:flex;gap:8px;justify-content:flex-end;}
+        .card-checkbox{
+            position:absolute;top:12px;left:12px;width:20px;height:20px;cursor:pointer;z-index:5;
+        }
+
+        /* 大图灯箱 */
+        .lightbox{
+            position:fixed;top:0;left:0;width:100%;height:100%;background:#000000dd;
+            display:none;flex-direction:column;align-items:center;justify-content:center;z-index:999;padding:20px;
+        }
+        .lightbox-img-wrap{position:relative;display:flex;align-items:center;justify-content:center;}
+        .lightbox img{max-width:90%;max-height:70vh;border-radius:12px;}
+        .lightbox .nav{margin-top:20px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center;align-items:center;}
+        .lightbox .close-btn{color:#fff;font-size:16px;cursor:pointer;padding:6px 12px;border:1px solid #fff5;border-radius:6px;}
+        .lightbox .close-btn:hover{background:#ffffff22;}
+        .lightbox .page-num{color:#fff;font-size:15px;min-width:60px;text-align:center;}
+
+        /* 通用弹窗 */
+        .modal-overlay{
+            position:fixed;inset:0;background:rgba(0,0,0,0.55);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px;
+        }
+        .modal-box{
+            background:#fff;padding:28px 32px;border-radius:16px;max-width:440px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,0.18);
+        }
+        .modal-title{font-size:18px;font-weight:600;text-align:center;margin-bottom:16px;color:#222;}
+        .modal-text{text-align:center;line-height:1.8;color:#444;margin-bottom:24px;}
+        .modal-buttons{display:flex;gap:12px;justify-content:center;}
+        .modal-buttons button{padding:9px 22px;border-radius:8px;font-size:15px;}
+
+        .link-modal,.note-modal,.add-modal,.img-edit-modal,.export-modal,.title-modal{
+            position:fixed;top:0;left:0;width:100%;height:100%;background:#00000077;display:none;align-items:center;justify-content:center;z-index:1000;
+        }
+        .link-box,.note-box,.add-box,.img-edit-box,.export-box,.title-box{background:#fff;padding:20px;border-radius:12px;width:90%;max-width:550px;}
+        .link-box label,.note-box label,.add-box label,.img-edit-box label,.title-box label{display:block;margin:10px 0 4px;font-weight:500;color:#333;}
+        .link-box input,.link-box textarea,.note-box textarea,.add-box input,.add-box textarea,.img-edit-box input,.title-box input{width:100%;padding:10px;font-size:14px;border:1px solid #dde5ee;border-radius:8px;margin-bottom:6px;background:#fff;color:#333;}
+        #noteText{min-height:160px;resize:vertical;}
+        #exportText{min-height:320px;resize:vertical;}
+        .link-buttons,.note-buttons,.add-buttons,.img-edit-buttons,.export-buttons,.title-buttons{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px;}
+
+        @media (max-width: 640px){
+            .timeline-path{left:22px;transform:none;width:32px;}
+            .timeline-item{width:100%;padding-left:56px !important;padding-right:0 !important;text-align:left !important;}
+            .timeline-item.right{margin-left:0;}
+            .footprint{left:7px !important;right:auto !important;transform:none !important;}
+            .page-title{font-size:32px;letter-spacing:2px;}
+        }
+    </style>
+</head>
+<body>
+    <div class="modal-overlay" id="cacheConfirmModal">
+        <div class="modal-box">
+            <div class="modal-title">缓存版本提示</div>
+            <div class="modal-text">
+                是否清除浏览器本地旧缓存？<br><br>
+                <span style="color:#2563eb">新打开或更新版本 → 点【确定】</span><br>
+                <span style="color:#555">无更改或保留你的修改 → 点【取消】</span>
+            </div>
+            <div class="modal-buttons">
+                <button id="cacheOkBtn">确定</button>
+                <button id="cacheCancelBtn" style="background:#999">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="header-wrap">
+        <div class="page-title" id="pageTitle" onclick="openTitleEditModal()">行琳时光</div>
+    </div>
+
+    <div class="filter-box">
+        <label>筛选：</label>
+        <select id="yearSel"><option value="">全部年份</option></select>
+        <select id="monthSel">
+            <option value="">全部月份</option>
+            <option value="01">01</option><option value="02">02</option><option value="03">03</option>
+            <option value="04">04</option><option value="05">05</option><option value="06">06</option>
+            <option value="07">07</option><option value="08">08</option><option value="09">09</option>
+            <option value="10">10</option><option value="11">11</option><option value="12">12</option>
+        </select>
+        <select id="locationSel"><option value="">全部地点</option></select>
+        <input type="text" id="searchInput" placeholder="搜索时间/地点/描述文字">
+        <button onclick="doSearch()">搜索</button>
+        <button id="sortDateBtn">时间↓晚-早</button>
+        <button id="sortLocBtn">地点↑A-Z</button>
+        <button onclick="resetAll()">重置</button>
+        <button class="success" onclick="openAddCardModal()">新增</button>
+        <button class="checked-mode" id="multiDelBtn" onclick="toggleMultiDelete()">批量删除</button>
+        <button class="export" onclick="openExportModal()">导出数据</button>
+        <button class="danger" onclick="openCacheConfirm()">清除缓存</button>
+    </div>
+
+    <div class="search-result-tip" id="searchTip"></div>
+
+    <div class="timeline" id="timelineWrap">
+        <div class="timeline-path" id="timelinePath">
+            <svg viewBox="0 0 52 1400" preserveAspectRatio="none">
+                <path d="M12,0 C26,100 4,200 24,300 C42,400 8,500 26,600 C44,700 6,800 28,900 C40,1000 10,1100 24,1200 C32,1280 18,1340 26,1400"
+                      fill="none" stroke="#c2ccd8" stroke-width="4" stroke-linecap="round"/>
+                <path d="M40,0 C22,100 46,200 26,300 C8,400 42,500 26,600 C10,700 48,800 24,900 C12,1000 44,1100 28,1200 C20,1280 34,1340 26,1400"
+                      fill="none" stroke="#d8dee6" stroke-width="4" stroke-linecap="round"/>
+            </svg>
+        </div>
+    </div>
+
+    <div class="link-modal" id="linkModal">
+        <div class="link-box">
+            <h3>修改日期 · 地点 · 外部链接</h3>
+            <label>日期(YYYY-MM-DD)</label>
+            <input type="text" id="editComboDate">
+            <label>地点 <span class="tip-small">多个地点用英文逗号分隔，最多3个</span></label>
+            <input type="text" id="editComboLoc">
+            <label>外部链接</label>
+            <input type="text" id="linkInput" placeholder="https://...">
+            <div class="link-buttons">
+                <button onclick="openLinkNow()">打开</button>
+                <button onclick="copyLink()">复制</button>
+                <button class="success" onclick="saveComboAll()">保存</button>
+                <button onclick="closeLinkModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="lightbox" id="lightbox">
+        <div class="lightbox-img-wrap">
+            <img id="galleryImg">
+        </div>
+        <div class="nav">
+            <button onclick="galleryFirst()">最前</button>
+            <button onclick="galleryPrev()">上一张</button>
+            <span class="page-num" id="galleryPageNum">0 / 0</span>
+            <button onclick="galleryNext()">下一张</button>
+            <button onclick="galleryLast()">最后</button>
+            <button id="loadFullBtn" class="ghost" onclick="loadFullRes()">查看原图</button>
+            <button class="success" onclick="openImgEditModal()">编辑链接</button>
+            <span class="close-btn" onclick="closeGallery()">关闭</span>
+        </div>
+    </div>
+
+    <div class="note-modal" id="noteModal">
+        <div class="note-box">
+            <h3>编辑备注</h3>
+            <textarea id="noteText"></textarea>
+            <div class="note-buttons">
+                <button onclick="saveNote()">保存</button>
+                <button onclick="closeNote()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="add-modal" id="addModal">
+        <div class="add-box">
+            <h3>新增卡片</h3>
+            <label>日期(格式如2026‑02‑19)</label>
+            <input type="text" id="newCardDate" placeholder="2026‑02‑19">
+            <label>地点 <span class="tip-small">多个地点英文逗号分隔，最多3个</span></label>
+            <input type="text" id="newCardLoc" placeholder="洛阳,郑州">
+            <label>外部链接</label>
+            <input type="text" id="newCardLink" placeholder="可选，相册、游记链接">
+            <label>图片链接(多个用逗号分隔 https开头)</label>
+            <textarea id="newCardImgs" placeholder="https://xxx.jpg,https://yyy.jpg"></textarea>
+            <label>备注描述</label>
+            <textarea id="newCardDesc" placeholder="记录旅途美好瞬间"></textarea>
+            <div class="add-buttons">
+                <button class="success" onclick="submitNewCard()">提交新增</button>
+                <button onclick="closeAddCardModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="img-edit-modal" id="imgEditModal">
+        <div class="img-edit-box">
+            <h3>修改当前图片链接</h3>
+            <input type="text" id="editImgUrl" placeholder="https://xxx.jpg">
+            <div class="img-edit-buttons">
+                <button class="success" onclick="saveImgUrl()">保存</button>
+                <button onclick="closeImgEditModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="export-modal" id="exportModal">
+        <div class="export-box">
+            <h3>导出完整卡片数据</h3>
+            <p>复制全部JSON，替换源码中 defaultCards 数组即可固化</p>
+            <textarea id="exportText" readonly></textarea>
+            <div class="export-buttons">
+                <button class="export" onclick="copyExportData()">复制全部</button>
+                <button onclick="closeExportModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="title-modal" id="titleModal">
+        <div class="title-box">
+            <h3>编辑页面大标题</h3>
+            <input type="text" id="titleInput" placeholder="输入页面标题">
+            <div class="title-buttons">
+                <button class="success" onclick="savePageTitle()">保存</button>
+                <button onclick="closeTitleEditModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    let currentIndex = 0;
+    let groupImgList = [];
+    let activeDescEl = null;
+    let activeCardItem = null;
+    let activeCardIndex = null;
+    let activeImgIndex = 0;
+    let dateSortAsc = false;
+    let locSortAsc = true;
+    let isMultiDeleteMode = false;
+    let fullLoaded = false;
+
+    const CARD_STORAGE_KEY = "timeline_cards";
+    const TITLE_STORAGE_KEY = "page_title";
+
+    const defaultCards = [
+        { date:"2026-09-01", locs:["苏州"], imgs:["https://cdn.postimage.me/2026/09/12/1789175980759.jpg","https://cdn.postimage.me/2026/09/12/1789175980519.jpg","https://cdn.postimage.me/2026/09/12/1789175981021.jpg","https://cdn.postimage.me/2026/09/12/1789175981288.jpg","https://cdn.postimage.me/2026/09/12/1789175981484.jpg","https://cdn.postimage.me/2026/09/12/1789175981710.jpg"], note:"160张选30张精修做相框；苏城纪；", link:"https://apps.lexar.com/album/s/main?shareKey=8e82b5b436fd4017afc748cb99d1d20c" },
+        { date:"2026-08-28", locs:["上海","苏州"], imgs:["https://cdn.postimage.me/2026/09/12/1789171390003.jpg","https://cdn.postimage.me/2026/09/12/1789171390128.jpg","https://cdn.postimage.me/2026/09/12/1789171390243.jpg","https://cdn.postimage.me/2026/09/12/1789171390385.jpg","https://cdn.postimage.me/2026/09/12/1789171390577.jpg","https://cdn.postimage.me/2026/09/12/1789171390646.jpg","https://cdn.postimage.me/2026/09/12/1789171390788.jpg"], note:"求婚；拍订婚照；高慧晓；", link:"https://apps.lexar.com/album/s/main?shareKey=cf443d8ae0ce418dbfcbc9eac151acfb" },
+        { date:"2026-07-24", locs:["郑州"], imgs:["https://cdn.postimage.me/2026/09/12/1789170622605.jpg","https://cdn.postimage.me/2026/09/12/1789170623063.jpg","https://cdn.postimage.me/2026/09/12/1789170622964.jpg","https://cdn.postimage.me/2026/09/12/1789170622845.jpg","https://cdn.postimage.me/2026/09/12/1789170622746.jpg","https://cdn.postimage.me/2026/09/12/1789170622521.jpg"], note:"穿蓝睡衣；试姜衣服；吃野人先生；", link:"https://apps.lexar.com/album/s/main?shareKey=32ae57c4741c4e3aa8b7dcf2b775008e" },
+        { date:"2026-06-18", locs:["郑州"], imgs:["https://cdn.postimage.me/2026/09/12/1789169587417.jpg","https://cdn.postimage.me/2026/09/12/1789169587325.jpg","https://cdn.postimage.me/2026/09/12/1789169587203.jpg","https://cdn.postimage.me/2026/09/12/1789169587014.jpg","https://cdn.postimage.me/2026/09/12/1789169586853.jpg","https://cdn.postimage.me/2026/09/12/1789169586764.jpg"], note:"琳试衣服；白裙子；电影小镇；差点丢手机；", link:"https://apps.lexar.com/album/s/main?shareKey=2369bca98ff34612b6d50a9b799233b5" },
+        { date:"2026-06-06", locs:["郑州"], imgs:["https://cdn.postimage.me/2026/09/12/1789169367764.jpg","https://cdn.postimage.me/2026/09/12/1789169367848.jpg"], note:"试衣服；给阿嫲的情书；", link:"https://apps.lexar.com/album/s/main?shareKey=e2b45b4cf71e43fd95d67937e45cf33c" },
+        { date:"2026-05-20", locs:["上海","嘉兴"], imgs:["https://cdn.postimage.me/2026/09/12/1789169152050.jpg","https://cdn.postimage.me/2026/09/12/1789169151983.jpg","https://cdn.postimage.me/2026/09/12/1789169151911.jpg","https://cdn.postimage.me/2026/09/12/1789169151800.jpg","https://cdn.postimage.me/2026/09/12/1789169151724.jpg"], note:"龙阳路；吻；西塘；南浔；乌镇饮料；矛盾 给人拍照", link:"https://apps.lexar.com/album/s/main?shareKey=bfb8bd5e92d648319d898e4b0f7c35e9" },
+        { date:"2026-05-02", locs:["合肥"], imgs:["https://cdn.postimage.me/2026/09/12/1789168602741.jpg","https://cdn.postimage.me/2026/09/12/1789168602650.jpg","https://cdn.postimage.me/2026/09/12/1789168602572.jpg","https://cdn.postimage.me/2026/09/12/1789168602462.jpg","https://cdn.postimage.me/2026/09/12/1789168602367.jpg","https://cdn.postimage.me/2026/09/12/1789168602274.jpg","https://cdn.postimage.me/2026/09/12/1000455684.jpg","https://cdn.postimage.me/2026/09/12/1789168602184.jpg","https://cdn.postimage.me/2026/09/12/1000455683.jpg"], note:"告白、下雨、浪漫、戏剧、配眼镜、巢湖的美、凌晨逛合柴1972、小酒馆、摩天轮、卡旺卡、好吃的那碗面、延迟一天走、", link:"https://apps.lexar.com/album/s/main?shareKey=892520346c1943e6997931286e34a23e" },
+        { date:"2026-03-21", locs:["成都"], imgs:["https://cdn.postimage.me/2026/09/12/1000455681.jpg","https://cdn.postimage.me/2026/09/12/1789168410463.jpg","https://cdn.postimage.me/2026/09/12/1000455680.png","https://cdn.postimage.me/2026/09/12/1789166792073.jpg","https://cdn.postimage.me/2026/09/12/1789166791915.jpg","https://cdn.postimage.me/2026/09/12/1000455059.png","https://cdn.postimage.me/2026/09/12/1789166791662.jpg","https://cdn.postimage.me/2026/09/12/1789166791821.jpg"], note:"熊猫；逛玉林路；吃好吃的；坚定了喜欢你的心", link:"https://apps.lexar.com/album/s/main?shareKey=2df36ecfe2ad468a966dce7921555f3a" },
+        { date:"2026-02-19", locs:["洛阳"], imgs:["https://cdn.postimage.me/2026/09/11/1789126394796.jpg","https://cdn.postimage.me/2026/09/11/1789126375442.jpg","https://cdn.postimage.me/2026/09/11/1789126271440.jpg"], note:"陆浑水库、小洱海、两顿面", link:"https://apps.lexar.com/album/s/main?shareKey=640326c1deae46ba92b5a6defa035bb3" }
+    ];
+
+    const cacheModal = document.getElementById('cacheConfirmModal');
+    function openCacheConfirm(){ cacheModal.style.display='flex'; }
+    function closeCacheConfirm(){ cacheModal.style.display='none'; }
+    document.getElementById('cacheOkBtn').onclick = function(){
+        localStorage.removeItem(CARD_STORAGE_KEY);
+        localStorage.removeItem(TITLE_STORAGE_KEY);
+        closeCacheConfirm();
+        renderAllCards();
+        document.getElementById("pageTitle").innerText = loadPageTitle();
+    };
+    document.getElementById('cacheCancelBtn').onclick = function(){
+        closeCacheConfirm();
+        renderAllCards();
+        document.getElementById("pageTitle").innerText = loadPageTitle();
+    };
+
+    function getThumbUrl(original){
+        return original.includes("?") ? original : original + "?w=400";
+    }
+
+    function updateGalleryPage(){
+        document.getElementById("galleryPageNum").innerText = `${currentIndex+1} / ${groupImgList.length}`;
+    }
+
+    function migrateCards(arr){
+        return arr.map(c=> c.locs ? c : {...c, locs:[c.loc]});
+    }
+
+    function makeCardTitle(dateStr, locsArr){
+        return `${dateStr.substring(0,4)}.${dateStr.substring(5,7)}.${dateStr.substring(8,10)} · ${locsArr.join(" / ")}`;
+    }
+
+    function loadPageTitle(){
+        return localStorage.getItem(TITLE_STORAGE_KEY) || "行琳时光";
+    }
+    function savePageTitleToLocal(val){ localStorage.setItem(TITLE_STORAGE_KEY, val); }
+    function openTitleEditModal(){
+        document.getElementById("titleInput").value = loadPageTitle();
+        document.getElementById("titleModal").style.display = "flex";
+    }
+    function closeTitleEditModal(){ document.getElementById("titleModal").style.display = "none"; }
+    function savePageTitle(){
+        const v = document.getElementById("titleInput").value.trim();
+        if(!v) return alert("标题不能为空");
+        savePageTitleToLocal(v);
+        document.getElementById("pageTitle").innerText = v;
+        closeTitleEditModal();
+    }
+
+    function loadCards(){
+        const data = localStorage.getItem(CARD_STORAGE_KEY);
+        return migrateCards(data ? JSON.parse(data) : JSON.parse(JSON.stringify(defaultCards)));
+    }
+    function saveCards(arr){ localStorage.setItem(CARD_STORAGE_KEY, JSON.stringify(arr)); }
+
+    function refreshFilterOptions(){
+        const cards = loadCards();
+        const ySel = document.getElementById("yearSel");
+        const lSel = document.getElementById("locationSel");
+        const sv = ySel.value, lv = lSel.value;
+        ySel.innerHTML = `<option value="">全部年份</option>`;
+        lSel.innerHTML = `<option value="">全部地点</option>`;
+        [...new Set(cards.map(c=>c.date.slice(0,4)))].sort((a,b)=>b.localeCompare(a)).forEach(y=>{
+            const o = document.createElement("option"); o.value=y; o.textContent=y; ySel.appendChild(o);
+        });
+        let locs = [];
+        cards.forEach(c=>locs.push(...c.locs));
+        [...new Set(locs)].sort((a,b)=>a.localeCompare(b,"zh")).forEach(l=>{
+            const o = document.createElement("option"); o.value=l; o.textContent=l; lSel.appendChild(o);
+        });
+        ySel.value = sv; lSel.value = lv;
+    }
+
+    function openExportModal(){
+        document.getElementById('exportText').value = JSON.stringify(loadCards(),null,2);
+        document.getElementById('exportModal').style.display='flex';
+    }
+    function closeExportModal(){ document.getElementById('exportModal').style.display='none'; }
+    function copyExportData(){
+        navigator.clipboard.writeText(document.getElementById('exportText').value).then(()=>{
+            alert("已复制完整卡片JSON！\n打开html源码，把代码里的 defaultCards 数组全部替换为复制的内容，保存文件即可固化。");
+        })
+    }
+
+    function footprintIcon(side){
+        if(side === 'left'){
+            return `<svg class="footprint" viewBox="0 0 34 44" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <ellipse cx="17" cy="37" rx="7" ry="5"/>
+  <path d="M10,34 C6,28 7,22 11,17 C14,14 19,13 23,15 C27,17 28,22 26,28 C24,33 20,36 17,37"/>
+  <ellipse cx="9" cy="14" rx="3.2" ry="4.4"/>
+  <ellipse cx="13.5" cy="12.4" rx="2.6" ry="3.8"/>
+  <ellipse cx="17.5" cy="12" rx="2.4" ry="3.6"/>
+  <ellipse cx="21.3" cy="12.6" rx="2.3" ry="3.3"/>
+  <ellipse cx="24.7" cy="14.3" rx="2.1" ry="3"/>
+</svg>`;
+        }else{
+            return `<svg class="footprint" viewBox="0 0 34 44" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <ellipse cx="17" cy="37" rx="7" ry="5"/>
+  <path d="M11,34 C8,28 7,22 9,17 C12,14 17,13 21,15 C25,17 28,22 27,28 C25,33 21,36 17,37"/>
+  <ellipse cx="9.5" cy="14" rx="3.2" ry="4.4"/>
+  <ellipse cx="13.8" cy="12.4" rx="2.6" ry="3.8"/>
+  <ellipse cx="17.6" cy="12" rx="2.4" ry="3.6"/>
+  <ellipse cx="21.4" cy="12.6" rx="2.3" ry="3.3"/>
+  <ellipse cx="24.9" cy="14.3" rx="2.1" ry="3"/>
+</svg>`;
+        }
+    }
+
+    function renderAllCards(){
+        const wrap = document.getElementById('timelineWrap');
+        const path = document.getElementById('timelinePath');
+        wrap.innerHTML = "";
+        wrap.appendChild(path);
+
+        let cards = loadCards();
+        cards.sort((a,b)=> b.date.localeCompare(a.date));
+
+        const frag = document.createDocumentFragment();
+        cards.forEach((card, idx)=>{
+            const side = idx % 2 === 0 ? "left" : "right";
+            const item = document.createElement('div');
+            item.className = `timeline-item ${side}`;
+            item.dataset.date = card.date;
+            item.dataset.locs = JSON.stringify(card.locs);
+            item.dataset.cardIndex = idx;
+
+            let checkboxHtml = isMultiDeleteMode
+                ? `<input type="checkbox" class="card-checkbox" data-card-index="${idx}">`
+                : "";
+
+            item.innerHTML = `
+                <div class="card">
+                    ${checkboxHtml}
+                    <div class="date" onclick="openComboEdit(${idx})">${makeCardTitle(card.date, card.locs)}</div>
+                    <div class="card-imgs" data-imgs='${JSON.stringify(card.imgs)}'>
+                        <img loading="lazy" src="${getThumbUrl(card.imgs[0])}" onclick="openGallery(this)" alt="${card.locs.join(',')}">
+                    </div>
+                    <p class="desc" onclick="openNote(this)">${card.note}</p>
+                </div>
+                ${footprintIcon(side)}
+            `;
+            frag.appendChild(item);
+        });
+        wrap.appendChild(frag);
+        refreshFilterOptions();
+        filterTimeline();
+    }
+
+    function openComboEdit(idx){
+        activeCardIndex = idx;
+        const c = loadCards()[idx];
+        document.getElementById("editComboDate").value = c.date;
+        document.getElementById("editComboLoc").value = c.locs.join(",");
+        document.getElementById("linkInput").value = c.link || "";
+        document.getElementById("linkModal").style.display = "flex";
+    }
+    function closeLinkModal(){ document.getElementById("linkModal").style.display = "none"; }
+    function saveComboAll(){
+        const newDate = document.getElementById("editComboDate").value.trim();
+        const locRaw = document.getElementById("editComboLoc").value.trim();
+        const newLink = document.getElementById("linkInput").value.trim();
+        if(!newDate || !locRaw) return alert("日期和地点不能为空");
+        let locArr = locRaw.split(",").map(s=>s.trim()).filter(s=>s).slice(0,3);
+        let cards = loadCards();
+        cards[activeCardIndex].date = newDate;
+        cards[activeCardIndex].locs = locArr;
+        cards[activeCardIndex].link = newLink;
+        saveCards(cards);
+        closeLinkModal();
+        renderAllCards();
+    }
+    function copyLink(){
+        navigator.clipboard.writeText(document.getElementById('linkInput').value).then(()=>alert("链接已复制"));
+    }
+    function openLinkNow(){
+        const u = document.getElementById('linkInput').value.trim();
+        if(!u) return alert("链接为空");
+        window.open(u,"_blank");
+    }
+
+    function toggleMultiDelete(){
+        isMultiDeleteMode = !isMultiDeleteMode;
+        const btn = document.getElementById("multiDelBtn");
+        if(isMultiDeleteMode){
+            btn.innerText = "确认删除选中";
+            renderAllCards();
+        }else{
+            const selected = [...document.querySelectorAll('.card-checkbox:checked')].map(cb=>Number(cb.dataset.cardIndex));
+            if(selected.length === 0){
+                btn.innerText = "批量删除";
+                renderAllCards();
+                return;
+            }
+            if(confirm(`确定要删除选中的 ${selected.length} 个卡片？删除后无法恢复！`)){
+                let cards = loadCards();
+                selected.sort((a,b)=>b-a).forEach(i=>cards.splice(i,1));
+                saveCards(cards);
+            }
+            isMultiDeleteMode = false;
+            btn.innerText = "批量删除";
+            renderAllCards();
+        }
+    }
+
+    function openAddCardModal(){ document.getElementById('addModal').style.display='flex'; }
+    function closeAddCardModal(){ document.getElementById('addModal').style.display='none'; }
+    function submitNewCard(){
+        const dateVal = document.getElementById('newCardDate').value.trim();
+        const locRaw = document.getElementById('newCardLoc').value.trim();
+        const linkVal = document.getElementById('newCardLink').value.trim();
+        const imgsRaw = document.getElementById('newCardImgs').value.trim();
+        const noteVal = document.getElementById('newCardDesc').value.trim();
+        if(!dateVal || !locRaw || !imgsRaw) return alert("日期、地点、图片链接不能为空");
+        let locArr = locRaw.split(',').map(s=>s.trim()).filter(s=>s).slice(0,3);
+        const imgsArr = imgsRaw.split(',').map(s=>s.trim()).filter(s=>s);
+        const newCard = {date:dateVal,locs:locArr,imgs:imgsArr,note:noteVal,link:linkVal};
+        let cards = loadCards();
+        cards.push(newCard);
+        saveCards(cards);
+        closeAddCardModal();
+        document.getElementById('newCardDate').value='';
+        document.getElementById('newCardLoc').value='';
+        document.getElementById('newCardLink').value='';
+        document.getElementById('newCardImgs').value='';
+        document.getElementById('newCardDesc').value='';
+        renderAllCards();
+        alert("卡片新增成功，筛选地点列表已更新");
+    }
+
+    function openImgEditModal(){
+        document.getElementById('editImgUrl').value = groupImgList[activeImgIndex];
+        document.getElementById('imgEditModal').style.display='flex';
+    }
+    function closeImgEditModal(){ document.getElementById('imgEditModal').style.display='none'; }
+    function saveImgUrl(){
+        const newUrl = document.getElementById('editImgUrl').value.trim();
+        if(!newUrl) return alert("图片链接不能为空");
+        groupImgList[activeImgIndex] = newUrl;
+        document.getElementById('galleryImg').src = getThumbUrl(newUrl);
+        fullLoaded = false;
+        document.getElementById("loadFullBtn").style.display = "inline-block";
+        updateGalleryPage();
+        const cards = loadCards();
+        cards[activeCardItem.dataset.cardIndex].imgs = groupImgList;
+        saveCards(cards);
+        closeImgEditModal();
+        renderAllCards();
+    }
+
+    function openGallery(el){
+        const parentWrap = el.closest('.card-imgs');
+        activeCardItem = el.closest('.timeline-item');
+        groupImgList = JSON.parse(parentWrap.dataset.imgs);
+        currentIndex = 0;
+        activeImgIndex = currentIndex;
+        fullLoaded = false;
+        document.getElementById("loadFullBtn").style.display = "inline-block";
+        document.getElementById('galleryImg').src = getThumbUrl(groupImgList[currentIndex]);
+        updateGalleryPage();
+        document.getElementById('lightbox').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function loadFullRes(){
+        if(fullLoaded) return;
+        document.getElementById('galleryImg').src = groupImgList[currentIndex];
+        fullLoaded = true;
+        document.getElementById("loadFullBtn").style.display = "none";
+    }
+
+    function closeGallery(){
+        document.getElementById('lightbox').style.display = 'none';
+        document.body.style.overflow = '';
+    }
+    function galleryFirst(){ currentIndex=0; activeImgIndex=currentIndex; fullLoaded=false; document.getElementById('galleryImg').src=getThumbUrl(groupImgList[currentIndex]); updateGalleryPage(); }
+    function galleryLast(){ currentIndex=groupImgList.length-1; activeImgIndex=currentIndex; fullLoaded=false; document.getElementById('galleryImg').src=getThumbUrl(groupImgList[currentIndex]); updateGalleryPage(); }
+    function galleryPrev(){ currentIndex=currentIndex>0?currentIndex-1:groupImgList.length-1; activeImgIndex=currentIndex; fullLoaded=false; document.getElementById('galleryImg').src=getThumbUrl(groupImgList[currentIndex]); updateGalleryPage(); }
+    function galleryNext(){ currentIndex=currentIndex<groupImgList.length-1?currentIndex+1:0; activeImgIndex=currentIndex; fullLoaded=false; document.getElementById('galleryImg').src=getThumbUrl(groupImgList[currentIndex]); updateGalleryPage(); }
+
+    function openNote(el){
+        activeDescEl = el;
+        document.getElementById('noteText').value = loadCards()[el.closest('.timeline-item').dataset.cardIndex].note;
+        document.getElementById('noteModal').style.display = 'flex';
+    }
+    function saveNote(){
+        const newText = document.getElementById('noteText').value;
+        const cardIdx = activeDescEl.closest('.timeline-item').dataset.cardIndex;
+        const cards = loadCards();
+        cards[cardIdx].note = newText;
+        saveCards(cards);
+        activeDescEl.innerText = newText;
+        closeNote();
+    }
+    function closeNote(){ document.getElementById('noteModal').style.display = 'none'; }
+
+    let filterTimer;
+    function filterTimeline(){
+        clearTimeout(filterTimer);
+        filterTimer = setTimeout(()=>{
+            const y = document.getElementById('yearSel').value;
+            const m = document.getElementById('monthSel').value;
+            const loc = document.getElementById('locationSel').value;
+            document.querySelectorAll('.timeline-item').forEach(item=>{
+                const d = item.dataset.date;
+                const itemLocs = JSON.parse(item.dataset.locs);
+                let show = true;
+                if(y && d.substring(0,4)!==y) show=false;
+                if(m && d.substring(5,7)!==m) show=false;
+                if(loc && !itemLocs.includes(loc)) show=false;
+                item.style.display = show ? 'block' : 'none';
+            })
+        },30);
+    }
+
+    function doSearch(){
+        const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+        const tipDom = document.getElementById('searchTip');
+        const items = document.querySelectorAll('.timeline-item');
+        let matchCount = 0;
+        if(!keyword){ tipDom.style.display='none'; filterTimeline(); return; }
+        items.forEach(item=>{
+            const hit = item.querySelector('.date').innerText.toLowerCase().includes(keyword) ||
+                        item.querySelector('.desc').innerText.toLowerCase().includes(keyword);
+            item.style.display = hit ? 'block' : 'none';
+            if(hit) matchCount++;
+        })
+        tipDom.style.display='block';
+        tipDom.innerText = `搜索「${keyword}」，找到 ${matchCount} 条结果`;
+    }
+
+    function resetAll(){
+        document.getElementById("yearSel").value="";
+        document.getElementById("monthSel").value="";
+        document.getElementById("locationSel").value="";
+        document.getElementById("searchInput").value="";
+        document.getElementById("searchTip").style.display="none";
+        renderAllCards();
+    }
+
+    document.getElementById('yearSel').addEventListener('change',filterTimeline);
+    document.getElementById('monthSel').addEventListener('change',filterTimeline);
+    document.getElementById('locationSel').addEventListener('change',filterTimeline);
+    document.getElementById("searchInput").addEventListener('keydown',e=>{ if(e.key==='Enter') doSearch(); });
+
+    document.getElementById('sortDateBtn').addEventListener('click',()=>{
+        const wrap = document.getElementById('timelineWrap');
+        const visible = [...wrap.querySelectorAll('.timeline-item')].filter(it=>it.style.display!=='none');
+        dateSortAsc = !dateSortAsc;
+        visible.sort((a,b)=> dateSortAsc
+            ? a.dataset.date.localeCompare(b.dataset.date)
+            : b.dataset.date.localeCompare(a.dataset.date));
+        visible.forEach(it=>wrap.appendChild(it));
+        document.getElementById('sortDateBtn').innerText = dateSortAsc ? '时间↑早-晚' : '时间↓晚-早';
+    });
+
+    document.getElementById('sortLocBtn').addEventListener('click',()=>{
+        const wrap = document.getElementById('timelineWrap');
+        const visible = [...wrap.querySelectorAll('.timeline-item')].filter(it=>it.style.display!=='none');
+        locSortAsc = !locSortAsc;
+        visible.sort((a,b)=>{
+            const la = JSON.parse(a.dataset.locs)[0]||"";
+            const lb = JSON.parse(b.dataset.locs)[0]||"";
+            return locSortAsc ? la.localeCompare(lb,"zh") : lb.localeCompare(la,"zh");
+        });
+        visible.forEach(it=>wrap.appendChild(it));
+        document.getElementById('sortLocBtn').innerText = locSortAsc ? '地点↑A-Z' : '地点↓Z-A';
+    });
+
+    document.addEventListener('keydown',e=>{
+        if(e.key==='Escape'){
+            closeGallery(); closeNote(); closeLinkModal(); closeAddCardModal();
+            closeImgEditModal(); closeExportModal(); closeTitleEditModal();
+        }
+    });
+
+    window.onload = function(){
+        openCacheConfirm();
+        document.getElementById("pageTitle").innerText = loadPageTitle();
+    }
+</script>
+</body>
+</html>
