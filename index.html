@@ -59,7 +59,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 }
 .card:hover{transform:translateY(-4px);box-shadow:0 10px 24px rgba(0,0,0,.09);}
 .card img{width:100%;border-radius:12px;object-fit:cover;max-height:320px;cursor:pointer;}
-.card .date{font-weight:bold;color:#3b82f6;margin:8px 0;cursor:pointer;font-size:15px;}
+.card .date{font-weight:bold;color:#3b82f6;margin:8px 0;cursor:pointer;font-size:15px;text-indent:2em;}
 .card .date:hover{text-decoration:underline;}
 .card .desc{color:#555;line-height:1.65;cursor:pointer;text-indent:2em;white-space:pre-wrap;word-break:break-word;}
 .card .desc:hover{color:#3b82f6;}
@@ -112,6 +112,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 .restore-item .restore-sub{font-size:12px;color:#888;margin-top:2px;}
 .restore-item button{flex:none;}
 .restore-tip{font-size:12px;color:#888;text-align:center;padding:10px 0;}
+.restore-current{font-size:12px;color:#0e7490;background:#e6f7f9;border-radius:8px;padding:8px 12px;margin-bottom:10px;text-align:center;line-height:1.6;}
 .empty-tip{text-align:center;color:#aaa;padding:90px 0;font-size:15px;line-height:2.1;}
 
 /* ===== 自动关闭提示条 ===== */
@@ -188,7 +189,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
   <button onclick="wdDownload()">下载</button>
   <button class="success" onclick="wdUpload()">上传</button>
   <button class="checked-mode" onclick="wdOpenRestore()">恢复</button>
-  <button class="danger" onclick="openCacheConfirm()">清缓</button>
+  <button class="danger" onclick="openCacheConfirm('clearOnly')">清缓</button>
 </div>
 
 <div class="timeline" id="timelineWrap">
@@ -218,7 +219,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
     <h3>修改日期 · 地点 · 图片 · 外部链接</h3>
     <label>日期(YYYY-MM-DD)</label>
     <input type="text" id="editComboDate">
-    <label>地点 <span class="tip-small">多个地点用英文逗号分隔，最多3个</span></label>
+    <label>地点 <span class="tip-small">多个地点用英文逗号分隔，最多5个</span></label>
     <input type="text" id="editComboLoc">
     <label>图片链接 <span class="tip-small">多个用英文逗号分隔</span></label>
     <input type="text" id="editComboImgs">
@@ -266,7 +267,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
     <h3>新增卡片</h3>
     <label>日期(格式如2026-02-19)</label>
     <input type="text" id="newCardDate" placeholder="2026-02-19">
-    <label>地点 <span class="tip-small">多个地点英文逗号分隔，最多3个</span></label>
+    <label>地点 <span class="tip-small">多个地点英文逗号分隔，最多5个</span></label>
     <input type="text" id="newCardLoc" placeholder="洛阳,郑州">
     <label>外部链接</label>
     <input type="text" id="newCardLink" placeholder="可选，相册、游记链接">
@@ -330,6 +331,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
   <div class="restore-box">
     <h3>恢复云端数据（最近 → 最远）</h3>
     <p style="color:#b45309;font-size:13px;margin-bottom:10px;">⚠️ 恢复会<strong>覆盖</strong>本地现有卡片及大标题，云端最多保留最近 10 个时间节点。</p>
+    <div class="restore-current" id="restoreCurrent">当前载入：本地数据</div>
     <div class="restore-list" id="restoreList"><div class="restore-tip">加载中…</div></div>
     <div class="link-buttons">
       <button class="checked-mode" onclick="ghSettings()">替换令牌</button>
@@ -690,7 +692,7 @@ function saveComboAll(){
   const card = cards.find(c => c.id === state.activeCardId);
   if(!card) return alert("未找到该卡片");
   card.date = date;
-  card.locs = locRaw.split(",").map(s => s.trim()).filter(Boolean).slice(0, 3);
+  card.locs = locRaw.split(",").map(s => s.trim()).filter(Boolean).slice(0, 5);
   card.imgs = imgRaw.split(",").map(s => s.trim()).filter(Boolean);
   card.link = link;
   saveCards(cards);
@@ -747,7 +749,7 @@ function submitNewCard(){
   const newCard = {
     id: uid(),
     date,
-    locs: locRaw.split(",").map(s => s.trim()).filter(Boolean).slice(0, 3),
+    locs: locRaw.split(",").map(s => s.trim()).filter(Boolean).slice(0, 5),
     imgs: imgRaw.split(",").map(s => s.trim()).filter(Boolean),
     note,
     link
@@ -1100,6 +1102,7 @@ async function wdDownload(){
     const imported = await wdReadFile(latest.name);
     if(!confirm(`将从云端拉取最新备份（${formatNodeTime(latest.ts)}）并覆盖本地数据，确定继续吗？`)) return;
     const count = applyImportedData(imported);
+    setCloudLoaded(latest);
     alert(`下载成功，已载入 ${count} 条记录（备份时间 ${formatNodeTime(latest.ts)}）`);
   }catch(err){
     alert("下载失败：" + err.message);
@@ -1111,6 +1114,7 @@ async function wdDownload(){
 // 打开恢复弹窗：按最近 → 最远列出云端节点
 async function wdOpenRestore(){
   const listEl = document.getElementById("restoreList");
+  document.getElementById("restoreCurrent").textContent = getCloudLoadedText();
   listEl.innerHTML = '<div class="restore-tip">加载中…</div>';
   document.getElementById("restoreModal").style.display = "flex";
   try{
@@ -1146,6 +1150,7 @@ async function wdRestoreNode(name){
   try{
     const imported = await wdReadFile(name);
     const count = applyImportedData(imported);
+    setCloudLoaded({ name, ts, label: (name.match(/^xinglin_\d{14}(?:_[^/]+)?\.json$/) && name.length > 22) ? name.slice(23, -5) : "" });
     closeRestoreModal();
     alert(`已恢复到 ${formatNodeTime(ts)} 的备份，共载入 ${count} 条记录`);
   }catch(err){
@@ -1188,8 +1193,12 @@ function fallbackCopy(text, done){
   done();
 }
 
-/* ---------- 缓存确认弹窗（含暗号校验） ---------- */
-function openCacheConfirm(){
+/* ---------- 缓存确认弹窗（含暗号校验） ----------
+   mode: "startup"（打开页面弹窗）→ 清缓存后拉取云端
+         "clearOnly"（顶部清缓键）→ 仅清除本地缓存，不拉云端 */
+let cacheConfirmMode = "startup";
+function openCacheConfirm(mode){
+  cacheConfirmMode = mode || "startup";
   document.getElementById("cachePwd").value = "";
   document.getElementById("cacheConfirmModal").style.display = "flex";
 }
@@ -1210,7 +1219,27 @@ function confirmClearCache(){
   document.getElementById("pageTitle").textContent = getPageTitle();
   renderAllCards();
   closeCacheConfirm();
+  if(cacheConfirmMode === "clearOnly"){
+    showToast("本地缓存已清除", 3);
+    return;
+  }
   cloudPullAfterClear();
+}
+
+// 记录当前载入的云端版本（恢复页小字展示用）
+function setCloudLoaded(f){
+  const info = { name: f.name, ts: f.ts, label: f.label || "" };
+  localStorage.setItem("cloud_loaded", JSON.stringify(info));
+}
+function getCloudLoadedText(){
+  const raw = localStorage.getItem("cloud_loaded");
+  if(!raw) return "当前载入：本地数据";
+  try{
+    const f = JSON.parse(raw);
+    return `当前载入：${formatNodeTime(f.ts)}${f.label ? "（" + f.label + "）" : ""}`;
+  }catch(e){
+    return "当前载入：本地数据";
+  }
 }
 
 // 清除缓存后自动拉取云端最新数据覆盖（结果用 3 秒自动关闭的提示条显示）
@@ -1224,6 +1253,7 @@ async function cloudPullAfterClear(){
     const latest = files[0];
     const imported = await wdReadFile(latest.name);
     const count = applyImportedData(imported);
+    setCloudLoaded(latest);
     showToast(`已载入云端最新数据（${formatNodeTime(latest.ts)}，共 ${count} 条记录）`, 3);
   }catch(err){
     showToast("云端拉取失败：" + err.message, 4);
@@ -1242,6 +1272,24 @@ function showToast(msg, seconds){
 
 document.getElementById("cacheOkBtn").addEventListener("click", confirmClearCache);
 document.getElementById("cacheCancelBtn").addEventListener("click", closeCacheConfirm);
+
+/* ---------- 备注文本框：回车自动缩进两个字符（全角空格） ---------- */
+function bindNoteIndent(taId){
+  const ta = document.getElementById(taId);
+  ta.addEventListener("keydown", function(e){
+    if(e.key === "Enter" && !e.shiftKey){
+      e.preventDefault();
+      const s = this.selectionStart;
+      const end = this.selectionEnd;
+      const indent = "\n　　";   // 换行 + 两个全角空格（正好两个字符宽）
+      this.value = this.value.slice(0, s) + indent + this.value.slice(end);
+      const pos = s + indent.length;
+      this.selectionStart = this.selectionEnd = pos;
+    }
+  });
+}
+bindNoteIndent("noteText");
+bindNoteIndent("newCardDesc");
 
 /* ---------- 排序按钮 ---------- */
 document.getElementById("sortDateBtn").addEventListener("click", function(){
