@@ -35,6 +35,8 @@ button.success{background:#10b981;}button.success:hover{background:#059669;}
 button.export{background:#8b5cf6;}button.export:hover{background:#7c3aed;}
 button.import{background:#0891b2;}button.import:hover{background:#0e7490;}
 button.checked-mode{background:#f59e0b;}button.checked-mode:hover{background:#d97706;}
+button.ghost-upload{background:#eef6f8;color:#0e7490;border:1px solid #cfe3e8;padding:4px 12px;font-size:12px;border-radius:8px;}
+button.ghost-upload:hover{background:#dceef2;}
 button.ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.5);}
 button.ghost:hover{background:rgba(255,255,255,.15);}
 .tip-small{font-size:12px;color:#888;}
@@ -228,6 +230,10 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
     <input type="text" id="editComboLoc">
     <label>图片链接 <span class="tip-small">多个用英文逗号分隔</span></label>
     <input type="text" id="editComboImgs">
+    <div style="margin:2px 0 8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <button type="button" class="ghost-upload" onclick="pickUploadImg('editComboImgs', () => document.getElementById('editComboDate').value.trim(), l => appendImgLink('editComboImgs', l))">上传图片</button>
+      <span class="tip-small">上传到仓库 images/日期/ 自动生成CDN链接</span>
+    </div>
     <label>外部链接</label>
     <input type="text" id="linkInput" placeholder="https://...">
     <div class="link-buttons">
@@ -278,6 +284,10 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
     <input type="text" id="newCardLink" placeholder="可选，相册、游记链接">
     <label>图片链接(多个用逗号分隔 https开头)</label>
     <textarea id="newCardImgs" placeholder="https://xxx.jpg,https://yyy.jpg"></textarea>
+    <div style="margin:2px 0 8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <button type="button" class="ghost-upload" onclick="pickUploadImg('newCardImgs', () => document.getElementById('newCardDate').value.trim(), l => appendImgLink('newCardImgs', l))">上传图片</button>
+      <span class="tip-small">按日期上传到仓库 images/日期/ 自动生成CDN链接</span>
+    </div>
     <label>备注描述</label>
     <textarea id="newCardDesc" placeholder="记录旅途美好瞬间"></textarea>
     <div class="add-buttons">
@@ -292,6 +302,10 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
   <div class="img-edit-box">
     <h3>修改当前图片链接</h3>
     <input type="text" id="editImgUrl" placeholder="https://xxx.jpg">
+    <div style="margin:2px 0 8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <button type="button" class="ghost-upload" onclick="pickUploadImg('editImgUrl', getActiveCardDate, l => document.getElementById('editImgUrl').value = l)">上传图片</button>
+      <span class="tip-small">上传到该卡片日期文件夹并生成CDN链接</span>
+    </div>
     <div class="img-edit-buttons">
       <button onclick="addImgLink()">增加</button>
       <button class="danger" onclick="deleteImgLink()">删除</button>
@@ -1009,6 +1023,68 @@ function b64decode(b64){
   const bytes = new Uint8Array(bin.length);
   for(let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return new TextDecoder().decode(bytes);
+}
+
+/* ---------- 本地图片上传至仓库图库（images/日期/，生成 CDN 链接） ---------- */
+// 弹窗里点击「上传图片」：选本地图片后上传
+function pickUploadImg(targetId, getDate, cb){
+  const fi = document.createElement("input");
+  fi.type = "file";
+  fi.accept = "image/*";
+  fi.onchange = () => {
+    const file = fi.files[0];
+    if(!file) return;
+    uploadImageToRepo(file, getDate(), cdn => cb(cdn));
+  };
+  fi.click();
+}
+
+// 上传单张图片到 images/<日期>/，自动取 GitHub 安全文件名，成功后回传 CDN 链接
+async function uploadImageToRepo(file, dateStr, cb){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(dateStr || "")){
+    alert("请先填写正确的日期（YYYY-MM-DD），图片将上传到该日期的图库文件夹");
+    return;
+  }
+  const m = file.name.toLowerCase().match(/\.(jpe?g|png|gif|webp|bmp)$/);
+  const ext = m ? (m[1] === "jpeg" ? "jpg" : m[1]) : "jpg";
+  const d = new Date();
+  const p = n => String(n).padStart(2, "0");
+  const name = `img_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.${ext}`;
+  const path = "images/" + dateStr + "/" + name;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try{
+      const b64 = reader.result.split(",")[1];
+      const url = GH_API + path;
+      const res = await ghFetch(url, {
+        method: "PUT",
+        headers: ghHeaders(),
+        body: JSON.stringify({ message: "时光图库: " + path, content: b64, branch: GH.branch })
+      }, 90000);
+      if(!res.ok) throw new Error("上传失败（" + res.status + "），请检查令牌与网络");
+      const cdn = `https://cdn.jsdelivr.net/gh/${GH.owner}/${GH.repo}@${GH.branch}/${path}`;
+      cb(cdn);
+    }catch(err){
+      alert("图片上传失败：" + err.message);
+    }
+  };
+  reader.onerror = () => alert("读取本地图片失败");
+  reader.readAsDataURL(file);
+}
+
+// 把新链接追加进文本框（逗号分隔，触发 input 事件同步到卡片）
+function appendImgLink(targetId, link){
+  const el = document.getElementById(targetId);
+  const cur = el.value.trim();
+  el.value = cur ? cur + "," + link : link;
+  el.dispatchEvent(new Event("input"));
+}
+
+// 当前灯箱所在卡片的日期（图片编辑弹窗上传用）
+function getActiveCardDate(){
+  const id = state.activeCardDom && state.activeCardDom.dataset.cardId;
+  const card = id ? loadCards().find(c => c.id === id) : null;
+  return card ? card.date : "";
 }
 
 function ghPath(name){ return GH.dir + "/" + name; }
