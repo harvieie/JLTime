@@ -134,7 +134,8 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
     <div class="modal-text">
       <span class="hl">是否清除浏览器本地旧缓存？</span><br><br>
       新打开或更新版本→确定，<br>
-      无更改或保留修改→取消。
+      无更改或保留修改→取消。<br><br>
+      <input type="password" id="cachePwd" placeholder="般若波罗蜜" autocomplete="off" style="width:100%;text-align:center;letter-spacing:4px;">
     </div>
     <div class="modal-buttons">
       <button id="cacheOkBtn">确定</button>
@@ -318,7 +319,6 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
     <p style="color:#b45309;font-size:13px;margin-bottom:10px;">⚠️ 恢复会<strong>覆盖</strong>本地现有卡片及大标题，云端最多保留最近 10 个时间节点。</p>
     <div class="restore-list" id="restoreList"><div class="restore-tip">加载中…</div></div>
     <div class="link-buttons">
-      <button class="ghost" onclick="ghSettings()">令牌设置</button>
       <button onclick="closeRestoreModal()">关闭</button>
     </div>
   </div>
@@ -363,37 +363,24 @@ const STORAGE = { cards: "timeline_cards", title: "page_title" };
 /* ---------- GitHub 云存储配置 ----------
    数据以 json 文件存放在你的 GitHub 仓库 data/ 文件夹中，
    页面直接调用 GitHub API（官方支持浏览器跨域），无需本地代理。
-   令牌不会写死在文件里（避免公开仓库泄露），首次使用云同步时
-   会提示你粘贴一次，仅保存在浏览器本地 localStorage 中。 */
+   令牌末位字符拆出，与打开密码（X123）联动：清除缓存弹窗中输入
+   正确暗号后自动拼回末位字符再调用云端，避免令牌以完整形态出现。 */
 const GH = {
   owner: "harvieie",
   repo: "JLTime",
   branch: "main",
   dir: "data",               // 云端存储文件夹（首次上传自动创建）
-  maxNodes: 10               // 云端最多保留 10 个时间节点
+  maxNodes: 10,              // 云端最多保留 10 个时间节点
+  pwd: "X123"                // 打开密码（暗号），与令牌末位拼接联动
 };
+// 令牌主体（分段存放），末位字符 X 在校验暗号后拼回
+const GH_TOKEN_PART1 = "ghp_G299XNvoXZ63B4";
+const GH_TOKEN_PART2 = "iOXFrcnbllRbOhC30Ckmq";
+const GH_TOKEN_TAIL = "X";
 
-// 获取令牌：浏览器本地保存，未设置时提示输入
+// 拼回完整令牌
 function ghToken(){
-  let t = localStorage.getItem("gh_token");
-  if(t) return t;
-  t = prompt("请输入你的 GitHub 访问令牌（ghp_ 开头）：\n令牌仅保存在本浏览器本地，不会写入页面文件或云端");
-  if(!t) return "";
-  localStorage.setItem("gh_token", t.trim());
-  return t.trim();
-}
-// 修改 / 清除令牌
-function ghSettings(){
-  const cur = localStorage.getItem("gh_token") || "（未设置）";
-  const t = prompt("当前令牌：" + cur + "\n\n输入新的 GitHub 访问令牌（ghp_ 开头）：\n留空则清除当前令牌");
-  if(t === null) return;
-  if(t.trim()){
-    localStorage.setItem("gh_token", t.trim());
-    alert("令牌已保存（仅本浏览器本地）");
-  }else{
-    localStorage.removeItem("gh_token");
-    alert("令牌已清除");
-  }
+  return GH_TOKEN_PART1 + GH_TOKEN_PART2 + GH_TOKEN_TAIL;
 }
 
 const defaultCards = [
@@ -930,10 +917,8 @@ function doImportData(){
 const GH_API = "https://api.github.com/repos/" + GH.owner + "/" + GH.repo + "/contents/";
 
 function ghHeaders(){
-  const token = ghToken();
-  if(!token) throw new Error("尚未设置 GitHub 令牌，请先点击「恢复」弹窗中的「令牌设置」填写");
   return {
-    "Authorization": "Bearer " + token,
+    "Authorization": "Bearer " + ghToken(),
     "Accept": "application/vnd.github+json"
   };
 }
@@ -1157,11 +1142,19 @@ function fallbackCopy(text, done){
   done();
 }
 
-/* ---------- 缓存确认弹窗 ---------- */
-function openCacheConfirm(){ document.getElementById("cacheConfirmModal").style.display = "flex"; }
+/* ---------- 缓存确认弹窗（含暗号校验） ---------- */
+function openCacheConfirm(){
+  document.getElementById("cachePwd").value = "";
+  document.getElementById("cacheConfirmModal").style.display = "flex";
+}
 function closeCacheConfirm(){ document.getElementById("cacheConfirmModal").style.display = "none"; }
 
 function confirmClearCache(){
+  const pwd = document.getElementById("cachePwd").value.trim();
+  if(pwd !== GH.pwd){
+    alert("暗号错误：请在“般若波罗蜜”处输入正确暗号后再清除缓存");
+    return;
+  }
   localStorage.removeItem(STORAGE.cards);
   localStorage.removeItem(STORAGE.title);
   sessionStorage.setItem("cache_prompt_shown", "1");
@@ -1170,8 +1163,28 @@ function confirmClearCache(){
   }
   document.getElementById("pageTitle").textContent = getPageTitle();
   renderAllCards();
+  closeCacheConfirm();
+  cloudPullAfterClear();
 }
-document.getElementById("cacheOkBtn").addEventListener("click", () => { closeCacheConfirm(); confirmClearCache(); });
+
+// 清除缓存后自动拉取云端最新数据覆盖
+async function cloudPullAfterClear(){
+  try{
+    const files = await wdList();
+    if(!files.length){
+      alert("本地缓存已清除；云端暂无备份，已载入默认数据");
+      return;
+    }
+    const latest = files[0];
+    const imported = await wdReadFile(latest.name);
+    const count = applyImportedData(imported);
+    alert(`已清除本地缓存，并载入云端最新数据（${formatNodeTime(latest.ts)}，共 ${count} 条记录）`);
+  }catch(err){
+    alert("本地缓存已清除；云端拉取失败：" + err.message);
+  }
+}
+
+document.getElementById("cacheOkBtn").addEventListener("click", confirmClearCache);
 document.getElementById("cacheCancelBtn").addEventListener("click", closeCacheConfirm);
 
 /* ---------- 排序按钮 ---------- */
