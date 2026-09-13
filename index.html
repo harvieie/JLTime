@@ -27,6 +27,7 @@ select,button,input,textarea{padding:8px 12px;border:1px solid #dde5ee;border-ra
 input{flex:1;min-width:180px;}
 #searchInput{flex:none;width:160px;min-width:120px;}
 .count-tip{font-size:12px;color:#666;white-space:nowrap;}
+#editZone{display:contents;}  /* 访客模式整体隐藏：display:none */
 button{background:#3b82f6;color:#fff;border:none;cursor:pointer;transition:.2s;}
 button:hover{background:#2563eb;}
 button.danger{background:#ef4444;}button.danger:hover{background:#dc2626;}
@@ -179,7 +180,8 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
   <button onclick="resetAll()">重置</button>
   <button id="sortDateBtn">时间↓晚-早</button>
   <button id="sortLocBtn">地点↑A-Z</button>
-  <!-- 编辑分区：与筛选功能区分开 -->
+  <!-- 编辑分区：与筛选功能区分开（X328 访客模式整体隐藏） -->
+  <span id="editZone">
   <label>编辑：</label>
   <button class="success" onclick="openAddCardModal()">新增</button>
   <button class="checked-mode" id="multiDelBtn" onclick="toggleMultiDelete()">选删</button>
@@ -190,6 +192,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
   <button class="success" onclick="wdUpload()">上传</button>
   <button class="checked-mode" onclick="wdOpenRestore()">恢复</button>
   <button class="danger" onclick="openCacheConfirm('clearOnly')">清缓</button>
+  </span>
 </div>
 
 <div class="timeline" id="timelineWrap">
@@ -244,7 +247,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
     <button onclick="galleryNext()">下一张</button>
     <button onclick="galleryLast()">最后</button>
     <button id="loadFullBtn" class="ghost" onclick="loadFullRes()">查看原图</button>
-    <button class="success" onclick="openImgEditModal()">编辑链接</button>
+    <button id="lightboxEditLinkBtn" class="success" onclick="openImgEditModal()">编辑链接</button>
     <span class="close-btn" onclick="closeGallery()">关闭</span>
   </div>
 </div>
@@ -577,11 +580,11 @@ function renderAllCards(){
     itemDiv.innerHTML = `
       <div class="card">
         ${checkbox}
-        <div class="date" onclick="openComboEdit('${card.id}')">${makeCardLabel(card.date, card.locs)}</div>
+        <div class="date" onclick="${viewMode === "view" ? `openComboView('${card.id}')` : `openComboEdit('${card.id}')`}">${makeCardLabel(card.date, card.locs)}</div>
         <div class="card-imgs" data-imgs='${JSON.stringify(card.imgs)}'>
           <img loading="lazy" src="${getThumbnailUrl(card.imgs[0])}" onclick="openGallery(this)" alt="${card.locs.join(',')}">
         </div>
-        <p class="desc" onclick="openNote(this)">${card.note}</p>
+        <p class="desc" ${viewMode === "view" ? "" : `onclick="openNote(this)"`}>${card.note}</p>
       </div>
       ${footprintSvg(side)}`;
 
@@ -648,6 +651,7 @@ function resetAll(){
 
 /* ---------- 选删 ---------- */
 function toggleMultiDelete(){
+  if(viewMode === "view") return;
   state.multiDeleteMode = !state.multiDeleteMode;
   const btn = document.getElementById("multiDelBtn");
   if(state.multiDeleteMode){
@@ -668,6 +672,7 @@ function toggleMultiDelete(){
 
 /* ---------- 编辑日期/地点/图片/外部链接 ---------- */
 function openComboEdit(id){
+  if(viewMode === "view") return;
   state.activeCardId = id;
   const card = findCardById(id);
   if(!card) return alert("未找到该卡片");
@@ -676,6 +681,15 @@ function openComboEdit(id){
   document.getElementById("editComboImgs").value = card.imgs.join(",");
   document.getElementById("linkInput").value = card.link || "";
   document.getElementById("linkModal").style.display = "flex";
+}
+function openComboView(id){
+  const card = findCardById(id);
+  if(!card) return;
+  if(card.link){
+    window.open(card.link, "_blank");
+  }else{
+    showToast("该卡片没有外部链接", 3);
+  }
 }
 function closeLinkModal(){ document.getElementById("linkModal").style.display = "none"; }
 
@@ -712,6 +726,7 @@ function openLinkNow(){
 
 /* ---------- 备注编辑 ---------- */
 function openNote(el){
+  if(viewMode === "view") return;
   state.activeDescEl = el;
   const id = el.closest(".timeline-item").dataset.cardId;
   const card = findCardById(id);
@@ -734,7 +749,10 @@ function saveNote(){
 }
 
 /* ---------- 新增卡片 ---------- */
-function openAddCardModal(){ document.getElementById("addModal").style.display = "flex"; }
+function openAddCardModal(){
+  if(viewMode === "view") return;
+  document.getElementById("addModal").style.display = "flex";
+}
 function closeAddCardModal(){ document.getElementById("addModal").style.display = "none"; }
 
 function submitNewCard(){
@@ -806,6 +824,7 @@ function galleryNext(){ state.galleryIndex = (state.galleryIndex + 1) % state.ga
 
 /* ---------- 图片链接编辑（可改/增/删） ---------- */
 function openImgEditModal(){
+  if(viewMode === "view") return;
   document.getElementById("editImgUrl").value = state.galleryImages[state.galleryIndex];
   document.getElementById("imgEditModal").style.display = "flex";
 }
@@ -863,6 +882,7 @@ function deleteImgLink(){
    导出 / 导入（含大标题 & JSON 文件）
    ============================================================ */
 function openExportModal(){
+  if(viewMode === "view") return;
   const data = { title: getPageTitle(), cards: loadCards() };
   document.getElementById("exportText").value = JSON.stringify(data, null, 2);
   document.getElementById("exportModal").style.display = "flex";
@@ -889,6 +909,7 @@ function downloadExportFile(){
 }
 
 function openImportModal(){
+  if(viewMode === "view") return;
   document.getElementById("importText").value = "";
   document.getElementById("importModal").style.display = "flex";
 }
@@ -1072,6 +1093,7 @@ function nowStamp(){
 
 // 上传：本地数据 → 云端新节点（保留最近 10 个，最旧自动删除）
 async function wdUpload(){
+  if(viewMode === "view") return;
   const btn = event && event.currentTarget;
   if(btn){ btn.disabled = true; btn.textContent = "上传中…"; }
   try{
@@ -1093,6 +1115,7 @@ async function wdUpload(){
 
 // 下载：拉取云端最新节点并覆盖本地
 async function wdDownload(){
+  if(viewMode === "view") return;
   const btn = event && event.currentTarget;
   if(btn){ btn.disabled = true; btn.textContent = "下载中…"; }
   try{
@@ -1113,6 +1136,7 @@ async function wdDownload(){
 
 // 打开恢复弹窗：按最近 → 最远列出云端节点
 async function wdOpenRestore(){
+  if(viewMode === "view") return;
   const listEl = document.getElementById("restoreList");
   document.getElementById("restoreCurrent").textContent = getCloudLoadedText();
   listEl.innerHTML = '<div class="restore-tip">加载中…</div>';
@@ -1160,6 +1184,7 @@ async function wdRestoreNode(name){
 
 /* ---------- 大标题编辑 ---------- */
 function openTitleEditModal(){
+  if(viewMode === "view") return;
   document.getElementById("titleInput").value = getPageTitle();
   document.getElementById("titleModal").style.display = "flex";
 }
@@ -1194,8 +1219,13 @@ function fallbackCopy(text, done){
 }
 
 /* ---------- 缓存确认弹窗（含暗号校验） ----------
-   mode: "startup"（打开页面弹窗）→ 清缓存后拉取云端
-         "clearOnly"（顶部清缓键）→ 仅清除本地缓存，不拉云端 */
+   mode: "startup"（打开页面弹窗）→ 输暗号（X123/新暗号=完整模式，X328=访客模式），清缓存后拉取云端
+         "clearOnly"（顶部清缓键）→ 免暗号，仅清除本地缓存，不拉云端
+   暗号：
+     X123（或替换令牌后的新暗号）→ 完整模式：所有编辑功能可见
+     X328                        → 访客模式：隐藏编辑按钮/编辑链接，日期标题点击直接跳外部链接 */
+const VIEW_PWD = "X328";
+let viewMode = "full";   // "full" | "view"
 let cacheConfirmMode = "startup";
 function openCacheConfirm(mode){
   cacheConfirmMode = mode || "startup";
@@ -1204,11 +1234,28 @@ function openCacheConfirm(mode){
 }
 function closeCacheConfirm(){ document.getElementById("cacheConfirmModal").style.display = "none"; }
 
+// 应用显示模式：full 完整 / view 访客（隐藏编辑相关）
+function applyViewMode(mode){
+  viewMode = mode;
+  sessionStorage.setItem("view_mode", mode);
+  const zone = document.getElementById("editZone");
+  if(zone) zone.style.display = mode === "view" ? "none" : "contents";
+  const lbBtn = document.getElementById("lightboxEditLinkBtn");
+  if(lbBtn) lbBtn.style.display = mode === "view" ? "none" : "";
+  renderAllCards();
+}
+
 function confirmClearCache(){
-  const pwd = document.getElementById("cachePwd").value.trim();
-  if(pwd !== ghPwd()){
-    alert("暗号错误：请在“般若波罗蜜”处输入正确暗号后再清除缓存");
-    return;
+  if(cacheConfirmMode !== "clearOnly"){
+    const pwd = document.getElementById("cachePwd").value.trim();
+    if(pwd === VIEW_PWD){
+      applyViewMode("view");
+    }else if(pwd === ghPwd()){
+      applyViewMode("full");
+    }else{
+      alert("暗号错误：请在“般若波罗蜜”处输入正确暗号后再清除缓存");
+      return;
+    }
   }
   localStorage.removeItem(STORAGE.cards);
   localStorage.removeItem(STORAGE.title);
@@ -1308,7 +1355,7 @@ document.getElementById("sortLocBtn").addEventListener("click", function(){
 /* ---------- 初始化 ---------- */
 function init(){
   document.getElementById("pageTitle").textContent = getPageTitle();
-  renderAllCards();
+  applyViewMode(sessionStorage.getItem("view_mode") === "view" ? "view" : "full");
   if(!sessionStorage.getItem("cache_prompt_shown")) openCacheConfirm();
 }
 if(document.readyState === "loading"){
