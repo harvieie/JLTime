@@ -112,6 +112,16 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 .restore-item .restore-sub{font-size:12px;color:#888;margin-top:2px;}
 .restore-item button{flex:none;}
 .restore-tip{font-size:12px;color:#888;text-align:center;padding:10px 0;}
+.empty-tip{text-align:center;color:#aaa;padding:90px 0;font-size:15px;line-height:2.1;}
+
+/* ===== 自动关闭提示条 ===== */
+.toast{
+  position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
+  background:rgba(17,24,39,.92);color:#fff;padding:18px 28px;border-radius:14px;
+  z-index:2000;max-width:82vw;text-align:center;line-height:1.7;font-size:15px;
+  box-shadow:0 10px 30px rgba(0,0,0,.25);opacity:0;transition:opacity .3s;pointer-events:none;
+}
+.toast.show{opacity:1;}
 
 /* ===== 移动端 ===== */
 @media (max-width:640px){
@@ -126,6 +136,9 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 </style>
 </head>
 <body>
+
+<!-- 自动关闭提示条 -->
+<div class="toast" id="globalToast"></div>
 
 <!-- 缓存确认弹窗（首次打开 & 顶部清缓按钮共用） -->
 <div class="modal-overlay" id="cacheConfirmModal">
@@ -319,6 +332,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
     <p style="color:#b45309;font-size:13px;margin-bottom:10px;">⚠️ 恢复会<strong>覆盖</strong>本地现有卡片及大标题，云端最多保留最近 10 个时间节点。</p>
     <div class="restore-list" id="restoreList"><div class="restore-tip">加载中…</div></div>
     <div class="link-buttons">
+      <button class="checked-mode" onclick="ghSettings()">替换令牌</button>
       <button onclick="closeRestoreModal()">关闭</button>
     </div>
   </div>
@@ -363,24 +377,47 @@ const STORAGE = { cards: "timeline_cards", title: "page_title" };
 /* ---------- GitHub 云存储配置 ----------
    数据以 json 文件存放在你的 GitHub 仓库 data/ 文件夹中，
    页面直接调用 GitHub API（官方支持浏览器跨域），无需本地代理。
-   令牌末位字符拆出，与打开密码（X123）联动：清除缓存弹窗中输入
-   正确暗号后自动拼回末位字符再调用云端，避免令牌以完整形态出现。 */
+   令牌末位字符拆出，打开暗号 = 末位字符 + "123"（当前为 X123）：
+   清除缓存弹窗中输入正确暗号后自动拼回末位字符再调用云端。
+   令牌到期可在「恢复」弹窗中点击「替换令牌」更新，新令牌同样
+   拆出末位，暗号自动变为 新末位+123。 */
 const GH = {
   owner: "harvieie",
   repo: "JLTime",
   branch: "main",
   dir: "data",               // 云端存储文件夹（首次上传自动创建）
-  maxNodes: 10,              // 云端最多保留 10 个时间节点
-  pwd: "X123"                // 打开密码（暗号），与令牌末位拼接联动
+  maxNodes: 10               // 云端最多保留 10 个时间节点
 };
-// 令牌主体（分段存放），末位字符 X 在校验暗号后拼回
+// 内置令牌主体（分段存放）与末位字符（默认令牌）
 const GH_TOKEN_PART1 = "ghp_G299XNvoXZ63B4";
 const GH_TOKEN_PART2 = "iOXFrcnbllRbOhC30Ckmq";
 const GH_TOKEN_TAIL = "X";
 
+// 令牌主体/末位：可被「替换令牌」覆盖（存 localStorage，避免写入页面文件）
+function ghTokenBody(){
+  return localStorage.getItem("gh_token_body") || (GH_TOKEN_PART1 + GH_TOKEN_PART2);
+}
+function ghTokenTail(){
+  return localStorage.getItem("gh_token_tail") || GH_TOKEN_TAIL;
+}
 // 拼回完整令牌
 function ghToken(){
-  return GH_TOKEN_PART1 + GH_TOKEN_PART2 + GH_TOKEN_TAIL;
+  return ghTokenBody() + ghTokenTail();
+}
+// 当前打开暗号 = 令牌末位 + "123"
+function ghPwd(){
+  return ghTokenTail() + "123";
+}
+// 替换令牌（恢复弹窗入口）：新令牌拆出末位，暗号自动变为 末位+123
+function ghSettings(){
+  const cur = "ghp***" + ghTokenTail();
+  const t = prompt("当前令牌（末位已隐藏）：" + cur + "\n\n粘贴新的完整 GitHub 令牌（ghp_ 开头，共 40 位）：");
+  if(t === null) return;
+  const val = t.trim();
+  if(!/^ghp_[A-Za-z0-9]{36}$/.test(val)) return alert("令牌格式不正确（应为 ghp_ 开头共 40 位）");
+  localStorage.setItem("gh_token_body", val.slice(0, -1));
+  localStorage.setItem("gh_token_tail", val.slice(-1));
+  alert("令牌已替换，暗号已自动更新为：" + val.slice(-1) + "123");
 }
 
 const defaultCards = [
@@ -409,11 +446,7 @@ function migrateCardData(list){
 
 function loadCards(){
   const raw = localStorage.getItem(STORAGE.cards);
-  if(!raw){
-    const initial = migrateCardData(JSON.parse(JSON.stringify(defaultCards)));
-    saveCards(initial);
-    return initial;
-  }
+  if(!raw) return [];   // 初始不预置卡片：须输入暗号从云端拉取后才显示
   try{
     const parsed = JSON.parse(raw);
     const migrated = migrateCardData(parsed);
@@ -421,10 +454,8 @@ function loadCards(){
     if(needFix) saveCards(migrated);
     return migrated;
   }catch(err){
-    console.warn("卡片数据解析失败，已重置为默认数据", err);
-    const fallback = migrateCardData(JSON.parse(JSON.stringify(defaultCards)));
-    saveCards(fallback);
-    return fallback;
+    console.warn("卡片数据解析失败，已重置为空", err);
+    return [];
   }
 }
 
@@ -520,6 +551,14 @@ function renderAllCards(){
 
   const cards = applySort(loadCards());
   const fragment = document.createDocumentFragment();
+
+  // 无卡片时显示空状态提示
+  if(cards.length === 0){
+    const empty = document.createElement("div");
+    empty.className = "empty-tip";
+    empty.innerHTML = "暂无时光记录<br>输入暗号「确定」后从云端载入";
+    fragment.appendChild(empty);
+  }
 
   cards.forEach((card, idx) => {
     const side = idx % 2 === 0 ? "left" : "right";
@@ -1158,7 +1197,7 @@ function closeCacheConfirm(){ document.getElementById("cacheConfirmModal").style
 
 function confirmClearCache(){
   const pwd = document.getElementById("cachePwd").value.trim();
-  if(pwd !== GH.pwd){
+  if(pwd !== ghPwd()){
     alert("暗号错误：请在“般若波罗蜜”处输入正确暗号后再清除缓存");
     return;
   }
@@ -1174,21 +1213,31 @@ function confirmClearCache(){
   cloudPullAfterClear();
 }
 
-// 清除缓存后自动拉取云端最新数据覆盖
+// 清除缓存后自动拉取云端最新数据覆盖（结果用 3 秒自动关闭的提示条显示）
 async function cloudPullAfterClear(){
   try{
     const files = await wdList();
     if(!files.length){
-      alert("本地缓存已清除；云端暂无备份，已载入默认数据");
+      showToast("本地缓存已清除；云端暂无备份", 3);
       return;
     }
     const latest = files[0];
     const imported = await wdReadFile(latest.name);
     const count = applyImportedData(imported);
-    alert(`已清除本地缓存，并载入云端最新数据（${formatNodeTime(latest.ts)}，共 ${count} 条记录）`);
+    showToast(`已载入云端最新数据（${formatNodeTime(latest.ts)}，共 ${count} 条记录）`, 3);
   }catch(err){
-    alert("本地缓存已清除；云端拉取失败：" + err.message);
+    showToast("云端拉取失败：" + err.message, 4);
   }
+}
+
+// 通用提示条：居中显示，seconds 秒后自动关闭
+let toastTimerId = null;
+function showToast(msg, seconds){
+  const el = document.getElementById("globalToast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimerId);
+  toastTimerId = setTimeout(() => el.classList.remove("show"), (seconds || 3) * 1000);
 }
 
 document.getElementById("cacheOkBtn").addEventListener("click", confirmClearCache);
