@@ -148,7 +148,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
     <div class="modal-title">提示</div>
     <div class="modal-text">
       <span class="hl">是否清除浏览器本地旧缓存？</span><br><br>
-      确定→直接清除本地缓存（含下载、恢复的数据），<br>
+      确定→直接清除本地缓存，<br>
       进入→输入暗号后载入云端，<br>
       取消→不操作。<br><br>
       <input type="password" id="cachePwd" placeholder="般若波罗蜜" autocomplete="off" style="width:100%;text-align:center;letter-spacing:4px;">
@@ -1096,6 +1096,7 @@ function nowStamp(){
 // 上传：本地数据 → 云端新节点（保留最近 10 个，最旧自动删除）
 async function wdUpload(){
   if(viewMode === "view") return;
+  if(isCloudLocked()) return showToast("云端连接已断开：请点击「清缓」，输入暗号「进入」恢复", 4);
   const btn = event && event.currentTarget;
   if(btn){ btn.disabled = true; btn.textContent = "上传中…"; }
   try{
@@ -1118,6 +1119,7 @@ async function wdUpload(){
 // 下载：拉取云端最新节点并覆盖本地
 async function wdDownload(){
   if(viewMode === "view") return;
+  if(isCloudLocked()) return showToast("云端连接已断开：请点击「清缓」，输入暗号「进入」恢复", 4);
   const btn = event && event.currentTarget;
   if(btn){ btn.disabled = true; btn.textContent = "下载中…"; }
   try{
@@ -1139,6 +1141,7 @@ async function wdDownload(){
 // 打开恢复弹窗：按最近 → 最远列出云端节点
 async function wdOpenRestore(){
   if(viewMode === "view") return;
+  if(isCloudLocked()) return showToast("云端连接已断开：请点击「清缓」，输入暗号「进入」恢复", 4);
   const listEl = document.getElementById("restoreList");
   document.getElementById("restoreCurrent").textContent = getCloudLoadedText();
   listEl.innerHTML = '<div class="restore-tip">加载中…</div>';
@@ -1245,6 +1248,9 @@ function applyViewMode(mode){
   renderAllCards();
 }
 
+// 云端连接锁定状态：点「确定」清缓存后断开云端，下载/上传/恢复不可用，直到输入暗号「进入」
+function isCloudLocked(){ return sessionStorage.getItem("cloud_locked") === "1"; }
+
 // 清除本地缓存（含下载/恢复写入的数据与“当前载入”版本记录；令牌与暗号保留）
 function clearLocalCache(){
   localStorage.removeItem(STORAGE.cards);
@@ -1258,14 +1264,15 @@ function clearLocalCache(){
   renderAllCards();
 }
 
-// 确定：无需密码，直接清除本地缓存
+// 确定：无需密码，直接清除本地缓存并断开云端连接
 function confirmClearCache(){
   clearLocalCache();
+  sessionStorage.setItem("cloud_locked", "1");
   closeCacheConfirm();
-  showToast("本地缓存已清除", 3);
+  showToast("本地缓存已清除，云端连接已断开", 3);
 }
 
-// 进入：校验暗号（X328 访客 / X123 完整），清缓存后拉取云端
+// 进入：校验暗号（X328 访客 / X123 完整），解锁云端，清缓存后拉取云端
 function enterWithPwd(){
   const pwd = document.getElementById("cachePwd").value.trim();
   if(pwd === VIEW_PWD){
@@ -1276,6 +1283,7 @@ function enterWithPwd(){
     alert("暗号错误：请在“般若波罗蜜”处输入正确暗号后再进入");
     return;
   }
+  sessionStorage.removeItem("cloud_locked");
   clearLocalCache();
   closeCacheConfirm();
   cloudPullAfterClear();
