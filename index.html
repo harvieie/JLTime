@@ -148,13 +148,15 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
     <div class="modal-title">提示</div>
     <div class="modal-text">
       <span class="hl">是否清除浏览器本地旧缓存？</span><br><br>
-      新打开或更新版本→确定，<br>
-      无更改或保留修改→取消。<br><br>
+      确定→直接清除本地缓存（含下载、恢复的数据），<br>
+      进入→输入暗号后载入云端，<br>
+      取消→不操作。<br><br>
       <input type="password" id="cachePwd" placeholder="般若波罗蜜" autocomplete="off" style="width:100%;text-align:center;letter-spacing:4px;">
     </div>
     <div class="modal-buttons">
       <button id="cacheOkBtn">确定</button>
       <button id="cacheCancelBtn" style="background:#999">取消</button>
+      <button id="cacheEnterBtn" class="success">进入</button>
     </div>
   </div>
 </div>
@@ -191,7 +193,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
   <button onclick="wdDownload()">下载</button>
   <button class="success" onclick="wdUpload()">上传</button>
   <button class="checked-mode" onclick="wdOpenRestore()">恢复</button>
-  <button class="danger" onclick="openCacheConfirm('clearOnly')">清缓</button>
+  <button class="danger" onclick="openCacheConfirm()">清缓</button>
   </span>
 </div>
 
@@ -1226,9 +1228,7 @@ function fallbackCopy(text, done){
      X328                        → 访客模式：隐藏编辑按钮/编辑链接，日期标题点击直接跳外部链接 */
 const VIEW_PWD = "X328";
 let viewMode = "full";   // "full" | "view"
-let cacheConfirmMode = "startup";
-function openCacheConfirm(mode){
-  cacheConfirmMode = mode || "startup";
+function openCacheConfirm(){
   document.getElementById("cachePwd").value = "";
   document.getElementById("cacheConfirmModal").style.display = "flex";
 }
@@ -1245,31 +1245,39 @@ function applyViewMode(mode){
   renderAllCards();
 }
 
-function confirmClearCache(){
-  if(cacheConfirmMode !== "clearOnly"){
-    const pwd = document.getElementById("cachePwd").value.trim();
-    if(pwd === VIEW_PWD){
-      applyViewMode("view");
-    }else if(pwd === ghPwd()){
-      applyViewMode("full");
-    }else{
-      alert("暗号错误：请在“般若波罗蜜”处输入正确暗号后再清除缓存");
-      return;
-    }
-  }
+// 清除本地缓存（含下载/恢复写入的数据与“当前载入”版本记录；令牌与暗号保留）
+function clearLocalCache(){
   localStorage.removeItem(STORAGE.cards);
   localStorage.removeItem(STORAGE.title);
+  localStorage.removeItem("cloud_loaded");
   sessionStorage.setItem("cache_prompt_shown", "1");
   if("caches" in window){
     caches.keys().then(keys => keys.forEach(key => caches.delete(key)));
   }
   document.getElementById("pageTitle").textContent = getPageTitle();
   renderAllCards();
+}
+
+// 确定：无需密码，直接清除本地缓存
+function confirmClearCache(){
+  clearLocalCache();
   closeCacheConfirm();
-  if(cacheConfirmMode === "clearOnly"){
-    showToast("本地缓存已清除", 3);
+  showToast("本地缓存已清除", 3);
+}
+
+// 进入：校验暗号（X328 访客 / X123 完整），清缓存后拉取云端
+function enterWithPwd(){
+  const pwd = document.getElementById("cachePwd").value.trim();
+  if(pwd === VIEW_PWD){
+    applyViewMode("view");
+  }else if(pwd === ghPwd()){
+    applyViewMode("full");
+  }else{
+    alert("暗号错误：请在“般若波罗蜜”处输入正确暗号后再进入");
     return;
   }
+  clearLocalCache();
+  closeCacheConfirm();
   cloudPullAfterClear();
 }
 
@@ -1319,6 +1327,7 @@ function showToast(msg, seconds){
 
 document.getElementById("cacheOkBtn").addEventListener("click", confirmClearCache);
 document.getElementById("cacheCancelBtn").addEventListener("click", closeCacheConfirm);
+document.getElementById("cacheEnterBtn").addEventListener("click", enterWithPwd);
 
 /* ---------- 备注文本框：回车自动缩进两个字符（全角空格） ---------- */
 function bindNoteIndent(taId){
