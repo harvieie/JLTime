@@ -488,6 +488,9 @@ function getPageTitle(){ return localStorage.getItem(STORAGE.title) || "行琳�
 function setPageTitle(text){ localStorage.setItem(STORAGE.title, text); }
 
 function getThumbnailUrl(url){
+  if(!url) return url;
+  // GitHub Pages / jsDelivr 链接原样返回（静态服务器忽略查询参数，无需缩略参数）
+  if(url.indexOf("github.io") !== -1 || url.indexOf("jsdelivr.net") !== -1) return url;
   return url.includes("?") ? url : url + "?w=400";
 }
 
@@ -1062,7 +1065,7 @@ async function uploadImageToRepo(file, dateStr, cb){
         body: JSON.stringify({ message: "时光图库: " + path, content: b64, branch: GH.branch })
       }, 90000);
       if(!res.ok) throw new Error("上传失败（" + res.status + "），请检查令牌与网络");
-      const cdn = `https://cdn.jsdelivr.net/gh/${GH.owner}/${GH.repo}@${GH.branch}/${path}`;
+      const cdn = `https://${GH.owner}.github.io/${GH.repo}/${path}`;
       cb(cdn);
     }catch(err){
       alert("图片上传失败：" + err.message);
