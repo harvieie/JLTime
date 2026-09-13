@@ -886,6 +886,31 @@ function addImgLink(){
 
 function deleteImgLink(){
   if(state.galleryImages.length <= 1) return alert("至少保留一张图片，不能删除");
+  const target = state.galleryImages[state.galleryIndex];
+  // 识别仓库图库链接（GitHub Pages images/日期/文件）
+  const m = target.match(/^https:\/\/harvieie\.github\.io\/JLTime\/images\/([^/]+)\/([^/?#]+)$/);
+  if(!m){ deleteLocalImgOnly(); return; }               // 外部链接：仅本地删除
+  const refs = loadCards().filter(c => c.imgs.indexOf(target) !== -1).length;
+  if(refs > 1){                                          // 被多张卡片引用：云端保留
+    if(!confirm("这张图片同时被 " + refs + " 张卡片使用，仅从当前卡片移除（云端图库保留）？")) return;
+    deleteLocalImgOnly();
+    return;
+  }
+  const path = "images/" + m[1] + "/" + m[2];
+  if(!confirm("同时删除仓库图库中的「" + m[2] + "」？删除后不可恢复。")) return;
+  (async () => {
+    try{
+      await deleteRepoFile(path);                        // 先删云端图库
+      deleteLocalImgOnly();                              // 再删本地卡片
+      pushCloudSnapshot("删除图片");                       // 更新云端数据节点，保持一致
+    }catch(err){
+      alert("云端删除失败：" + err.message + "（本地未删除，可重试）");
+    }
+  })();
+}
+
+// 仅从当前卡片移除链接（不涉及云端）
+function deleteLocalImgOnly(){
   state.galleryImages.splice(state.galleryIndex, 1);
   if(state.galleryIndex >= state.galleryImages.length) state.galleryIndex = state.galleryImages.length - 1;
   persistGalleryImages();
@@ -895,6 +920,40 @@ function deleteImgLink(){
   state.fullImageLoaded = false;
   document.getElementById("loadFullBtn").style.display = "inline-block";
   updateGalleryPageInfo();
+}
+
+// 删除仓库 images/ 下的文件（按路径先取 sha 再 DELETE）
+async function deleteRepoFile(path){
+  const url = GH_API + path;
+  const res = await ghFetch(url, { headers: ghHeaders() });
+  if(res.status === 404) return;                         // 云端本就无此文件，放行
+  if(!res.ok) throw new Error("读取云端文件失败（" + res.status + "）");
+  const sha = (await res.json()).sha;
+  const del = await ghFetch(url, {
+    method: "DELETE",
+    headers: Object.assign({ "Content-Type": "application/json" }, ghHeaders()),
+    body: JSON.stringify({ message: "时光图库删除: " + path, sha: sha, branch: GH.branch })
+  });
+  if(!del.ok && del.status !== 404) throw new Error("删除云端文件失败（" + del.status + "）");
+}
+
+// 把当前本地卡片数据作为新节点推上云端（保持本地云端统一）
+async function pushCloudSnapshot(note){
+  if(viewMode === "view") return;
+  if(isCloudLocked()){
+    showToast("云端已断开：数据快照未自动上传，解锁后点「上传」同步", 4);
+    return;
+  }
+  try{
+    const files = await wdList();
+    if(files.length >= GH.maxNodes){
+      for(const f of files.slice(GH.maxNodes - 1)) await wdDeleteFile(f);
+    }
+    const name = `xinglin_${nowStamp()}${note ? "_" + note : ""}.json`;
+    await wdWriteFile(name, { title: getPageTitle(), cards: loadCards() });
+  }catch(err){
+    showToast("云端数据更新失败：" + err.message, 4);
+  }
 }
 
 /* ============================================================
