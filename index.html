@@ -959,8 +959,13 @@ async function wdList(){
   const files = [];
   (Array.isArray(items) ? items : []).forEach(it => {
     const name = it.name;
-    if(name && /^xinglin_\d{14}\.json$/.test(name)){
-      files.push({ name, ts: name.replace("xinglin_", "").replace(".json", ""), sha: it.sha });
+    // 兼容两种命名：xinglin_时间戳.json 与 xinglin_时间戳_版本说明.json
+    const m = name && name.match(/^xinglin_(\d{14})(?:_[^/]+)?\.json$/);
+    if(m){
+      const ts = m[1];
+      const rest = name.slice(8 + 14, -5);        // 取时间戳后的部分
+      const label = rest.length > 1 ? rest.slice(1) : "";  // 去掉前导下划线
+      files.push({ name, ts, label, sha: it.sha });
     }
   });
   files.sort((a, b) => b.ts.localeCompare(a.ts));
@@ -1079,10 +1084,11 @@ async function wdOpenRestore(){
     files.forEach((f, i) => {
       const item = document.createElement("div");
       item.className = "restore-item";
+      const sub = f.label ? f.name : f.name;
       item.innerHTML = `
         <div>
-          <div class="restore-time">${formatNodeTime(f.ts)}${i === 0 ? '（最新）' : ''}</div>
-          <div class="restore-sub">${f.name}</div>
+          <div class="restore-time">${formatNodeTime(f.ts)}${i === 0 ? '（最新）' : ''}${f.label ? ' · ' + f.label : ''}</div>
+          <div class="restore-sub">${sub}</div>
         </div>
         <button class="checked-mode" onclick="wdRestoreNode('${f.name}')">恢复</button>`;
       listEl.appendChild(item);
@@ -1095,7 +1101,8 @@ function closeRestoreModal(){ document.getElementById("restoreModal").style.disp
 
 // 恢复指定节点并覆盖本地
 async function wdRestoreNode(name){
-  const ts = name.replace("xinglin_", "").replace(".json", "");
+  const m = name.match(/^xinglin_(\d{14})/);
+  const ts = m ? m[1] : name.replace("xinglin_", "").replace(".json", "");
   if(!confirm(`确定恢复到 ${formatNodeTime(ts)} 这个备份点？本地当前数据将被覆盖！`)) return;
   try{
     const imported = await wdReadFile(name);
