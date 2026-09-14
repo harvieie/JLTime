@@ -137,6 +137,47 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
   .footprint{left:7px !important;right:auto !important;transform:none !important;}
   .page-title{font-size:32px;letter-spacing:2px;}
 }
+
+/* ============================================================
+   情侣回忆相册美化 & 惊喜彩蛋
+   ============================================================ */
+body{
+  background:linear-gradient(180deg,#fffaf3 0%,#ffeef4 45%,#fdeef8 100%);
+  background-attachment:fixed;
+}
+.page-title::before,.page-title::after{
+  content:"❤";-webkit-text-fill-color:#ff7da9;-webkit-text-stroke:0;font-size:24px;
+  vertical-align:8px;margin:0 10px;opacity:.8;
+}
+button{border-radius:12px;}
+.card{
+  background:linear-gradient(160deg,#ffffff 0%,#fff7f9 100%);
+  border:1px solid #ffe3ec;border-radius:18px;
+  box-shadow:0 6px 22px rgba(255,150,180,.12),0 2px 6px rgba(0,0,0,.04);
+}
+.card:hover{box-shadow:0 14px 30px rgba(255,150,180,.22),0 4px 10px rgba(0,0,0,.06);}
+.filter-box{background:rgba(255,255,255,.78);border-color:#ffe3ec;backdrop-filter:blur(6px);}
+
+/* 彩蛋层：烟花 canvas / 点按涟漪 / 漂浮爱心（全部不拦截点击） */
+#fxCanvas{position:fixed;inset:0;pointer-events:none;z-index:999;}
+.ripple{
+  position:fixed;width:10px;height:10px;border:2px solid #ff9ec4;border-radius:50%;
+  pointer-events:none;z-index:998;animation:rippleAnim .7s ease-out forwards;
+}
+@keyframes rippleAnim{
+  0%{transform:scale(.3);opacity:.9;}
+  100%{transform:scale(4);opacity:0;}
+}
+.float-heart{
+  position:fixed;bottom:-40px;pointer-events:none;z-index:997;opacity:0;
+  animation:heartFloat linear forwards;
+}
+@keyframes heartFloat{
+  0%{transform:translateY(0) translateX(0) rotate(0);opacity:0;}
+  8%{opacity:.85;}
+  90%{opacity:.55;}
+  100%{transform:translateY(-105vh) translateX(26px) rotate(18deg);opacity:0;}
+}
 </style>
 </head>
 <body>
@@ -838,6 +879,8 @@ function openGallery(imgEl){
   updateGalleryPageInfo();
   document.getElementById("lightbox").style.display = "flex";
   document.body.style.overflow = "hidden";
+  // 惊喜：打开大图有 30% 概率在图片周围放一次小烟花
+  setTimeout(() => { if(Math.random() < 0.3) launchFireworks(innerWidth / 2, innerHeight * 0.45, 26); }, 350);
 }
 function closeGallery(){
   document.getElementById("lightbox").style.display = "none";
@@ -1687,11 +1730,112 @@ document.getElementById("sortLocBtn").addEventListener("click", function(){
   renderAllCards();
 });
 
+/* ============================================================
+   惊喜彩蛋：随机烟花 / 漂浮爱心气泡 / 点按涟漪
+   ============================================================ */
+const SURPRISE = { canvas: null, ctx: null, parts: [], raf: null, timer: null };
+
+function initFxCanvas(){
+  const cv = document.createElement("canvas");
+  cv.id = "fxCanvas";
+  document.body.appendChild(cv);
+  SURPRISE.canvas = cv;
+  SURPRISE.ctx = cv.getContext("2d");
+  const resize = () => { cv.width = innerWidth; cv.height = innerHeight; };
+  resize();
+  addEventListener("resize", resize);
+}
+
+// 在 (x, y) 处放一束烟花（count 个粒子）
+function launchFireworks(x, y, count){
+  if(!SURPRISE.ctx) return;
+  const colors = ["#ff7da9","#ffb84d","#7dd3fc","#c084fc","#fda4af","#a7f3d0","#fde68a"];
+  for(let i = 0; i < (count || 34); i++){
+    const a = Math.random() * Math.PI * 2;
+    const sp = 2 + Math.random() * 5;
+    SURPRISE.parts.push({
+      x: x !== undefined ? x : innerWidth / 2,
+      y: y !== undefined ? y : innerHeight * 0.4,
+      vx: Math.cos(a) * sp,
+      vy: Math.sin(a) * sp,
+      life: 1,
+      decay: 0.012 + Math.random() * 0.02,
+      size: 1.6 + Math.random() * 2.4,
+      color: colors[(Math.random() * colors.length) | 0]
+    });
+  }
+  if(!SURPRISE.raf) tickFireworks();
+}
+function tickFireworks(){
+  const { ctx, parts } = SURPRISE;
+  ctx.clearRect(0, 0, SURPRISE.canvas.width, SURPRISE.canvas.height);
+  for(let i = parts.length - 1; i >= 0; i--){
+    const p = parts[i];
+    p.x += p.vx; p.y += p.vy; p.vy += 0.045; p.vx *= 0.985; p.life -= p.decay;
+    if(p.life <= 0){ parts.splice(i, 1); continue; }
+    ctx.globalAlpha = Math.max(p.life, 0);
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  if(parts.length){
+    SURPRISE.raf = requestAnimationFrame(tickFireworks);
+  }else{
+    SURPRISE.raf = null;
+    ctx.clearRect(0, 0, SURPRISE.canvas.width, SURPRISE.canvas.height);
+  }
+}
+
+// 每 4~9 分钟随机放一次烟花
+function scheduleFireworks(){
+  clearTimeout(SURPRISE.timer);
+  SURPRISE.timer = setTimeout(() => {
+    launchFireworks(innerWidth * (0.15 + Math.random() * 0.7), innerHeight * (0.2 + Math.random() * 0.45), 30 + ((Math.random() * 20) | 0));
+    scheduleFireworks();
+  }, (240 + Math.random() * 300) * 1000);
+}
+
+// 漂浮爱心气泡：每 20~45 秒随机飘一个
+function floatHeart(){
+  const icons = ["❤","💗","🩷","💞","✨"];
+  const el = document.createElement("span");
+  el.className = "float-heart";
+  el.textContent = icons[(Math.random() * icons.length) | 0];
+  el.style.left = (5 + Math.random() * 90) + "vw";
+  el.style.fontSize = (14 + Math.random() * 22) + "px";
+  el.style.animationDuration = (7 + Math.random() * 7) + "s";
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 16000);
+  setTimeout(floatHeart, 20000 + Math.random() * 25000);
+}
+
+// 点按涟漪：任意位置点击出现小水波（不影响原有点击事件）
+function bindRipple(){
+  document.addEventListener("pointerdown", e => {
+    const r = document.createElement("span");
+    r.className = "ripple";
+    r.style.left = (e.clientX - 5) + "px";
+    r.style.top = (e.clientY - 5) + "px";
+    document.body.appendChild(r);
+    setTimeout(() => r.remove(), 800);
+  }, { passive: true });
+}
+
+function startSurprises(){
+  initFxCanvas();
+  bindRipple();
+  scheduleFireworks();
+  setTimeout(floatHeart, 3000);
+}
+
 /* ---------- 初始化 ---------- */
 function init(){
   document.getElementById("pageTitle").textContent = getPageTitle();
   applyViewMode(sessionStorage.getItem("view_mode") === "view" ? "view" : "full");
   if(!sessionStorage.getItem("cache_prompt_shown")) openCacheConfirm();
+  startSurprises();
 }
 if(document.readyState === "loading"){
   document.addEventListener("DOMContentLoaded", init);
