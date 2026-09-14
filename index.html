@@ -61,7 +61,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
   transition:transform .25s,box-shadow .25s;
 }
 .card:hover{transform:translateY(-4px);box-shadow:0 10px 24px rgba(0,0,0,.09);}
-.card img{width:100%;border-radius:12px;object-fit:cover;max-height:320px;cursor:pointer;}
+.card img{width:100%;aspect-ratio:4/3;border-radius:12px;object-fit:cover;max-height:320px;cursor:pointer;}
 .card .date{font-weight:bold;color:#3b82f6;margin:8px 0;cursor:pointer;font-size:15px;text-indent:2em;}
 .card .date:hover{text-decoration:underline;}
 .card .desc{color:#555;line-height:1.65;cursor:pointer;text-indent:2em;white-space:pre-wrap;word-break:break-word;}
@@ -178,7 +178,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
     <option value="10">10</option><option value="11">11</option><option value="12">12</option>
   </select>
   <select id="locationSel"><option value="">全部地点</option></select>
-  <input type="text" id="searchInput" placeholder="搜索时间/地点/描述">
+  <input type="text" id="searchInput" placeholder="搜索时间/地点/描述" oninput="doSearch()">
   <span id="countTip" class="count-tip">0 条</span>
   <button onclick="doSearch()">搜索</button>
   <button onclick="resetAll()">重置</button>
@@ -489,7 +489,13 @@ function setPageTitle(text){ localStorage.setItem(STORAGE.title, text); }
 
 function getThumbnailUrl(url){
   if(!url) return url;
-  // GitHub Pages / jsDelivr 链接原样返回（静态服务器忽略查询参数，无需缩略参数）
+  // 仓库原图 → 同目录 .thumb/ 缩略图（几十KB，加载更快；点开灯箱“查看原图”再载原图）
+  const m = url.match(/^(https:\/\/harvieie\.github\.io\/JLTime\/images\/[^/]+\/)([^/?#]+)$/);
+  if(m){
+    const file = m[2];
+    const dot = file.lastIndexOf(".");
+    return m[1] + ".thumb/" + (dot > 0 ? file.slice(0, dot) : file) + ".jpg";
+  }
   if(url.indexOf("github.io") !== -1 || url.indexOf("jsdelivr.net") !== -1) return url;
   return url.includes("?") ? url : url + "?w=400";
 }
@@ -610,7 +616,7 @@ function renderAllCards(){
         ${checkbox}
         <div class="date" onclick="${viewMode === "view" ? `openComboView('${card.id}')` : `openComboEdit('${card.id}')`}">${makeCardLabel(card.date, card.locs)}</div>
         <div class="card-imgs" data-imgs='${JSON.stringify(card.imgs)}'>
-          <img loading="lazy" src="${getThumbnailUrl(card.imgs[0])}" onclick="openGallery(this)" alt="${card.locs.join(',')}">
+          <img loading="lazy" decoding="async" src="${getThumbnailUrl(card.imgs[0])}" onclick="openGallery(this)" alt="${card.locs.join(',')}">
         </div>
         <p class="desc" ${viewMode === "view" ? "" : `onclick="openNote(this)"`}>${card.note}</p>
       </div>
@@ -652,21 +658,25 @@ function filterTimeline(){
   }, 300);
 }
 
+let searchTimerId;
 function doSearch(){
-  const kw = document.getElementById("searchInput").value.trim().toLowerCase();
-  const items = document.querySelectorAll(".timeline-item");
+  clearTimeout(searchTimerId);
+  searchTimerId = setTimeout(() => {
+    const kw = document.getElementById("searchInput").value.trim().toLowerCase();
+    const items = document.querySelectorAll(".timeline-item");
 
-  if(!kw){
-    filterTimeline();
-    return;
-  }
-  items.forEach(it => {
-    const dateText = it.querySelector(".date").textContent.toLowerCase();
-    const descText = it.querySelector(".desc").textContent.toLowerCase();
-    const match = dateText.includes(kw) || descText.includes(kw);
-    it.style.display = match ? "block" : "none";
-  });
-  updateCountTip();
+    if(!kw){
+      filterTimeline();
+      return;
+    }
+    items.forEach(it => {
+      const dateText = it.querySelector(".date").textContent.toLowerCase();
+      const descText = it.querySelector(".desc").textContent.toLowerCase();
+      const match = dateText.includes(kw) || descText.includes(kw);
+      it.style.display = match ? "block" : "none";
+    });
+    updateCountTip();
+  }, 250);
 }
 
 function resetAll(){
@@ -1197,6 +1207,16 @@ async function uploadImageToRepo(file, dateStr, cb){
       }, 90000);
       if(!res.ok) throw new Error("上传失败（" + res.status + "），请检查令牌与网络");
       const cdn = `https://${GH.owner}.github.io/${GH.repo}/${path}`;
+      // 同步生成并上传缩略图（宽400）到 .thumb/，保证页面立即能显示小图
+      try{
+        const thumbB64 = await makeThumbB64(file);
+        const thumbPath = "images/" + dateStr + "/.thumb/" + name.replace(/\.[^.]+$/, "") + ".jpg";
+        await ghFetch(GH_API + thumbPath, {
+          method: "PUT",
+          headers: ghHeaders(),
+          body: JSON.stringify({ message: "时光图库缩略图: " + thumbPath, content: thumbB64, branch: GH.branch })
+        }, 90000);
+      }catch(e){ /* 缩略图失败不影响原图上传 */ }
       cb(cdn);
     }catch(err){
       alert("图片上传失败：" + err.message);
@@ -1204,6 +1224,34 @@ async function uploadImageToRepo(file, dateStr, cb){
   };
   reader.onerror = () => alert("读取本地图片失败");
   reader.readAsDataURL(file);
+}
+
+// 生成缩略图（最长边400px，JPEG质量72），返回 base64
+function makeThumbB64(file){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      const MAX = 400;
+      const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+      const w = Math.max(1, Math.round(img.width * scale));
+      const h = Math.max(1, Math.round(img.height * scale));
+      const cv = document.createElement("canvas");
+      cv.width = w;
+      cv.height = h;
+      cv.getContext("2d").drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(objUrl);
+      cv.toBlob(b => {
+        if(!b) return reject(new Error("缩略图生成失败"));
+        const fr = new FileReader();
+        fr.onload = () => resolve(fr.result.split(",")[1]);
+        fr.onerror = () => reject(new Error("缩略图读取失败"));
+        fr.readAsDataURL(b);
+      }, "image/jpeg", 0.72);
+    };
+    img.onerror = () => { URL.revokeObjectURL(objUrl); reject(new Error("图片解码失败")); };
+    img.src = objUrl;
+  });
 }
 
 // 把新链接追加进文本框（逗号分隔，触发 input 事件同步到卡片）
