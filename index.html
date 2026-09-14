@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>行琳时光</title>
+<title>JL Time</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;}
 body{background:#ffffff;color:#333;padding:20px;}
@@ -164,7 +164,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 </div>
 
 <div class="header-wrap">
-  <div class="page-title" id="pageTitle" onclick="openTitleEditModal()">行琳时光</div>
+  <div class="page-title" id="pageTitle" onclick="openTitleEditModal()">JL Time</div>
 </div>
 
 <div class="filter-box">
@@ -232,7 +232,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
     <input type="text" id="editComboImgs">
     <div style="margin:2px 0 8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
       <button type="button" class="ghost-upload" onclick="pickUploadImg('editComboImgs', () => document.getElementById('editComboDate').value.trim(), l => appendImgLink('editComboImgs', l))">上传图片</button>
-      <span class="tip-small">上传到仓库 images/日期/ 自动生成CDN链接</span>
+      <span class="tip-small">上传到仓库 images/日期/ 自动生成 harvieie.github.io 图片链接</span>
     </div>
     <label>外部链接</label>
     <input type="text" id="linkInput" placeholder="https://...">
@@ -286,7 +286,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
     <textarea id="newCardImgs" placeholder="https://xxx.jpg,https://yyy.jpg"></textarea>
     <div style="margin:2px 0 8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
       <button type="button" class="ghost-upload" onclick="pickUploadImg('newCardImgs', () => document.getElementById('newCardDate').value.trim(), l => appendImgLink('newCardImgs', l))">上传图片</button>
-      <span class="tip-small">按日期上传到仓库 images/日期/ 自动生成CDN链接</span>
+      <span class="tip-small">按日期上传到仓库 images/日期/ 自动生成 harvieie.github.io 图片链接</span>
     </div>
     <label>备注描述</label>
     <textarea id="newCardDesc" placeholder="记录旅途美好瞬间"></textarea>
@@ -304,7 +304,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
     <input type="text" id="editImgUrl" placeholder="https://xxx.jpg">
     <div style="margin:2px 0 8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
       <button type="button" class="ghost-upload" onclick="pickUploadImg('editImgUrl', getActiveCardDate, l => document.getElementById('editImgUrl').value = l)">上传图片</button>
-      <span class="tip-small">上传到该卡片日期文件夹并生成CDN链接</span>
+      <span class="tip-small">上传到该卡片日期文件夹并生成 harvieie.github.io 图片链接</span>
     </div>
     <div class="img-edit-buttons">
       <button onclick="addImgLink()">增加</button>
@@ -335,7 +335,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
     <h3>导入数据</h3>
     <p style="color:#b45309;font-size:13px;">⚠️ 导入会<strong>完全覆盖</strong>本地全部现有卡片及大标题，请先导出备份！</p>
     <label>选择本地 JSON 文件，或直接粘贴导出数据</label>
-    <textarea id="importText" placeholder='{"title":"行琳时光","cards":[{"date":"2026-09-01","locs":["苏州"],"imgs":["https://..."],"note":"...","link":"https://..."}]}'></textarea>
+    <textarea id="importText" placeholder='{"title":"JL Time","cards":[{"date":"2026-09-01","locs":["苏州"],"imgs":["https://..."],"note":"...","link":"https://..."}]}'></textarea>
     <div class="import-buttons">
       <button class="import" onclick="pickImportFile()">选择文件</button>
       <button class="import" onclick="doImportData()">确认导入</button>
@@ -373,7 +373,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 
 <script>
 /* ============================================================
-   行琳时光 · 单文件时间轴
+   JL Time · 单文件时间轴
    数据：localStorage "timeline_cards" / "page_title"
    导出格式：{ title, cards }，兼容旧版纯卡片数组
    云同步：GitHub 仓库（直接调用 GitHub API 读写 data/ 文件夹，保留最近 10 个时间节点）
@@ -484,7 +484,7 @@ function saveCards(list){
   localStorage.setItem(STORAGE.cards, JSON.stringify(list));
 }
 
-function getPageTitle(){ return localStorage.getItem(STORAGE.title) || "行琳时光"; }
+function getPageTitle(){ return localStorage.getItem(STORAGE.title) || "JL Time"; }
 function setPageTitle(text){ localStorage.setItem(STORAGE.title, text); }
 
 function getThumbnailUrl(url){
@@ -1033,7 +1033,7 @@ async function pushCloudSnapshot(note){
     if(files.length >= GH.maxNodes){
       for(const f of files.slice(GH.maxNodes - 1)) await wdDeleteFile(f);
     }
-    const name = `xinglin_${nowStamp()}${note ? "_" + note : ""}.json`;
+    const name = `jltime_${nowStamp()}${note ? "_" + note : ""}.json`;
     await wdWriteFile(name, { title: getPageTitle(), cards: loadCards() });
   }catch(err){
     showToast("云端数据更新失败：" + err.message, 4);
@@ -1063,7 +1063,7 @@ function downloadExportFile(){
   const d = new Date();
   const pad = n => String(n).padStart(2, "0");
   a.href = url;
-  a.download = `行琳时光数据_${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}.json`;
+  a.download = `JLTime数据_${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -1135,7 +1135,7 @@ function doImportData(){
 
 /* ============================================================
    GitHub 云同步（直接调用 GitHub API / 下载 / 上传 / 恢复）
-   数据文件：{dir}/xinglin_YYYYMMDDHHmmss.json，保留最近 10 个
+   数据文件：{dir}/jltime_YYYYMMDDHHmmss.json，保留最近 10 个
    ============================================================ */
 
 const GH_API = "https://api.github.com/repos/" + GH.owner + "/" + GH.repo + "/contents/";
@@ -1180,22 +1180,35 @@ function pickUploadImg(targetId, getDate, cb){
   fi.onchange = () => {
     const file = fi.files[0];
     if(!file) return;
-    uploadImageToRepo(file, getDate(), cdn => cb(cdn));
+    const dateStr = getDate();
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(dateStr || "")){
+      alert("请先填写正确的日期（YYYY-MM-DD），图片将上传到该日期的图库文件夹");
+      return;
+    }
+    const m = file.name.toLowerCase().match(/\.(jpe?g|png|gif|webp|bmp)$/);
+    const ext = m ? (m[1] === "jpeg" ? "jpg" : m[1]) : "jpg";
+    const d = new Date();
+    const p = n => String(n).padStart(2, "0");
+    const name = `img_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.${ext}`;
+    const link = `https://${GH.owner}.github.io/${GH.repo}/images/${dateStr}/${name}`;
+    // 上传前确认：简要列出即将执行的内容
+    const msg = [
+      "确认上传图片：",
+      "· 文件：" + file.name,
+      "· 上传到：images/" + dateStr + "/" + name,
+      "· 同时生成缩略图（.thumb）",
+      "· 生成链接：" + link,
+      "",
+      "点「确定」开始上传"
+    ].join("\n");
+    if(!confirm(msg)) return;
+    uploadImageToRepo(file, dateStr, name, cdn => cb(cdn));
   };
   fi.click();
 }
 
-// 上传单张图片到 images/<日期>/，自动取 GitHub 安全文件名，成功后回传 CDN 链接
-async function uploadImageToRepo(file, dateStr, cb){
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(dateStr || "")){
-    alert("请先填写正确的日期（YYYY-MM-DD），图片将上传到该日期的图库文件夹");
-    return;
-  }
-  const m = file.name.toLowerCase().match(/\.(jpe?g|png|gif|webp|bmp)$/);
-  const ext = m ? (m[1] === "jpeg" ? "jpg" : m[1]) : "jpg";
-  const d = new Date();
-  const p = n => String(n).padStart(2, "0");
-  const name = `img_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.${ext}`;
+// 上传单张图片到 images/<日期>/（name 已由确认窗口预生成），成功后回传 GitHub Pages 链接
+async function uploadImageToRepo(file, dateStr, name, cb){
   const path = "images/" + dateStr + "/" + name;
   const reader = new FileReader();
   reader.onload = async () => {
@@ -1273,7 +1286,7 @@ function getActiveCardDate(){
 
 function ghPath(name){ return GH.dir + "/" + name; }
 
-// 列出云端备份文件（仅 xinglin_*.json，最近 → 最远）；目录不存在视为空
+// 列出云端备份文件（仅 jltime_/xinglin_*.json，最近 → 最远）；目录不存在视为空
 async function wdList(){
   const url = GH_API + encodeURIComponent(GH.dir) + "?ref=" + encodeURIComponent(GH.branch);
   const res = await ghFetch(url, { headers: ghHeaders() });
@@ -1283,8 +1296,8 @@ async function wdList(){
   const files = [];
   (Array.isArray(items) ? items : []).forEach(it => {
     const name = it.name;
-    // 兼容两种命名：xinglin_时间戳.json 与 xinglin_时间戳_版本说明.json
-    const m = name && name.match(/^xinglin_(\d{14})(?:_[^/]+)?\.json$/);
+    // 兼容两种命名：jltime_/xinglin_ 时间戳.json 与 时间戳_版本说明.json
+    const m = name && name.match(/^(?:jltime|xinglin)_(\d{14})(?:_[^/]+)?\.json$/);
     if(m){
       const ts = m[1];
       const rest = name.slice(8 + 14, -5);        // 取时间戳后的部分
@@ -1366,7 +1379,7 @@ async function wdUpload(){
         await wdDeleteFile(f);
       }
     }
-    const name = `xinglin_${nowStamp()}.json`;
+    const name = `jltime_${nowStamp()}.json`;
     await wdWriteFile(name, { title: getPageTitle(), cards: loadCards() });
     alert(`已上传至云端（${formatNodeTime(name.slice(8, 22))}），云端保留最近 ${GH.maxNodes} 个节点`);
   }catch(err){
@@ -1433,13 +1446,13 @@ function closeRestoreModal(){ document.getElementById("restoreModal").style.disp
 
 // 恢复指定节点并覆盖本地
 async function wdRestoreNode(name){
-  const m = name.match(/^xinglin_(\d{14})/);
-  const ts = m ? m[1] : name.replace("xinglin_", "").replace(".json", "");
+  const m = name.match(/^(?:jltime|xinglin)_(\d{14})/);
+  const ts = m ? m[1] : name.replace(/^(?:jltime|xinglin)_/, "").replace(".json", "");
   if(!confirm(`确定恢复到 ${formatNodeTime(ts)} 这个备份点？本地当前数据将被覆盖！`)) return;
   try{
     const imported = await wdReadFile(name);
     const count = applyImportedData(imported);
-    setCloudLoaded({ name, ts, label: (name.match(/^xinglin_\d{14}(?:_[^/]+)?\.json$/) && name.length > 22) ? name.slice(23, -5) : "" });
+    setCloudLoaded({ name, ts, label: (name.match(/^(?:jltime|xinglin)_\d{14}(?:_[^/]+)?\.json$/) && name.length > 22) ? name.replace(/^(?:jltime|xinglin)_\d{14}_/, "").slice(0, -5) : "" });
     closeRestoreModal();
     alert(`已恢复到 ${formatNodeTime(ts)} 的备份，共载入 ${count} 条记录`);
   }catch(err){
