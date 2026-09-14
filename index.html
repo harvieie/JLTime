@@ -905,6 +905,19 @@ function addImgLink(){
   updateGalleryPageInfo();
 }
 
+/* 待删云端图清单：删除照片时先记下，下次「上传」时统一把云端原图移入回收站 */
+function getPendingDeletes(){
+  try{ return JSON.parse(localStorage.getItem("pending_deletes") || "[]"); }catch(e){ return []; }
+}
+function addPendingDelete(path){
+  const list = getPendingDeletes();
+  if(!list.includes(path)) list.push(path);
+  localStorage.setItem("pending_deletes", JSON.stringify(list));
+}
+function clearPendingDelete(path){
+  localStorage.setItem("pending_deletes", JSON.stringify(getPendingDeletes().filter(p => p !== path)));
+}
+
 function deleteImgLink(){
   if(state.galleryImages.length <= 1) return alert("至少保留一张图片，不能删除");
   const target = state.galleryImages[state.galleryIndex];
@@ -918,16 +931,10 @@ function deleteImgLink(){
     return;
   }
   const path = "images/" + m[1] + "/" + m[2];
-  if(!confirm("「" + m[2] + "」将移入云端回收站（保留30天自动清除），确定？")) return;
-  (async () => {
-    try{
-      await moveToTrash(path);                           // 原图移入回收站（.trash/时间戳_文件名）
-      deleteLocalImgOnly();                              // 再删本地卡片
-      pushCloudSnapshot("删除图片");                       // 更新云端数据节点，保持一致
-    }catch(err){
-      alert("云端移入回收站失败：" + err.message + "（本地未删除，可重试）");
-    }
-  })();
+  if(!confirm("「" + m[2] + "」将从本地删除；云端原图会在下次点「上传」时同步移入回收站（保留30天自动清除），确定？")) return;
+  addPendingDelete(path);                                // 记录待删云端图（上传时处理）
+  deleteLocalImgOnly();                                  // 立即删除本地卡片
+  showToast("已删除，云端图库将在下次「上传」时同步删除", 3);
 }
 
 // 仅从当前卡片移除链接（不涉及云端）
@@ -1376,20 +1383,29 @@ async function wdUpload(){
   try{ files = await wdList(); }catch(e){ /* 目录读取失败时按空处理 */ }
   const cards = loadCards();
   const imgCount = cards.reduce((s, c) => s + ((c.imgs && c.imgs.length) || 0), 0);
+  const pendings = getPendingDeletes();
   const name = `jltime_${nowStamp()}.json`;
   const lines = [
     "确认上传云端数据？",
     "· 大标题：" + (getPageTitle() || "（空）"),
     "· 卡片：" + cards.length + " 张",
     "· 图片：" + imgCount + " 张",
+    pendings.length ? "· 待同步删除云端图：" + pendings.length + " 张（移入回收站）" : "",
     "· 云端现有节点：" + files.length + " 个" + (files.length >= GH.maxNodes ? "（将删除最旧1个）" : ""),
     "· 将保存为新节点：" + formatNodeTime(name.slice(8, 22)),
     "",
     "点「确定」开始上传"
-  ];
+  ].filter(l => l !== "");
   if(!confirm(lines.join("\n"))) return;
   if(btn){ btn.disabled = true; btn.textContent = "上传中…"; }
   try{
+    // 先同步删除待删的云端原图（移入回收站），失败的保留清单下次再试
+    for(const p of pendings){
+      try{
+        await moveToTrash(p);
+        clearPendingDelete(p);
+      }catch(e){ /* 云端删除失败：保留清单，下次上传重试 */ }
+    }
     if(files.length >= GH.maxNodes){
       for(const f of files.slice(GH.maxNodes - 1)){
         await wdDeleteFile(f);
