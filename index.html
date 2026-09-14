@@ -847,6 +847,8 @@ function closeGallery(){
 function showGalleryImage(){
   state.fullImageLoaded = false;
   document.getElementById("galleryImg").src = getThumbnailUrl(state.galleryImages[state.galleryIndex]);
+  // 每切到一张新图都重新显示「查看原图」按钮（当前图始终以缩略图展示，可随时点开原图）
+  document.getElementById("loadFullBtn").style.display = "inline-block";
   updateGalleryPageInfo();
 }
 function loadFullRes(){
