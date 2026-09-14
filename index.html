@@ -573,6 +573,15 @@ function renderAllCards(){
   wrap.innerHTML = "";
   wrap.appendChild(pathNode);
 
+  // 未输入暗号授权：不显示任何数据
+  if(!isAuthGranted()){
+    const tip = document.createElement("div");
+    tip.className = "empty-tip";
+    tip.innerHTML = "🔒 请输入暗号进入后查看";
+    wrap.appendChild(tip);
+    return;
+  }
+
   const cards = applySort(loadCards());
   const fragment = document.createDocumentFragment();
 
@@ -897,14 +906,14 @@ function deleteImgLink(){
     return;
   }
   const path = "images/" + m[1] + "/" + m[2];
-  if(!confirm("同时删除仓库图库中的「" + m[2] + "」？删除后不可恢复。")) return;
+  if(!confirm("「" + m[2] + "」将移入云端回收站（保留30天自动清除），确定？")) return;
   (async () => {
     try{
-      await deleteRepoFile(path);                        // 先删云端图库
+      await moveToTrash(path);                           // 原图移入回收站（.trash/时间戳_文件名）
       deleteLocalImgOnly();                              // 再删本地卡片
       pushCloudSnapshot("删除图片");                       // 更新云端数据节点，保持一致
     }catch(err){
-      alert("云端删除失败：" + err.message + "（本地未删除，可重试）");
+      alert("云端移入回收站失败：" + err.message + "（本地未删除，可重试）");
     }
   })();
 }
@@ -935,6 +944,69 @@ async function deleteRepoFile(path){
     body: JSON.stringify({ message: "时光图库删除: " + path, sha: sha, branch: GH.branch })
   });
   if(!del.ok && del.status !== 404) throw new Error("删除云端文件失败（" + del.status + "）");
+}
+
+// 把仓库图库文件移入回收站：images/<日期>/.trash/<删除时间戳>_<原名>，保留30天后自动清除
+async function moveToTrash(path){
+  const url = GH_API + path;
+  const res = await ghFetch(url + "?ref=" + encodeURIComponent(GH.branch), { headers: ghHeaders() });
+  if(res.status === 404) return;                         // 云端本就无此文件，放行
+  if(!res.ok) throw new Error("读取云端文件失败（" + res.status + "）");
+  const meta = await res.json();
+  const parts = path.split("/");
+  const trashPath = "images/" + parts[1] + "/.trash/" + nowStamp() + "_" + parts[2];
+  // 取文件内容：小文件直接取 content，大文件用 download_url 拉取
+  let b64 = meta.content;
+  if(!b64){
+    const dl = await fetch(meta.download_url);
+    if(!dl.ok) throw new Error("读取云端图片内容失败");
+    const bytes = new Uint8Array(await dl.arrayBuffer());
+    let bin = "";
+    for(let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    b64 = btoa(bin);
+  }
+  // 写入回收站
+  const put = await ghFetch(GH_API + trashPath, {
+    method: "PUT",
+    headers: Object.assign({ "Content-Type": "application/json" }, ghHeaders()),
+    body: JSON.stringify({ message: "移入回收站: " + parts[2], content: b64, branch: GH.branch })
+  });
+  if(!put.ok) throw new Error("移入回收站失败（" + put.status + "）");
+  // 删除原位置文件
+  const del = await ghFetch(url, {
+    method: "DELETE",
+    headers: Object.assign({ "Content-Type": "application/json" }, ghHeaders()),
+    body: JSON.stringify({ message: "已移入回收站: " + path, sha: meta.sha, branch: GH.branch })
+  });
+  if(!del.ok) throw new Error("删除原文件失败（" + del.status + "）");
+}
+
+// 清理回收站中超过30天的文件（进入云端后自动执行）
+async function cleanTrash(){
+  const root = await ghFetch(GH_API + "images/?ref=" + encodeURIComponent(GH.branch), { headers: ghHeaders() });
+  if(!root.ok) return;
+  const dirs = (await root.json()).filter(x => x.type === "dir");
+  const now = Date.now();
+  const DAY = 30 * 24 * 3600 * 1000;
+  for(const d of dirs){
+    const trashUrl = GH_API + "images/" + d.name + "/.trash?ref=" + encodeURIComponent(GH.branch);
+    let res;
+    try{ res = await ghFetch(trashUrl, { headers: ghHeaders() }); }catch(e){ continue; }
+    if(res.status === 404 || !res.ok) continue;
+    const files = await res.json();
+    for(const f of files){
+      const m = f.name.match(/^(\d{14})_/);
+      if(!m) continue;
+      const ts = m[1];
+      const t = new Date(+ts.slice(0,4), +ts.slice(4,6) - 1, +ts.slice(6,8), +ts.slice(8,10), +ts.slice(10,12), +ts.slice(12,14)).getTime();
+      if(now - t <= DAY) continue;
+      await ghFetch(GH_API + "images/" + d.name + "/.trash/" + f.name, {
+        method: "DELETE",
+        headers: Object.assign({ "Content-Type": "application/json" }, ghHeaders()),
+        body: JSON.stringify({ message: "回收站超30天自动清除: " + f.name, sha: f.sha, branch: GH.branch })
+      });
+    }
+  }
 }
 
 // 把当前本地卡片数据作为新节点推上云端（保持本地云端统一）
@@ -1380,11 +1452,14 @@ function applyViewMode(mode){
   viewMode = mode;
   sessionStorage.setItem("view_mode", mode);
   const zone = document.getElementById("editZone");
-  if(zone) zone.style.display = mode === "view" ? "none" : "contents";
+  if(zone) zone.style.display = (mode === "full" && isAuthGranted()) ? "contents" : "none";
   const lbBtn = document.getElementById("lightboxEditLinkBtn");
   if(lbBtn) lbBtn.style.display = mode === "view" ? "none" : "";
   renderAllCards();
 }
+
+// 授权状态：只有输入正确暗号「进入」后才为 1，未授权时不显示任何数据、编辑与云端操作不可用
+function isAuthGranted(){ return sessionStorage.getItem("auth_granted") === "1"; }
 
 // 云端连接锁定状态：点「确定」清缓存后断开云端，下载/上传/恢复不可用，直到输入暗号「进入」
 function isCloudLocked(){ return sessionStorage.getItem("cloud_locked") === "1"; }
@@ -1402,8 +1477,9 @@ function clearLocalCache(){
   renderAllCards();
 }
 
-// 确定：无需密码，直接清除本地缓存并断开云端连接
+// 确定：无需密码，直接清除本地缓存并断开云端连接（仍属未授权）
 function confirmClearCache(){
+  sessionStorage.setItem("auth_granted", "0");
   clearLocalCache();
   sessionStorage.setItem("cloud_locked", "1");
   closeCacheConfirm();
@@ -1413,14 +1489,17 @@ function confirmClearCache(){
 // 进入：校验暗号（X328 访客 / X123 完整），解锁云端，清缓存后拉取云端
 function enterWithPwd(){
   const pwd = document.getElementById("cachePwd").value.trim();
+  let mode = "";
   if(pwd === VIEW_PWD){
-    applyViewMode("view");
+    mode = "view";
   }else if(pwd === ghPwd()){
-    applyViewMode("full");
+    mode = "full";
   }else{
     alert("暗号错误：请在“般若波罗蜜”处输入正确暗号后再进入");
     return;
   }
+  sessionStorage.setItem("auth_granted", "1");
+  applyViewMode(mode);
   sessionStorage.removeItem("cloud_locked");
   clearLocalCache();
   closeCacheConfirm();
@@ -1456,6 +1535,7 @@ async function cloudPullAfterClear(){
     const count = applyImportedData(imported);
     setCloudLoaded(latest);
     showToast(`已载入云端最新数据（${formatNodeTime(latest.ts)}，共 ${count} 条记录）`, 3);
+    cleanTrash().catch(() => {});                        // 后台清理回收站中超过30天的图片
   }catch(err){
     showToast("云端拉取失败：" + err.message, 4);
   }
@@ -1472,7 +1552,13 @@ function showToast(msg, seconds){
 }
 
 document.getElementById("cacheOkBtn").addEventListener("click", confirmClearCache);
-document.getElementById("cacheCancelBtn").addEventListener("click", closeCacheConfirm);
+document.getElementById("cacheCancelBtn").addEventListener("click", function(){
+  // 取消：不输密码，不显示任何数据，云端连接保持断开（必须暗号「进入」才能读取）
+  sessionStorage.setItem("auth_granted", "0");
+  sessionStorage.setItem("cloud_locked", "1");
+  closeCacheConfirm();
+  renderAllCards();
+});
 document.getElementById("cacheEnterBtn").addEventListener("click", enterWithPwd);
 
 /* ---------- 备注文本框：回车自动缩进两个字符（全角空格） ---------- */
