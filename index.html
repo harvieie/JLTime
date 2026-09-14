@@ -1371,15 +1371,30 @@ async function wdUpload(){
   if(viewMode === "view") return;
   if(isCloudLocked()) return showToast("云端连接已断开：请点击「清缓」，输入暗号「进入」恢复", 4);
   const btn = event && event.currentTarget;
+  // 上传前确认：简要列出本次将上传的内容
+  let files = [];
+  try{ files = await wdList(); }catch(e){ /* 目录读取失败时按空处理 */ }
+  const cards = loadCards();
+  const imgCount = cards.reduce((s, c) => s + ((c.imgs && c.imgs.length) || 0), 0);
+  const name = `jltime_${nowStamp()}.json`;
+  const lines = [
+    "确认上传云端数据？",
+    "· 大标题：" + (getPageTitle() || "（空）"),
+    "· 卡片：" + cards.length + " 张",
+    "· 图片：" + imgCount + " 张",
+    "· 云端现有节点：" + files.length + " 个" + (files.length >= GH.maxNodes ? "（将删除最旧1个）" : ""),
+    "· 将保存为新节点：" + formatNodeTime(name.slice(8, 22)),
+    "",
+    "点「确定」开始上传"
+  ];
+  if(!confirm(lines.join("\n"))) return;
   if(btn){ btn.disabled = true; btn.textContent = "上传中…"; }
   try{
-    const files = await wdList();
     if(files.length >= GH.maxNodes){
       for(const f of files.slice(GH.maxNodes - 1)){
         await wdDeleteFile(f);
       }
     }
-    const name = `jltime_${nowStamp()}.json`;
     await wdWriteFile(name, { title: getPageTitle(), cards: loadCards() });
     alert(`已上传至云端（${formatNodeTime(name.slice(8, 22))}），云端保留最近 ${GH.maxNodes} 个节点`);
   }catch(err){
