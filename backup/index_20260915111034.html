@@ -1,0 +1,1990 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JL Time</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;}
+body{background:#ffffff;color:#333;padding:20px;}
+
+/* ===== 顶部大标题（空心胖圆） ===== */
+.header-wrap{max-width:800px;margin:0 auto 40px;text-align:center;}
+.page-title{
+  display:inline-block;font-size:42px;letter-spacing:6px;font-weight:900;cursor:pointer;
+  font-family:"Comic Sans MS","ZCOOL KuaiLe","PingFang SC","Microsoft YaHei",sans-serif;
+  -webkit-text-stroke:1px #2c3e50;-webkit-text-fill-color:transparent;transition:.2s;
+}
+.page-title:hover{-webkit-text-stroke-color:#3b82f6;}
+
+/* ===== 筛选栏 ===== */
+.filter-box{
+  max-width:800px;margin:0 auto 30px;padding:16px;background:#f7f9fc;border:1px solid #eef2f7;border-radius:14px;
+  display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:center;
+}
+.filter-box label{font-weight:600;color:#444;width:48px;text-align:left;flex:none;}
+select,button,input,textarea{padding:8px 12px;border:1px solid #dde5ee;border-radius:10px;font-size:14px;background:#fff;color:#333;}
+input{flex:1;min-width:180px;}
+#searchInput{flex:none;width:160px;min-width:120px;}
+.count-tip{font-size:12px;color:#666;white-space:nowrap;}
+#editZone{display:contents;}  /* 访客模式整体隐藏：display:none */
+button{background:#3b82f6;color:#fff;border:none;cursor:pointer;transition:.2s;}
+button:hover{background:#2563eb;}
+button.danger{background:#ef4444;}button.danger:hover{background:#dc2626;}
+button.success{background:#10b981;}button.success:hover{background:#059669;}
+button.export{background:#8b5cf6;}button.export:hover{background:#7c3aed;}
+button.import{background:#0891b2;}button.import:hover{background:#0e7490;}
+button.checked-mode{background:#f59e0b;}button.checked-mode:hover{background:#d97706;}
+button.ghost-upload{background:#eef6f8;color:#0e7490;border:1px solid #cfe3e8;padding:4px 12px;font-size:12px;border-radius:8px;}
+button.ghost-upload:hover{background:#dceef2;}
+button.ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.5);}
+button.ghost:hover{background:rgba(255,255,255,.15);}
+.tip-small{font-size:12px;color:#888;}
+
+/* ===== 双轨蜿蜒小路时间轴 ===== */
+.timeline{max-width:800px;margin:0 auto;position:relative;padding:40px 0;}
+.timeline-path{position:absolute;left:50%;top:0;bottom:0;width:52px;transform:translateX(-50%);pointer-events:none;z-index:0;}
+.timeline-path svg{width:100%;height:100%;display:block;overflow:visible;}
+.timeline-item{width:50%;position:relative;z-index:1;padding-bottom:60px;}
+.timeline-item.left{padding-right:50px;text-align:right;}
+.timeline-item.right{margin-left:50%;padding-left:50px;}
+
+/* ===== 彩色线条脚印（左橙右青，左右交替） ===== */
+.footprint{position:absolute;top:12px;z-index:3;width:34px;height:44px;}
+.timeline-item.left .footprint{right:-17px;color:#ff7850;transform:rotate(-8deg);}
+.timeline-item.right .footprint{left:-17px;color:#23c4c9;transform:rotate(8deg);}
+
+/* ===== 卡片 ===== */
+.card{
+  background:#fff;padding:14px;border-radius:16px;position:relative;text-align:left;
+  box-shadow:0 4px 18px rgba(0,0,0,.06),0 1px 3px rgba(0,0,0,.04);border:1px solid #eef2f7;
+  transition:transform .25s,box-shadow .25s;
+}
+.card:hover{transform:translateY(-4px);box-shadow:0 10px 24px rgba(0,0,0,.09);}
+.card img{width:100%;aspect-ratio:4/3;border-radius:12px;object-fit:cover;max-height:320px;cursor:pointer;}
+.card .date{font-weight:bold;color:#3b82f6;margin:8px 0;cursor:pointer;font-size:15px;text-indent:2em;}
+.card .date:hover{text-decoration:underline;}
+.card .desc{color:#555;line-height:1.65;cursor:pointer;text-indent:2em;white-space:pre-wrap;word-break:break-word;}
+.card .desc:hover{color:#3b82f6;}
+.card-checkbox{position:absolute;top:12px;left:12px;width:20px;height:20px;cursor:pointer;z-index:5;}
+
+/* ===== 大图灯箱（居中查看） ===== */
+.lightbox{
+  position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.87);z-index:999;padding:20px;
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+}
+.lightbox-img-wrap{display:flex;align-items:center;justify-content:center;}
+.lightbox img{max-width:90%;max-height:70vh;border-radius:12px;}
+.lightbox .nav{margin-top:20px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center;align-items:center;}
+.lightbox .close-btn{color:#fff;font-size:16px;cursor:pointer;padding:6px 12px;border:1px solid rgba(255,255,255,.5);border-radius:6px;}
+.lightbox .close-btn:hover{background:rgba(255,255,255,.15);}
+.lightbox .page-num{color:#fff;font-size:15px;min-width:60px;text-align:center;}
+
+/* ===== 通用弹窗 ===== */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;padding:20px;display:none;align-items:center;justify-content:center;}
+.modal-box{background:#fff;padding:28px 32px;border-radius:16px;max-width:440px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,.18);}
+.modal-title{font-size:18px;font-weight:600;text-align:center;margin-bottom:16px;color:#222;}
+.modal-text{text-align:center;line-height:1.8;color:#444;margin-bottom:24px;}
+.modal-text .hl{font-weight:800;font-size:17px;color:#1f2937;}
+.modal-buttons{display:flex;gap:12px;justify-content:center;}
+.modal-buttons button{padding:9px 22px;border-radius:8px;font-size:15px;}
+
+.link-modal,.note-modal,.add-modal,.img-edit-modal,.export-modal,.import-modal,.title-modal,.restore-modal{
+  position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.47);z-index:1000;display:none;align-items:center;justify-content:center;
+}
+.link-box,.note-box,.add-box,.img-edit-box,.export-box,.import-box,.title-box,.restore-box{
+  background:#fff;padding:20px;border-radius:12px;width:90%;max-width:550px;max-height:90vh;overflow-y:auto;
+}
+.export-box{max-width:800px;}
+.link-box h3,.note-box h3,.add-box h3,.img-edit-box h3,.export-box h3,.import-box h3,.title-box h3,.restore-box h3{margin-bottom:10px;color:#222;}
+.link-box label,.note-box label,.add-box label,.img-edit-box label,.title-box label,.import-box label{display:block;margin:10px 0 4px;font-weight:500;color:#333;}
+.link-box input,.link-box textarea,.note-box textarea,.add-box input,.add-box textarea,.img-edit-box input,.title-box input,.import-box textarea{
+  width:100%;padding:10px;font-size:14px;border:1px solid #dde5ee;border-radius:8px;margin-bottom:6px;background:#fff;color:#333;
+}
+#noteText,#importText{min-height:160px;resize:vertical;}
+#exportText{min-height:320px;resize:both;}
+.link-buttons,.note-buttons,.add-buttons,.img-edit-buttons,.export-buttons,.import-buttons,.title-buttons{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px;}
+
+/* ===== 云端恢复列表 ===== */
+.restore-list{max-height:50vh;overflow-y:auto;}
+.restore-item{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:10px 12px;border:1px solid #eef2f7;border-radius:10px;margin-bottom:8px;background:#fafbfd;
+}
+.restore-item .restore-time{font-size:14px;color:#333;font-weight:600;}
+.restore-item .restore-sub{font-size:12px;color:#888;margin-top:2px;}
+.restore-item button{flex:none;}
+.restore-tip{font-size:12px;color:#888;text-align:center;padding:10px 0;}
+.restore-current{font-size:12px;color:#0e7490;background:#e6f7f9;border-radius:8px;padding:8px 12px;margin-bottom:10px;text-align:center;line-height:1.6;}
+.empty-tip{text-align:center;color:#aaa;padding:90px 0;font-size:15px;line-height:2.1;}
+
+/* ===== 自动关闭提示条 ===== */
+.toast{
+  position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
+  background:rgba(17,24,39,.92);color:#fff;padding:18px 28px;border-radius:14px;
+  z-index:2000;max-width:82vw;text-align:center;line-height:1.7;font-size:15px;
+  box-shadow:0 10px 30px rgba(0,0,0,.25);opacity:0;transition:opacity .3s;pointer-events:none;
+}
+.toast.show{opacity:1;}
+
+/* ===== 移动端 ===== */
+@media (max-width:640px){
+  .filter-box{justify-content:flex-start;}
+  .filter-box label{text-align:left;}
+  .timeline-path{left:22px;transform:none;width:32px;}
+  .timeline-item{width:100%;padding-left:56px !important;padding-right:0 !important;text-align:left !important;}
+  .timeline-item.right{margin-left:0;}
+  .footprint{left:7px !important;right:auto !important;transform:none !important;}
+  .page-title{font-size:32px;letter-spacing:2px;}
+}
+
+/* ============================================================
+   情侣回忆相册美化 & 惊喜彩蛋
+   ============================================================ */
+body{
+  background:linear-gradient(180deg,#fffaf3 0%,#ffeef4 45%,#fdeef8 100%);
+  background-attachment:fixed;
+}
+/* 大标题两侧跳动爱心 */
+.title-wrap{position:relative;display:inline-block;}
+.title-heart{
+  position:absolute;top:50%;transform:translateY(-50%);color:#ff7da9;font-size:24px;opacity:.85;
+  transition:left .9s cubic-bezier(.3,1.2,.4,1),right .9s cubic-bezier(.3,1.2,.4,1);
+  pointer-events:none;
+}
+button{border-radius:12px;}
+.card{
+  background:linear-gradient(160deg,#ffffff 0%,#fff7f9 100%);
+  border:1px solid #ffe3ec;border-radius:18px;
+  box-shadow:0 6px 22px rgba(255,150,180,.12),0 2px 6px rgba(0,0,0,.04);
+}
+.card:hover{box-shadow:0 14px 30px rgba(255,150,180,.22),0 4px 10px rgba(0,0,0,.06);}
+.filter-box{background:rgba(255,255,255,.78);border-color:#ffe3ec;backdrop-filter:blur(6px);}
+
+/* 彩蛋层：烟花 canvas / 点按涟漪 / 漂浮小物 / 爆花（全部不拦截点击） */
+#fxCanvas{position:fixed;inset:0;pointer-events:none;z-index:999;}
+.ripple{
+  position:fixed;width:10px;height:10px;border:2px solid #ff9ec4;border-radius:50%;
+  pointer-events:none;z-index:998;animation:rippleAnim .7s ease-out forwards;
+}
+@keyframes rippleAnim{
+  0%{transform:scale(.3);opacity:.9;}
+  100%{transform:scale(4);opacity:0;}
+}
+.float-heart{
+  position:fixed;pointer-events:none;z-index:997;opacity:0;
+}
+.burst-part{
+  position:fixed;pointer-events:none;z-index:998;font-size:14px;opacity:1;
+  animation:burstOut .95s ease-out forwards;
+}
+@keyframes burstOut{
+  0%{transform:translate(0,0) scale(.5) rotate(0);opacity:1;}
+  100%{transform:translate(var(--dx),var(--dy)) scale(1.15) rotate(var(--rot));opacity:0;}
+}
+</style>
+</head>
+<body>
+
+<!-- 自动关闭提示条 -->
+<div class="toast" id="globalToast"></div>
+
+<!-- 缓存确认弹窗（首次打开 & 顶部清缓按钮共用） -->
+<div class="modal-overlay" id="cacheConfirmModal">
+  <div class="modal-box">
+    <div class="modal-title">提示</div>
+    <div class="modal-text">
+      <span class="hl">是否清除浏览器本地旧缓存？</span><br><br>
+      确定→直接清除本地缓存，<br>
+      进入→输入暗号后载入云端，<br>
+      取消→不清缓存，直接浏览本地。<br><br>
+      <input type="password" id="cachePwd" placeholder="般若波罗蜜" autocomplete="off" style="width:100%;text-align:center;letter-spacing:4px;">
+    </div>
+    <div class="modal-buttons">
+      <button id="cacheOkBtn">确定</button>
+      <button id="cacheCancelBtn" style="background:#999">取消</button>
+      <button id="cacheEnterBtn" class="success">进入</button>
+    </div>
+  </div>
+</div>
+
+<div class="header-wrap">
+  <div class="title-wrap">
+    <span class="title-heart" id="titleHeartA">❤</span>
+    <span class="page-title" id="pageTitle" onclick="openTitleEditModal()">JL Time</span>
+    <span class="title-heart" id="titleHeartB">❤</span>
+  </div>
+</div>
+
+<div class="filter-box">
+  <label>筛选：</label>
+  <select id="yearSel"><option value="">全部年份</option></select>
+  <select id="monthSel">
+    <option value="">全部月份</option>
+    <option value="01">01</option><option value="02">02</option><option value="03">03</option>
+    <option value="04">04</option><option value="05">05</option><option value="06">06</option>
+    <option value="07">07</option><option value="08">08</option><option value="09">09</option>
+    <option value="10">10</option><option value="11">11</option><option value="12">12</option>
+  </select>
+  <select id="locationSel"><option value="">全部地点</option></select>
+  <input type="text" id="searchInput" placeholder="搜索时间/地点/描述" oninput="doSearch()">
+  <span id="countTip" class="count-tip">0 条</span>
+  <button onclick="doSearch()">搜索</button>
+  <button onclick="resetAll()">重置</button>
+  <button id="sortDateBtn">时间↓晚-早</button>
+  <button id="sortLocBtn">地点↑A-Z</button>
+  <!-- 编辑分区：与筛选功能区分开（访客模式整体隐藏） -->
+  <span id="editZone">
+  <label>编辑：</label>
+  <button class="success" onclick="openAddCardModal()">新增</button>
+  <button class="checked-mode" id="multiDelBtn" onclick="toggleMultiDelete()">选删</button>
+  <button class="export" onclick="openExportModal()">导出</button>
+  <button class="import" onclick="openImportModal()">导入</button>
+  <!-- 云端同步：下载 / 上传 / 恢复 -->
+  <button onclick="wdDownload()">下载</button>
+  <button class="success" onclick="wdUpload()">上传</button>
+  <button class="checked-mode" onclick="wdOpenRestore()">恢复</button>
+  <button class="danger" onclick="openCacheConfirm()">清缓</button>
+  </span>
+</div>
+
+<div class="timeline" id="timelineWrap">
+  <div class="timeline-path" id="timelinePath">
+    <svg viewBox="0 0 52 1400" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="grayGrad" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0" stop-color="#e5e7eb"/>
+          <stop offset="1" stop-color="#6b7280"/>
+        </linearGradient>
+        <linearGradient id="sakuraGrad" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0" stop-color="#ffe3ea"/>
+          <stop offset="1" stop-color="#ff8fab"/>
+        </linearGradient>
+      </defs>
+      <path d="M12,1400 C26,1300 4,1200 24,1100 C42,1000 8,900 26,800 C44,700 6,600 28,500 C40,400 10,300 24,200 C32,120 18,60 26,0"
+            fill="none" stroke="url(#grayGrad)" stroke-width="4" stroke-linecap="round"/>
+      <path d="M40,1400 C22,1300 46,1200 26,1100 C8,1000 42,900 26,800 C10,700 48,600 24,500 C12,400 44,300 28,200 C20,120 34,60 26,0"
+            fill="none" stroke="url(#sakuraGrad)" stroke-width="4" stroke-linecap="round"/>
+    </svg>
+  </div>
+</div>
+
+<!-- 编辑日期/地点/图片/外部链接 -->
+<div class="link-modal" id="linkModal">
+  <div class="link-box">
+    <h3>修改日期 · 地点 · 图片 · 外部链接</h3>
+    <label>日期(YYYY-MM-DD)</label>
+    <input type="text" id="editComboDate">
+    <label>地点 <span class="tip-small">多个地点用英文逗号分隔，最多5个</span></label>
+    <input type="text" id="editComboLoc">
+    <label>图片链接 <span class="tip-small">多个用英文逗号分隔</span></label>
+    <input type="text" id="editComboImgs">
+    <div style="margin:2px 0 8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <button type="button" class="ghost-upload" onclick="pickUploadImg('editComboImgs', () => document.getElementById('editComboDate').value.trim(), l => appendImgLink('editComboImgs', l))">上传图片</button>
+      <span class="tip-small">上传到仓库 images/日期/ 自动生成 harvieie.github.io 图片链接</span>
+    </div>
+    <label>外部链接</label>
+    <input type="text" id="linkInput" placeholder="https://...">
+    <div class="link-buttons">
+      <button onclick="openLinkNow()">打开</button>
+      <button onclick="copyLink()">复制</button>
+      <button class="success" onclick="saveComboAll()">保存</button>
+      <button onclick="closeLinkModal()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 大图灯箱 -->
+<div class="lightbox" id="lightbox">
+  <div class="lightbox-img-wrap"><img id="galleryImg"></div>
+  <div class="nav">
+    <button onclick="galleryFirst()">最前</button>
+    <button onclick="galleryPrev()">上一张</button>
+    <span class="page-num" id="galleryPageNum">0 / 0</span>
+    <button onclick="galleryNext()">下一张</button>
+    <button onclick="galleryLast()">最后</button>
+    <button id="loadFullBtn" class="ghost" onclick="loadFullRes()">查看原图</button>
+    <button id="lightboxEditLinkBtn" class="success" onclick="openImgEditModal()">编辑链接</button>
+    <span class="close-btn" onclick="closeGallery()">关闭</span>
+  </div>
+</div>
+
+<!-- 编辑备注 -->
+<div class="note-modal" id="noteModal">
+  <div class="note-box">
+    <h3>编辑备注</h3>
+    <textarea id="noteText"></textarea>
+    <div class="note-buttons">
+      <button onclick="saveNote()">保存</button>
+      <button onclick="closeNote()">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- 新增卡片 -->
+<div class="add-modal" id="addModal">
+  <div class="add-box">
+    <h3>新增卡片</h3>
+    <label>日期(格式如2026-02-19)</label>
+    <input type="text" id="newCardDate" placeholder="2026-02-19">
+    <label>地点 <span class="tip-small">多个地点英文逗号分隔，最多5个</span></label>
+    <input type="text" id="newCardLoc" placeholder="洛阳,郑州">
+    <label>外部链接</label>
+    <input type="text" id="newCardLink" placeholder="可选，相册、游记链接">
+    <label>图片链接(多个用逗号分隔 https开头)</label>
+    <textarea id="newCardImgs" placeholder="https://xxx.jpg,https://yyy.jpg"></textarea>
+    <div style="margin:2px 0 8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <button type="button" class="ghost-upload" onclick="pickUploadImg('newCardImgs', () => document.getElementById('newCardDate').value.trim(), l => appendImgLink('newCardImgs', l))">上传图片</button>
+      <span class="tip-small">按日期上传到仓库 images/日期/ 自动生成 harvieie.github.io 图片链接</span>
+    </div>
+    <label>备注描述</label>
+    <textarea id="newCardDesc" placeholder="记录旅途美好瞬间"></textarea>
+    <div class="add-buttons">
+      <button class="success" onclick="submitNewCard()">提交新增</button>
+      <button onclick="closeAddCardModal()">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- 修改图片链接（可增加/删除） -->
+<div class="img-edit-modal" id="imgEditModal">
+  <div class="img-edit-box">
+    <h3>修改当前图片链接</h3>
+    <input type="text" id="editImgUrl" placeholder="https://xxx.jpg">
+    <div style="margin:2px 0 8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <button type="button" class="ghost-upload" onclick="pickUploadImg('editImgUrl', getActiveCardDate, l => document.getElementById('editImgUrl').value = l)">上传图片</button>
+      <span class="tip-small">上传到该卡片日期文件夹并生成 harvieie.github.io 图片链接</span>
+    </div>
+    <div class="img-edit-buttons">
+      <button onclick="addImgLink()">增加</button>
+      <button class="danger" onclick="deleteImgLink()">删除</button>
+      <button class="success" onclick="saveImgUrl()">保存</button>
+      <button onclick="closeImgEditModal()">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- 导出 -->
+<div class="export-modal" id="exportModal">
+  <div class="export-box">
+    <h3>导出完整数据</h3>
+    <p style="color:#666;font-size:13px;">可保存为 JSON 文件（浏览器默认下载位置），或复制全部JSON（含大标题与全部卡片）用于备份恢复</p>
+    <textarea id="exportText" readonly></textarea>
+    <div class="export-buttons">
+      <button class="export" onclick="downloadExportFile()">导出文件</button>
+      <button class="export" onclick="copyExportData()">复制全部</button>
+      <button onclick="closeExportModal()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 导入（覆盖替换） -->
+<div class="import-modal" id="importModal">
+  <div class="import-box">
+    <h3>导入数据</h3>
+    <p style="color:#b45309;font-size:13px;">⚠️ 导入会<strong>完全覆盖</strong>本地全部现有卡片及大标题，请先导出备份！</p>
+    <label>选择本地 JSON 文件，或直接粘贴导出数据</label>
+    <textarea id="importText" placeholder='{"title":"JL Time","cards":[{"date":"2026-09-01","locs":["苏州"],"imgs":["https://..."],"note":"...","link":"https://..."}]}'></textarea>
+    <div class="import-buttons">
+      <button class="import" onclick="pickImportFile()">选择文件</button>
+      <button class="import" onclick="doImportData()">确认导入</button>
+      <button onclick="closeImportModal()">取消</button>
+    </div>
+    <input type="file" id="importFileInput" accept=".json,application/json" style="display:none">
+  </div>
+</div>
+
+<!-- 云端恢复（时间节点列表） -->
+<div class="restore-modal" id="restoreModal">
+  <div class="restore-box">
+    <h3>恢复云端数据（最近 → 最远）</h3>
+    <p style="color:#b45309;font-size:13px;margin-bottom:10px;">⚠️ 恢复会<strong>覆盖</strong>本地现有卡片及大标题，云端最多保留最近 10 个时间节点。</p>
+    <div class="restore-current" id="restoreCurrent">当前载入：本地数据</div>
+    <div class="restore-list" id="restoreList"><div class="restore-tip">加载中…</div></div>
+    <div class="link-buttons">
+      <button class="checked-mode" onclick="ghSettings()">云端登录</button>
+      <button onclick="closeRestoreModal()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 修改大标题 -->
+<div class="title-modal" id="titleModal">
+  <div class="title-box">
+    <h3>编辑页面大标题</h3>
+    <input type="text" id="titleInput" placeholder="输入页面标题">
+    <div class="title-buttons">
+      <button class="success" onclick="savePageTitle()">保存</button>
+      <button onclick="closeTitleEditModal()">取消</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   JL Time · 单文件时间轴
+   数据：localStorage "timeline_cards" / "page_title"
+   导出格式：{ title, cards }，兼容旧版纯卡片数组
+   云同步：GitHub 仓库（直接调用 GitHub API 读写 data/ 文件夹，保留最近 10 个时间节点）
+   ============================================================ */
+
+/* ---------- 全局状态 ---------- */
+const state = {
+  galleryIndex: 0,
+  galleryImages: [],
+  activeCardId: null,
+  activeDescEl: null,
+  activeCardDom: null,
+  activeImageIndex: 0,
+  sortBy: "date",
+  sortAsc: false,
+  multiDeleteMode: false,
+  fullImageLoaded: false
+};
+
+const STORAGE = { cards: "timeline_cards", title: "page_title" };
+
+/* ---------- GitHub 云存储配置 ----------
+   数据以 json 文件存放在你的 GitHub 仓库 data/ 文件夹中，
+   页面直接调用 GitHub API（官方支持浏览器跨域），无需本地代理。
+   打开暗号：输入 123 = 访客模式（只读浏览）；输入 328 = 编辑模式（全部功能）。
+   令牌以混淆编码内嵌（源码不直接出现完整令牌），
+   令牌到期或更换仓库可在「恢复」弹窗 →「云端登录」中直接修改。 */
+const GH = {
+  branch: "main",
+  dir: "data",               // 云端存储文件夹（首次上传自动创建）
+  maxNodes: 10               // 云端最多保留 10 个时间节点
+};
+
+// 内置默认令牌（混淆编码，运行时还原；可通过「云端登录」覆盖）
+function defaultToken(){
+  const s = "==AWx12aDBzMDh2TiJFbsJmbjJnRY9Ua0I0M2oFWvZnTYlTOyc0Xwh2Z";
+  return atob(s.split("").reverse().join(""));
+}
+// 仓库名：可被「云端登录」覆盖（存 localStorage）
+function ghOwner(){ return localStorage.getItem("gh_owner") || "harvieie"; }
+function ghRepo(){ return localStorage.getItem("gh_repo") || "JLTime"; }
+// 令牌主体/末位：可被「云端登录」覆盖（存 localStorage，避免写入页面文件）
+function ghTokenBody(){
+  return localStorage.getItem("gh_token_body") || defaultToken().slice(0, -1);
+}
+function ghTokenTail(){
+  return localStorage.getItem("gh_token_tail") || defaultToken().slice(-1);
+}
+// 拼回完整令牌
+function ghToken(){
+  return ghTokenBody() + ghTokenTail();
+}
+// 云端 API 根地址（随仓库配置动态变化）
+function ghApi(){
+  return "https://api.github.com/repos/" + ghOwner() + "/" + ghRepo() + "/contents/";
+}
+
+// 云端登录（恢复弹窗入口）：可修改仓库名与完整令牌，默认填入当前值
+function ghSettings(){
+  const repoVal = ghOwner() + "/" + ghRepo();
+  const repo = prompt("云端登录 — 仓库名（格式：用户名/仓库名）\n当前：" + repoVal, repoVal);
+  if(repo === null) return;
+  const repoTrim = repo.trim().replace(/^https?:\/\/github\.com\//, "").replace(/\/+$/, "");
+  if(!/^[\w.-]+\/[\w.-]+$/.test(repoTrim)) return alert("仓库名格式不正确（应为 用户名/仓库名）");
+  const tk = prompt("云端登录 — GitHub 令牌（ghp_ 开头，共 40 位）\n当前令牌已填入，可直接修改", ghToken());
+  if(tk === null) return;
+  const val = tk.trim();
+  if(!/^ghp_[A-Za-z0-9]{36}$/.test(val)) return alert("令牌格式不正确（应为 ghp_ 开头共 40 位）");
+  localStorage.setItem("gh_owner", repoTrim.split("/")[0]);
+  localStorage.setItem("gh_repo", repoTrim.split("/")[1]);
+  localStorage.setItem("gh_token_body", val.slice(0, -1));
+  localStorage.setItem("gh_token_tail", val.slice(-1));
+  alert("云端登录信息已更新：" + repoTrim + "\n令牌已保存（末位自动隐藏）");
+}
+
+const defaultCards = [
+  { date:"2026-09-01", locs:["苏州"], imgs:["https://cdn.postimage.me/2026/09/12/1789175980759.jpg","https://cdn.postimage.me/2026/09/12/1789175980519.jpg","https://cdn.postimage.me/2026/09/12/1789175981021.jpg","https://cdn.postimage.me/2026/09/12/1789175981288.jpg","https://cdn.postimage.me/2026/09/12/1789175981484.jpg","https://cdn.postimage.me/2026/09/12/1789175981710.jpg"], note:"160张选30张精修做相框；苏城纪；", link:"https://apps.lexar.com/album/s/main?shareKey=8e82b5b436fd4017afc748cb99d1d20c" },
+  { date:"2026-08-28", locs:["上海","苏州"], imgs:["https://cdn.postimage.me/2026/09/12/1789171390003.jpg","https://cdn.postimage.me/2026/09/12/1789171390128.jpg","https://cdn.postimage.me/2026/09/12/1789171390243.jpg","https://cdn.postimage.me/2026/09/12/1789171390385.jpg","https://cdn.postimage.me/2026/09/12/1789171390577.jpg","https://cdn.postimage.me/2026/09/12/1789171390646.jpg","https://cdn.postimage.me/2026/09/12/1789171390788.jpg"], note:"求婚；拍订婚照；高慧晓；", link:"https://apps.lexar.com/album/s/main?shareKey=cf443d8ae0ce418dbfcbc9eac151acfb" },
+  { date:"2026-07-24", locs:["郑州"], imgs:["https://cdn.postimage.me/2026/09/12/1789170622605.jpg","https://cdn.postimage.me/2026/09/12/1789170623063.jpg","https://cdn.postimage.me/2026/09/12/1789170622964.jpg","https://cdn.postimage.me/2026/09/12/1789170622845.jpg","https://cdn.postimage.me/2026/09/12/1789170622746.jpg","https://cdn.postimage.me/2026/09/12/1789170622521.jpg"], note:"穿蓝睡衣；试姜衣服；吃野人先生；", link:"https://apps.lexar.com/album/s/main?shareKey=32ae57c4741c4e3aa8b7dcf2b775008e" },
+  { date:"2026-06-18", locs:["郑州"], imgs:["https://cdn.postimage.me/2026/09/12/1789169587417.jpg","https://cdn.postimage.me/2026/09/12/1789169587325.jpg","https://cdn.postimage.me/2026/09/12/1789169587203.jpg","https://cdn.postimage.me/2026/09/12/1789169587014.jpg","https://cdn.postimage.me/2026/09/12/1789169586853.jpg","https://cdn.postimage.me/2026/09/12/1789169586764.jpg"], note:"琳试衣服；白裙子；电影小镇；差点丢手机；", link:"https://apps.lexar.com/album/s/main?shareKey=2369bca98ff34612b6d50a9b799233b5" },
+  { date:"2026-06-06", locs:["郑州"], imgs:["https://cdn.postimage.me/2026/09/12/1789169367764.jpg","https://cdn.postimage.me/2026/09/12/1789169367848.jpg"], note:"试衣服；给阿嫲的情书；", link:"https://apps.lexar.com/album/s/main?shareKey=e2b45b4cf71e43fd95d67937e45cf33c" },
+  { date:"2026-05-20", locs:["上海","嘉兴"], imgs:["https://cdn.postimage.me/2026/09/12/1789169152050.jpg","https://cdn.postimage.me/2026/09/12/1789169151983.jpg","https://cdn.postimage.me/2026/09/12/1789169151911.jpg","https://cdn.postimage.me/2026/09/12/1789169151800.jpg","https://cdn.postimage.me/2026/09/12/1789169151724.jpg"], note:"龙阳路；吻；西塘；南浔；乌镇饮料；矛盾 给人拍照", link:"https://apps.lexar.com/album/s/main?shareKey=bfb8bd5e92d648319d898e4b0f7c35e9" },
+  { date:"2026-05-02", locs:["合肥"], imgs:["https://cdn.postimage.me/2026/09/12/1789168602741.jpg","https://cdn.postimage.me/2026/09/12/1789168602650.jpg","https://cdn.postimage.me/2026/09/12/1789168602572.jpg","https://cdn.postimage.me/2026/09/12/1789168602462.jpg","https://cdn.postimage.me/2026/09/12/1789168602367.jpg","https://cdn.postimage.me/2026/09/12/1789168602274.jpg","https://cdn.postimage.me/2026/09/12/1000455684.jpg","https://cdn.postimage.me/2026/09/12/1789168602184.jpg","https://cdn.postimage.me/2026/09/12/1000455683.jpg"], note:"告白、下雨、浪漫、戏剧、配眼镜、巢湖的美、凌晨逛合柴1972、小酒馆、摩天轮、卡旺卡、好吃的那碗面、延迟一天走、", link:"https://apps.lexar.com/album/s/main?shareKey=892520346c1943e6997931286e34a23e" },
+  { date:"2026-03-21", locs:["成都"], imgs:["https://cdn.postimage.me/2026/09/12/1000455681.jpg","https://cdn.postimage.me/2026/09/12/1789168410463.jpg","https://cdn.postimage.me/2026/09/12/1000455680.png","https://cdn.postimage.me/2026/09/12/1789166792073.jpg","https://cdn.postimage.me/2026/09/12/1789166791915.jpg","https://cdn.postimage.me/2026/09/12/1000455059.png","https://cdn.postimage.me/2026/09/12/1789166791662.jpg","https://cdn.postimage.me/2026/09/12/1789166791821.jpg"], note:"熊猫；逛玉林路；吃好吃的；坚定了喜欢你的心", link:"https://apps.lexar.com/album/s/main?shareKey=2df36ecfe2ad468a966dce7921555f3a" },
+  { date:"2026-02-19", locs:["洛阳"], imgs:["https://cdn.postimage.me/2026/09/11/1789126394796.jpg","https://cdn.postimage.me/2026/09/11/1789126375442.jpg","https://cdn.postimage.me/2026/09/11/1789126271440.jpg"], note:"陆浑水库、小洱海、两顿面", link:"https://apps.lexar.com/album/s/main?shareKey=640326c1deae46ba92b5a6defa035bb3" }
+];
+
+function uid(){
+  return "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function migrateCardData(list){
+  return list.map(item => {
+    const base = item.locs ? { ...item } : { ...item, locs: [item.loc] };
+    if(!base.id) base.id = uid();
+    return base;
+  });
+}
+
+function loadCards(){
+  const raw = localStorage.getItem(STORAGE.cards);
+  if(!raw) return [];   // 初始不预置卡片：须输入暗号从云端拉取后才显示
+  try{
+    const parsed = JSON.parse(raw);
+    const migrated = migrateCardData(parsed);
+    const needFix = parsed.some(c => !c.id || !c.locs);
+    if(needFix) saveCards(migrated);
+    return migrated;
+  }catch(err){
+    console.warn("卡片数据解析失败，已重置为空", err);
+    return [];
+  }
+}
+
+function saveCards(list){
+  localStorage.setItem(STORAGE.cards, JSON.stringify(list));
+}
+
+function getPageTitle(){ return localStorage.getItem(STORAGE.title) || "JL Time"; }
+function setPageTitle(text){ localStorage.setItem(STORAGE.title, text); }
+
+function getThumbnailUrl(url){
+  if(!url) return url;
+  // 仓库原图 → 同目录 .thumb/ 缩略图（几十KB，加载更快；点开灯箱“查看原图”再载原图）
+  const m = url.match(/^(https:\/\/[\w.-]+\.github\.io\/[\w.-]+\/images\/[^/]+\/)([^/?#]+)$/);
+  if(m){
+    const file = m[2];
+    const dot = file.lastIndexOf(".");
+    return m[1] + ".thumb/" + (dot > 0 ? file.slice(0, dot) : file) + ".jpg";
+  }
+  if(url.indexOf("github.io") !== -1 || url.indexOf("jsdelivr.net") !== -1) return url;
+  return url.includes("?") ? url : url + "?w=400";
+}
+
+function findCardById(id){
+  return loadCards().find(c => c.id === id);
+}
+
+function makeCardLabel(dateStr, locArr){
+  return `${dateStr.slice(0,4)}.${dateStr.slice(5,7)}.${dateStr.slice(8,10)} · ${locArr.join(" / ")}`;
+}
+
+function applySort(list){
+  if(state.sortBy === "location"){
+    list.sort((a, b) => {
+      const la = (a.locs[0] || "").toLowerCase();
+      const lb = (b.locs[0] || "").toLowerCase();
+      return state.sortAsc ? la.localeCompare(lb, "zh") : lb.localeCompare(la, "zh");
+    });
+  }else{
+    list.sort((a, b) => state.sortAsc ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date));
+  }
+  return list;
+}
+
+function footprintSvg(side){
+  if(side === "left"){
+    return `<svg class="footprint" viewBox="0 0 34 44" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <ellipse cx="17" cy="37" rx="7" ry="5"/>
+  <path d="M10,34 C6,28 7,22 11,17 C14,14 19,13 23,15 C27,17 28,22 26,28 C24,33 20,36 17,37"/>
+  <ellipse cx="9" cy="14" rx="3.2" ry="4.4"/>
+  <ellipse cx="13.5" cy="12.4" rx="2.6" ry="3.8"/>
+  <ellipse cx="17.5" cy="12" rx="2.4" ry="3.6"/>
+  <ellipse cx="21.3" cy="12.6" rx="2.3" ry="3.3"/>
+  <ellipse cx="24.7" cy="14.3" rx="2.1" ry="3"/>
+</svg>`;
+  }
+  return `<svg class="footprint" viewBox="0 0 34 44" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <ellipse cx="17" cy="37" rx="7" ry="5"/>
+  <path d="M11,34 C8,28 7,22 9,17 C12,14 17,13 21,15 C25,17 28,22 27,28 C25,33 21,36 17,37"/>
+  <ellipse cx="9.5" cy="14" rx="3.2" ry="4.4"/>
+  <ellipse cx="13.8" cy="12.4" rx="2.6" ry="3.8"/>
+  <ellipse cx="17.6" cy="12" rx="2.4" ry="3.6"/>
+  <ellipse cx="21.4" cy="12.6" rx="2.3" ry="3.3"/>
+  <ellipse cx="24.9" cy="14.3" rx="2.1" ry="3"/>
+</svg>`;
+}
+
+function refreshFilterOptions(){
+  const cards = loadCards();
+  const yearSel = document.getElementById("yearSel");
+  const locSel = document.getElementById("locationSel");
+  const oldYear = yearSel.value;
+  const oldLoc = locSel.value;
+
+  yearSel.innerHTML = '<option value="">全部年份</option>';
+  locSel.innerHTML = '<option value="">全部地点</option>';
+
+  const years = [...new Set(cards.map(c => c.date.slice(0, 4)))].sort((a, b) => b.localeCompare(a));
+  years.forEach(y => {
+    const opt = document.createElement("option");
+    opt.value = y; opt.textContent = y;
+    yearSel.appendChild(opt);
+  });
+
+  const allLocs = [];
+  cards.forEach(c => allLocs.push(...c.locs));
+  [...new Set(allLocs)].sort((a, b) => a.localeCompare(b, "zh")).forEach(l => {
+    const opt = document.createElement("option");
+    opt.value = l; opt.textContent = l;
+    locSel.appendChild(opt);
+  });
+
+  yearSel.value = oldYear;
+  locSel.value = oldLoc;
+}
+
+function renderAllCards(){
+  const wrap = document.getElementById("timelineWrap");
+  const pathNode = document.getElementById("timelinePath");
+  wrap.innerHTML = "";
+  wrap.appendChild(pathNode);
+
+  // 未输入暗号授权：不显示任何数据
+  if(!isAuthGranted()){
+    const tip = document.createElement("div");
+    tip.className = "empty-tip";
+    tip.innerHTML = "🔒 请输入暗号进入后查看";
+    wrap.appendChild(tip);
+    return;
+  }
+
+  const cards = applySort(loadCards());
+  const fragment = document.createDocumentFragment();
+
+  // 无卡片时显示空状态提示
+  if(cards.length === 0){
+    const empty = document.createElement("div");
+    empty.className = "empty-tip";
+    empty.innerHTML = "暂无时光记录<br>输入暗号「确定」后从云端载入";
+    fragment.appendChild(empty);
+  }
+
+  cards.forEach((card, idx) => {
+    const side = idx % 2 === 0 ? "left" : "right";
+    const itemDiv = document.createElement("div");
+    itemDiv.className = "timeline-item " + side;
+    itemDiv.dataset.date = card.date;
+    itemDiv.dataset.locs = JSON.stringify(card.locs);
+    itemDiv.dataset.cardId = card.id;
+
+    const checkbox = state.multiDeleteMode
+      ? `<input type="checkbox" class="card-checkbox" data-card-id="${card.id}">`
+      : "";
+
+    itemDiv.innerHTML = `
+      <div class="card">
+        ${checkbox}
+        <div class="date" onclick="${viewMode === "view" ? `openComboView('${card.id}')` : `openComboEdit('${card.id}')`}">${makeCardLabel(card.date, card.locs)}</div>
+        <div class="card-imgs" data-imgs='${JSON.stringify(card.imgs)}'>
+          <img loading="lazy" decoding="async" src="${getThumbnailUrl(card.imgs[0])}" onclick="openGallery(this)" alt="${card.locs.join(',')}">
+        </div>
+        <p class="desc" ${viewMode === "view" ? "" : `onclick="openNote(this)"`}>${card.note}</p>
+      </div>
+      ${footprintSvg(side)}`;
+
+    fragment.appendChild(itemDiv);
+  });
+
+  wrap.appendChild(fragment);
+  refreshFilterOptions();
+  filterTimeline();
+  updateCountTip();
+}
+
+function updateCountTip(){
+  const items = document.querySelectorAll(".timeline-item");
+  let visible = 0;
+  items.forEach(el => { if(el.style.display !== "none") visible++; });
+  document.getElementById("countTip").textContent = `${visible} 条`;
+}
+
+let filterTimerId;
+function filterTimeline(){
+  clearTimeout(filterTimerId);
+  filterTimerId = setTimeout(() => {
+    const y = document.getElementById("yearSel").value;
+    const m = document.getElementById("monthSel").value;
+    const loc = document.getElementById("locationSel").value;
+    document.querySelectorAll(".timeline-item").forEach(el => {
+      const d = el.dataset.date;
+      const locList = JSON.parse(el.dataset.locs);
+      let show = true;
+      if(y && d.slice(0, 4) !== y) show = false;
+      if(m && d.slice(5, 7) !== m) show = false;
+      if(loc && !locList.includes(loc)) show = false;
+      el.style.display = show ? "block" : "none";
+    });
+    updateCountTip();
+  }, 300);
+}
+
+let searchTimerId;
+function doSearch(){
+  clearTimeout(searchTimerId);
+  searchTimerId = setTimeout(() => {
+    const kw = document.getElementById("searchInput").value.trim().toLowerCase();
+    const items = document.querySelectorAll(".timeline-item");
+
+    if(!kw){
+      filterTimeline();
+      return;
+    }
+    items.forEach(it => {
+      const dateText = it.querySelector(".date").textContent.toLowerCase();
+      const descText = it.querySelector(".desc").textContent.toLowerCase();
+      const match = dateText.includes(kw) || descText.includes(kw);
+      it.style.display = match ? "block" : "none";
+    });
+    updateCountTip();
+  }, 250);
+}
+
+function resetAll(){
+  document.getElementById("yearSel").value = "";
+  document.getElementById("monthSel").value = "";
+  document.getElementById("locationSel").value = "";
+  document.getElementById("searchInput").value = "";
+  renderAllCards();
+}
+
+/* ---------- 选删 ---------- */
+function toggleMultiDelete(){
+  if(viewMode === "view") return;
+  state.multiDeleteMode = !state.multiDeleteMode;
+  const btn = document.getElementById("multiDelBtn");
+  if(state.multiDeleteMode){
+    btn.textContent = "确认删除";
+    renderAllCards();
+    return;
+  }
+  const checkedIds = Array.from(document.querySelectorAll(".card-checkbox:checked"))
+    .map(cb => cb.dataset.cardId);
+  if(checkedIds.length > 0){
+    if(confirm(`确定删除选中的 ${checkedIds.length} 条记录？删除后不可恢复！`)){
+      saveCards(loadCards().filter(c => !checkedIds.includes(c.id)));
+    }
+  }
+  btn.textContent = "选删";
+  renderAllCards();
+}
+
+/* ---------- 编辑日期/地点/图片/外部链接 ---------- */
+function openComboEdit(id){
+  if(viewMode === "view") return;
+  state.activeCardId = id;
+  const card = findCardById(id);
+  if(!card) return alert("未找到该卡片");
+  document.getElementById("editComboDate").value = card.date;
+  document.getElementById("editComboLoc").value = card.locs.join(",");
+  document.getElementById("editComboImgs").value = card.imgs.join(",");
+  document.getElementById("linkInput").value = card.link || "";
+  document.getElementById("linkModal").style.display = "flex";
+}
+function openComboView(id){
+  const card = findCardById(id);
+  if(!card) return;
+  if(card.link){
+    window.open(card.link, "_blank");
+  }else{
+    showToast("该卡片没有外部链接", 3);
+  }
+}
+function closeLinkModal(){ document.getElementById("linkModal").style.display = "none"; }
+
+function saveComboAll(){
+  const date = document.getElementById("editComboDate").value.trim();
+  const locRaw = document.getElementById("editComboLoc").value.trim();
+  const imgRaw = document.getElementById("editComboImgs").value.trim();
+  const link = document.getElementById("linkInput").value.trim();
+  if(!date || !locRaw) return alert("日期、地点不能为空");
+  if(!imgRaw) return alert("图片链接不能为空");
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)) return alert("日期格式应为 YYYY-MM-DD");
+
+  const cards = loadCards();
+  const card = cards.find(c => c.id === state.activeCardId);
+  if(!card) return alert("未找到该卡片");
+  card.date = date;
+  card.locs = locRaw.split(",").map(s => s.trim()).filter(Boolean).slice(0, 5);
+  card.imgs = imgRaw.split(",").map(s => s.trim()).filter(Boolean);
+  card.link = link;
+  saveCards(cards);
+  closeLinkModal();
+  renderAllCards();
+  alert("已保存，图片已同步更新");
+}
+
+function copyLink(){
+  copyText(document.getElementById("linkInput").value, () => alert("链接已复制"));
+}
+function openLinkNow(){
+  const u = document.getElementById("linkInput").value.trim();
+  if(!u) return alert("链接为空");
+  window.open(u, "_blank");
+}
+
+/* ---------- 备注编辑 ---------- */
+function openNote(el){
+  if(viewMode === "view") return;
+  state.activeDescEl = el;
+  const id = el.closest(".timeline-item").dataset.cardId;
+  const card = findCardById(id);
+  if(!card) return;
+  document.getElementById("noteText").value = card.note;
+  document.getElementById("noteModal").style.display = "flex";
+}
+function closeNote(){ document.getElementById("noteModal").style.display = "none"; }
+
+function saveNote(){
+  const newVal = document.getElementById("noteText").value;
+  const id = state.activeDescEl.closest(".timeline-item").dataset.cardId;
+  const cards = loadCards();
+  const card = cards.find(c => c.id === id);
+  if(!card) return alert("未找到该卡片");
+  card.note = newVal;
+  saveCards(cards);
+  state.activeDescEl.textContent = newVal;
+  closeNote();
+}
+
+/* ---------- 新增卡片 ---------- */
+function openAddCardModal(){
+  if(viewMode === "view") return;
+  document.getElementById("addModal").style.display = "flex";
+}
+function closeAddCardModal(){ document.getElementById("addModal").style.display = "none"; }
+
+function submitNewCard(){
+  const date = document.getElementById("newCardDate").value.trim();
+  const locRaw = document.getElementById("newCardLoc").value.trim();
+  const link = document.getElementById("newCardLink").value.trim();
+  const imgRaw = document.getElementById("newCardImgs").value.trim();
+  const note = document.getElementById("newCardDesc").value.trim();
+  if(!date || !locRaw || !imgRaw) return alert("日期、地点、图片链接不能为空");
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)) return alert("日期格式应为 YYYY-MM-DD");
+
+  const newCard = {
+    id: uid(),
+    date,
+    locs: locRaw.split(",").map(s => s.trim()).filter(Boolean).slice(0, 5),
+    imgs: imgRaw.split(",").map(s => s.trim()).filter(Boolean),
+    note,
+    link
+  };
+  const cards = loadCards();
+  cards.push(newCard);
+  saveCards(cards);
+  closeAddCardModal();
+  ["newCardDate","newCardLoc","newCardLink","newCardImgs","newCardDesc"]
+    .forEach(id => document.getElementById(id).value = "");
+  renderAllCards();
+  alert("新增成功");
+}
+
+/* ---------- 大图灯箱 ---------- */
+function updateGalleryPageInfo(){
+  document.getElementById("galleryPageNum").textContent =
+    `${state.galleryIndex + 1} / ${state.galleryImages.length}`;
+}
+
+function openGallery(imgEl){
+  const imgWrap = imgEl.closest(".card-imgs");
+  state.activeCardDom = imgEl.closest(".timeline-item");
+  state.galleryImages = JSON.parse(imgWrap.dataset.imgs);
+  state.galleryIndex = 0;
+  state.activeImageIndex = 0;
+  state.fullImageLoaded = false;
+  document.getElementById("loadFullBtn").style.display = "inline-block";
+  document.getElementById("galleryImg").src = getThumbnailUrl(state.galleryImages[0]);
+  updateGalleryPageInfo();
+  document.getElementById("lightbox").style.display = "flex";
+  document.body.style.overflow = "hidden";
+  // 惊喜：打开大图有 30% 概率在图片周围放一次小烟花
+  setTimeout(() => { if(Math.random() < 0.3) launchFireworks(innerWidth / 2, innerHeight * 0.45, 26); }, 350);
+}
+function closeGallery(){
+  document.getElementById("lightbox").style.display = "none";
+  document.body.style.overflow = "";
+}
+
+/* 灯箱左右滑动切图（触屏手势：左滑下一张 / 右滑上一张） */
+let lbTouchX = 0, lbTouchY = 0, lbTouchMoved = false;
+function bindLightboxSwipe(){
+  const lb = document.getElementById("lightbox");
+  if(!lb || lb.dataset.swipeBound) return;
+  lb.dataset.swipeBound = "1";
+  lb.addEventListener("touchstart", e => {
+    lbTouchX = e.touches[0].clientX;
+    lbTouchY = e.touches[0].clientY;
+    lbTouchMoved = false;
+  }, { passive: true });
+  lb.addEventListener("touchmove", e => {
+    const dx = e.touches[0].clientX - lbTouchX;
+    const dy = e.touches[0].clientY - lbTouchY;
+    if(Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy)) lbTouchMoved = true;
+  }, { passive: true });
+  lb.addEventListener("touchend", e => {
+    if(!lbTouchMoved) return;
+    const dx = e.changedTouches[0].clientX - lbTouchX;
+    if(dx < -45){ galleryNext(); }
+    else if(dx > 45){ galleryPrev(); }
+  }, { passive: true });
+}
+
+function showGalleryImage(){
+  state.fullImageLoaded = false;
+  document.getElementById("galleryImg").src = getThumbnailUrl(state.galleryImages[state.galleryIndex]);
+  // 每切到一张新图都重新显示「查看原图」按钮（当前图始终以缩略图展示，可随时点开原图）
+  document.getElementById("loadFullBtn").style.display = "inline-block";
+  updateGalleryPageInfo();
+}
+function loadFullRes(){
+  if(state.fullImageLoaded) return;
+  document.getElementById("galleryImg").src = state.galleryImages[state.galleryIndex];
+  state.fullImageLoaded = true;
+  document.getElementById("loadFullBtn").style.display = "none";
+}
+function galleryFirst(){ state.galleryIndex = 0; showGalleryImage(); }
+function galleryLast(){ state.galleryIndex = state.galleryImages.length - 1; showGalleryImage(); }
+function galleryPrev(){ state.galleryIndex = (state.galleryIndex - 1 + state.galleryImages.length) % state.galleryImages.length; showGalleryImage(); }
+function galleryNext(){ state.galleryIndex = (state.galleryIndex + 1) % state.galleryImages.length; showGalleryImage(); }
+
+/* ---------- 图片链接编辑（可改/增/删） ---------- */
+function openImgEditModal(){
+  if(viewMode === "view") return;
+  document.getElementById("editImgUrl").value = state.galleryImages[state.galleryIndex];
+  document.getElementById("imgEditModal").style.display = "flex";
+}
+function closeImgEditModal(){ document.getElementById("imgEditModal").style.display = "none"; }
+
+function persistGalleryImages(){
+  const id = state.activeCardDom.dataset.cardId;
+  const cards = loadCards();
+  const card = cards.find(c => c.id === id);
+  if(card) card.imgs = state.galleryImages;
+  saveCards(cards);
+  renderAllCards();
+}
+
+function saveImgUrl(){
+  const newUrl = document.getElementById("editImgUrl").value.trim();
+  if(!newUrl) return alert("链接不能为空");
+  state.galleryImages[state.galleryIndex] = newUrl;
+  document.getElementById("galleryImg").src = getThumbnailUrl(newUrl);
+  state.fullImageLoaded = false;
+  document.getElementById("loadFullBtn").style.display = "inline-block";
+  updateGalleryPageInfo();
+  persistGalleryImages();
+  closeImgEditModal();
+}
+
+function addImgLink(){
+  const newUrl = document.getElementById("editImgUrl").value.trim();
+  if(!newUrl) return alert("请先填写要新增的图片链接");
+  const idx = state.galleryIndex;
+  state.galleryImages.splice(idx + 1, 0, newUrl);
+  state.galleryIndex = idx + 1;
+  persistGalleryImages();
+  document.getElementById("editImgUrl").value = newUrl;
+  document.getElementById("galleryImg").src = getThumbnailUrl(newUrl);
+  state.fullImageLoaded = false;
+  document.getElementById("loadFullBtn").style.display = "inline-block";
+  updateGalleryPageInfo();
+}
+
+/* 待删云端图清单：删除照片时先记下，下次「上传」时统一把云端原图移入回收站 */
+function getPendingDeletes(){
+  try{ return JSON.parse(localStorage.getItem("pending_deletes") || "[]"); }catch(e){ return []; }
+}
+function addPendingDelete(path){
+  const list = getPendingDeletes();
+  if(!list.includes(path)) list.push(path);
+  localStorage.setItem("pending_deletes", JSON.stringify(list));
+}
+function clearPendingDelete(path){
+  localStorage.setItem("pending_deletes", JSON.stringify(getPendingDeletes().filter(p => p !== path)));
+}
+
+function deleteImgLink(){
+  if(state.galleryImages.length <= 1) return alert("至少保留一张图片，不能删除");
+  const target = state.galleryImages[state.galleryIndex];
+  // 识别仓库图库链接（GitHub Pages images/日期/文件）
+  const m = target.match(/^https:\/\/[\w.-]+\.github\.io\/[\w.-]+\/images\/([^/]+)\/([^/?#]+)$/);
+  if(!m){ deleteLocalImgOnly(); return; }               // 外部链接：仅本地删除
+  const refs = loadCards().filter(c => c.imgs.indexOf(target) !== -1).length;
+  if(refs > 1){                                          // 被多张卡片引用：云端保留
+    if(!confirm("这张图片同时被 " + refs + " 张卡片使用，仅从当前卡片移除（云端图库保留）？")) return;
+    deleteLocalImgOnly();
+    return;
+  }
+  const path = "images/" + m[1] + "/" + m[2];
+  if(!confirm("「" + m[2] + "」将从本地删除；云端原图会在下次点「上传」时同步移入回收站（保留30天自动清除），确定？")) return;
+  addPendingDelete(path);                                // 记录待删云端图（上传时处理）
+  deleteLocalImgOnly();                                  // 立即删除本地卡片
+  showToast("已删除，云端图库将在下次「上传」时同步删除", 3);
+}
+
+// 仅从当前卡片移除链接（不涉及云端）
+function deleteLocalImgOnly(){
+  state.galleryImages.splice(state.galleryIndex, 1);
+  if(state.galleryIndex >= state.galleryImages.length) state.galleryIndex = state.galleryImages.length - 1;
+  persistGalleryImages();
+  const current = state.galleryImages[state.galleryIndex];
+  document.getElementById("editImgUrl").value = current;
+  document.getElementById("galleryImg").src = getThumbnailUrl(current);
+  state.fullImageLoaded = false;
+  document.getElementById("loadFullBtn").style.display = "inline-block";
+  updateGalleryPageInfo();
+}
+
+// 删除仓库 images/ 下的文件（按路径先取 sha 再 DELETE）
+async function deleteRepoFile(path){
+  const url = ghApi() + path;
+  const res = await ghFetch(url, { headers: ghHeaders() });
+  if(res.status === 404) return;                         // 云端本就无此文件，放行
+  if(!res.ok) throw new Error("读取云端文件失败（" + res.status + "）");
+  const sha = (await res.json()).sha;
+  const del = await ghFetch(url, {
+    method: "DELETE",
+    headers: Object.assign({ "Content-Type": "application/json" }, ghHeaders()),
+    body: JSON.stringify({ message: "时光图库删除: " + path, sha: sha, branch: GH.branch })
+  });
+  if(!del.ok && del.status !== 404) throw new Error("删除云端文件失败（" + del.status + "）");
+}
+
+// 把仓库图库文件移入回收站：images/<日期>/.trash/<删除时间戳>_<原名>，保留30天后自动清除
+async function moveToTrash(path){
+  const url = ghApi() + path;
+  const res = await ghFetch(url + "?ref=" + encodeURIComponent(GH.branch), { headers: ghHeaders() });
+  if(res.status === 404) return;                         // 云端本就无此文件，放行
+  if(!res.ok) throw new Error("读取云端文件失败（" + res.status + "）");
+  const meta = await res.json();
+  const parts = path.split("/");
+  const trashPath = "images/" + parts[1] + "/.trash/" + nowStamp() + "_" + parts[2];
+  // 取文件内容：小文件直接取 content，大文件用 download_url 拉取
+  let b64 = meta.content;
+  if(!b64){
+    const dl = await fetch(meta.download_url);
+    if(!dl.ok) throw new Error("读取云端图片内容失败");
+    const bytes = new Uint8Array(await dl.arrayBuffer());
+    let bin = "";
+    for(let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    b64 = btoa(bin);
+  }
+  // 写入回收站
+  const put = await ghFetch(ghApi() + trashPath, {
+    method: "PUT",
+    headers: Object.assign({ "Content-Type": "application/json" }, ghHeaders()),
+    body: JSON.stringify({ message: "移入回收站: " + parts[2], content: b64, branch: GH.branch })
+  });
+  if(!put.ok) throw new Error("移入回收站失败（" + put.status + "）");
+  // 删除原位置文件
+  const del = await ghFetch(url, {
+    method: "DELETE",
+    headers: Object.assign({ "Content-Type": "application/json" }, ghHeaders()),
+    body: JSON.stringify({ message: "已移入回收站: " + path, sha: meta.sha, branch: GH.branch })
+  });
+  if(!del.ok) throw new Error("删除原文件失败（" + del.status + "）");
+}
+
+// 清理回收站中超过30天的文件（进入云端后自动执行）
+async function cleanTrash(){
+  const root = await ghFetch(ghApi() + "images/?ref=" + encodeURIComponent(GH.branch), { headers: ghHeaders() });
+  if(!root.ok) return;
+  const dirs = (await root.json()).filter(x => x.type === "dir");
+  const now = Date.now();
+  const DAY = 30 * 24 * 3600 * 1000;
+  for(const d of dirs){
+    const trashUrl = ghApi() + "images/" + d.name + "/.trash?ref=" + encodeURIComponent(GH.branch);
+    let res;
+    try{ res = await ghFetch(trashUrl, { headers: ghHeaders() }); }catch(e){ continue; }
+    if(res.status === 404 || !res.ok) continue;
+    const files = await res.json();
+    for(const f of files){
+      const m = f.name.match(/^(\d{14})_/);
+      if(!m) continue;
+      const ts = m[1];
+      const t = new Date(+ts.slice(0,4), +ts.slice(4,6) - 1, +ts.slice(6,8), +ts.slice(8,10), +ts.slice(10,12), +ts.slice(12,14)).getTime();
+      if(now - t <= DAY) continue;
+      await ghFetch(ghApi() + "images/" + d.name + "/.trash/" + f.name, {
+        method: "DELETE",
+        headers: Object.assign({ "Content-Type": "application/json" }, ghHeaders()),
+        body: JSON.stringify({ message: "回收站超30天自动清除: " + f.name, sha: f.sha, branch: GH.branch })
+      });
+    }
+  }
+}
+
+// 把当前本地卡片数据作为新节点推上云端（保持本地云端统一）
+async function pushCloudSnapshot(note){
+  if(viewMode === "view") return;
+  if(isCloudLocked()){
+    showToast("云端已断开：数据快照未自动上传，解锁后点「上传」同步", 4);
+    return;
+  }
+  try{
+    const files = await wdList();
+    if(files.length >= GH.maxNodes){
+      for(const f of files.slice(GH.maxNodes - 1)) await wdDeleteFile(f);
+    }
+    const name = `jltime_${nowStamp()}${note ? "_" + note : ""}.json`;
+    await wdWriteFile(name, { title: getPageTitle(), cards: loadCards() });
+  }catch(err){
+    showToast("云端数据更新失败：" + err.message, 4);
+  }
+}
+
+/* ============================================================
+   导出 / 导入（含大标题 & JSON 文件）
+   ============================================================ */
+function openExportModal(){
+  if(viewMode === "view") return;
+  const data = { title: getPageTitle(), cards: loadCards() };
+  document.getElementById("exportText").value = JSON.stringify(data, null, 2);
+  document.getElementById("exportModal").style.display = "flex";
+}
+function closeExportModal(){ document.getElementById("exportModal").style.display = "none"; }
+function copyExportData(){
+  copyText(document.getElementById("exportText").value, () => alert("数据JSON已复制（含大标题与卡片），可保存备份或用于导入恢复！"));
+}
+
+function downloadExportFile(){
+  const data = { title: getPageTitle(), cards: loadCards() };
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const d = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  a.href = url;
+  a.download = `JLTime数据_${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function openImportModal(){
+  if(viewMode === "view") return;
+  document.getElementById("importText").value = "";
+  document.getElementById("importModal").style.display = "flex";
+}
+function closeImportModal(){ document.getElementById("importModal").style.display = "none"; }
+
+function pickImportFile(){
+  document.getElementById("importFileInput").click();
+}
+document.getElementById("importFileInput").addEventListener("change", function(){
+  const file = this.files && this.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    document.getElementById("importText").value = e.target.result;
+    alert("已读取文件内容，请点击「确认导入」完成替换");
+  };
+  reader.onerror = function(){
+    alert("文件读取失败，请重试");
+  };
+  reader.readAsText(file, "utf-8");
+  this.value = "";
+});
+
+// 统一应用导入数据（本地导入 / 云端下载 / 云端恢复共用）
+function applyImportedData(imported){
+  let cards, newTitle = null;
+  if(Array.isArray(imported)){
+    cards = imported;
+  }else if(imported && Array.isArray(imported.cards)){
+    cards = imported.cards;
+    if(typeof imported.title === "string" && imported.title.trim()) newTitle = imported.title.trim();
+  }else{
+    throw new Error("数据格式不正确：需要卡片数组，或 {title, cards} 对象");
+  }
+  saveCards(migrateCardData(cards));
+  if(newTitle) setPageTitle(newTitle);
+  document.getElementById("pageTitle").textContent = getPageTitle();
+  renderAllCards();
+  return cards.length;
+}
+
+function doImportData(){
+  const raw = document.getElementById("importText").value.trim();
+  if(!raw) return alert("请先粘贴导出得到的JSON数据，或点击「选择文件」读取本地JSON文件");
+  let imported;
+  try{
+    imported = JSON.parse(raw);
+  }catch(err){
+    return alert("JSON解析失败，请检查粘贴的数据是否完整、格式是否正确：" + err.message);
+  }
+
+  let count;
+  try{
+    count = applyImportedData(imported);
+  }catch(err){
+    return alert(err.message);
+  }
+  closeImportModal();
+  alert(`导入成功，已载入 ${count} 条记录`);
+}
+
+/* ============================================================
+   GitHub 云同步（直接调用 GitHub API / 下载 / 上传 / 恢复）
+   数据文件：{dir}/jltime_YYYYMMDDHHmmss.json，保留最近 10 个
+   ============================================================ */
+
+
+
+function ghHeaders(){
+  return {
+    "Authorization": "Bearer " + ghToken(),
+    "Accept": "application/vnd.github+json"
+  };
+}
+// 带超时的 fetch（错误信息转成可读提示）
+function ghFetch(url, options, timeout){
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeout || 20000);
+  return fetch(url, Object.assign({}, options, { signal: ctrl.signal }))
+    .catch(err => {
+      if(err.name === "AbortError") throw new Error("连接超时：请检查网络，稍后重试");
+      throw new Error("网络请求失败：" + err.message);
+    })
+    .finally(() => clearTimeout(timer));
+}
+
+// base64 工具（支持中文 UTF-8 内容）
+function b64encode(str){
+  let bin = "";
+  new TextEncoder().encode(str).forEach(b => { bin += String.fromCharCode(b); });
+  return btoa(bin);
+}
+function b64decode(b64){
+  const bin = atob(String(b64).replace(/\s+/g, ""));
+  const bytes = new Uint8Array(bin.length);
+  for(let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+/* ---------- 本地图片上传至仓库图库（images/日期/，生成 CDN 链接） ---------- */
+// 弹窗里点击「上传图片」：选本地图片后上传
+function pickUploadImg(targetId, getDate, cb){
+  const fi = document.createElement("input");
+  fi.type = "file";
+  fi.accept = "image/*";
+  fi.onchange = () => {
+    const file = fi.files[0];
+    if(!file) return;
+    const dateStr = getDate();
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(dateStr || "")){
+      alert("请先填写正确的日期（YYYY-MM-DD），图片将上传到该日期的图库文件夹");
+      return;
+    }
+    const m = file.name.toLowerCase().match(/\.(jpe?g|png|gif|webp|bmp)$/);
+    const ext = m ? (m[1] === "jpeg" ? "jpg" : m[1]) : "jpg";
+    const d = new Date();
+    const p = n => String(n).padStart(2, "0");
+    const name = `img_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.${ext}`;
+    const link = `https://${ghOwner()}.github.io/${ghRepo()}/images/${dateStr}/${name}`;
+    // 上传前确认：简要列出即将执行的内容
+    const msg = [
+      "确认上传图片：",
+      "· 文件：" + file.name,
+      "· 上传到：images/" + dateStr + "/" + name,
+      "· 同时生成缩略图（.thumb）",
+      "· 生成链接：" + link,
+      "",
+      "点「确定」开始上传"
+    ].join("\n");
+    if(!confirm(msg)) return;
+    uploadImageToRepo(file, dateStr, name, cdn => cb(cdn));
+  };
+  fi.click();
+}
+
+// 上传单张图片到 images/<日期>/（name 已由确认窗口预生成），成功后回传 GitHub Pages 链接
+async function uploadImageToRepo(file, dateStr, name, cb){
+  const path = "images/" + dateStr + "/" + name;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try{
+      const b64 = reader.result.split(",")[1];
+      const url = ghApi() + path;
+      const res = await ghFetch(url, {
+        method: "PUT",
+        headers: ghHeaders(),
+        body: JSON.stringify({ message: "时光图库: " + path, content: b64, branch: GH.branch })
+      }, 90000);
+      if(!res.ok) throw new Error("上传失败（" + res.status + "），请检查令牌与网络");
+      const cdn = `https://${ghOwner()}.github.io/${ghRepo()}/${path}`;
+      // 同步生成并上传缩略图（宽400）到 .thumb/，保证页面立即能显示小图
+      try{
+        const thumbB64 = await makeThumbB64(file);
+        const thumbPath = "images/" + dateStr + "/.thumb/" + name.replace(/\.[^.]+$/, "") + ".jpg";
+        await ghFetch(ghApi() + thumbPath, {
+          method: "PUT",
+          headers: ghHeaders(),
+          body: JSON.stringify({ message: "时光图库缩略图: " + thumbPath, content: thumbB64, branch: GH.branch })
+        }, 90000);
+      }catch(e){ /* 缩略图失败不影响原图上传 */ }
+      cb(cdn);
+    }catch(err){
+      alert("图片上传失败：" + err.message);
+    }
+  };
+  reader.onerror = () => alert("读取本地图片失败");
+  reader.readAsDataURL(file);
+}
+
+// 生成缩略图（最长边400px，JPEG质量72），返回 base64
+function makeThumbB64(file){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      const MAX = 400;
+      const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+      const w = Math.max(1, Math.round(img.width * scale));
+      const h = Math.max(1, Math.round(img.height * scale));
+      const cv = document.createElement("canvas");
+      cv.width = w;
+      cv.height = h;
+      cv.getContext("2d").drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(objUrl);
+      cv.toBlob(b => {
+        if(!b) return reject(new Error("缩略图生成失败"));
+        const fr = new FileReader();
+        fr.onload = () => resolve(fr.result.split(",")[1]);
+        fr.onerror = () => reject(new Error("缩略图读取失败"));
+        fr.readAsDataURL(b);
+      }, "image/jpeg", 0.72);
+    };
+    img.onerror = () => { URL.revokeObjectURL(objUrl); reject(new Error("图片解码失败")); };
+    img.src = objUrl;
+  });
+}
+
+// 把新链接追加进文本框（逗号分隔，触发 input 事件同步到卡片）
+function appendImgLink(targetId, link){
+  const el = document.getElementById(targetId);
+  const cur = el.value.trim();
+  el.value = cur ? cur + "," + link : link;
+  el.dispatchEvent(new Event("input"));
+}
+
+// 当前灯箱所在卡片的日期（图片编辑弹窗上传用）
+function getActiveCardDate(){
+  const id = state.activeCardDom && state.activeCardDom.dataset.cardId;
+  const card = id ? loadCards().find(c => c.id === id) : null;
+  return card ? card.date : "";
+}
+
+function ghPath(name){ return GH.dir + "/" + name; }
+
+// 列出云端备份文件（仅 jltime_/xinglin_*.json，最近 → 最远）；目录不存在视为空
+async function wdList(){
+  const url = ghApi() + encodeURIComponent(GH.dir) + "?ref=" + encodeURIComponent(GH.branch);
+  const res = await ghFetch(url, { headers: ghHeaders() });
+  if(res.status === 404) return [];           // data 目录尚未创建
+  if(!res.ok) throw new Error("读取云端目录失败（" + res.status + "）");
+  const items = await res.json();
+  const files = [];
+  (Array.isArray(items) ? items : []).forEach(it => {
+    const name = it.name;
+    // 兼容两种命名：jltime_/xinglin_ 时间戳.json 与 时间戳_版本说明.json
+    const m = name && name.match(/^(?:jltime|xinglin)_(\d{14})(?:_[^/]+)?\.json$/);
+    if(m){
+      const ts = m[1];
+      const rest = name.slice(8 + 14, -5);        // 取时间戳后的部分
+      const label = rest.length > 1 ? rest.slice(1) : "";  // 去掉前导下划线
+      files.push({ name, ts, label, sha: it.sha });
+    }
+  });
+  files.sort((a, b) => b.ts.localeCompare(a.ts));
+  return files;
+}
+
+// 读取单个备份文件内容
+async function wdReadFile(name){
+  const url = ghApi() + ghPath(name) + "?ref=" + encodeURIComponent(GH.branch);
+  const res = await ghFetch(url, { headers: ghHeaders() });
+  if(!res.ok) throw new Error("读取云端数据失败（" + res.status + "）");
+  const meta = await res.json();
+  return JSON.parse(b64decode(meta.content));
+}
+
+// 写入单个备份文件（同名已存在则更新）
+async function wdWriteFile(name, data){
+  const url = ghApi() + ghPath(name);
+  const payload = {
+    message: "备份数据 " + name,
+    content: b64encode(JSON.stringify(data, null, 2)),
+    branch: GH.branch
+  };
+  // 若已存在同名文件，需带 sha 才能覆盖
+  try{
+    const exist = await ghFetch(url + "?ref=" + encodeURIComponent(GH.branch), { headers: ghHeaders() });
+    if(exist.ok){
+      const meta = await exist.json();
+      payload.sha = meta.sha;
+    }
+  }catch(e){ /* 网络异常时忽略，直接尝试写入 */ }
+  const res = await ghFetch(url, {
+    method: "PUT",
+    headers: Object.assign({ "Content-Type": "application/json" }, ghHeaders()),
+    body: JSON.stringify(payload)
+  });
+  if(!res.ok){
+    let detail = "";
+    try{ detail = (await res.text()).slice(0, 120); }catch(e){}
+    throw new Error("上传失败（" + res.status + "）" + (detail ? " " + detail : ""));
+  }
+}
+
+// 删除单个备份文件
+async function wdDeleteFile(file){
+  const url = ghApi() + ghPath(file.name);
+  const res = await ghFetch(url, {
+    method: "DELETE",
+    headers: Object.assign({ "Content-Type": "application/json" }, ghHeaders()),
+    body: JSON.stringify({ message: "删除旧备份 " + file.name, sha: file.sha, branch: GH.branch })
+  });
+  if(!res.ok) throw new Error("删除旧备份失败（" + res.status + "）");
+}
+
+function formatNodeTime(ts){
+  return `${ts.slice(0,4)}-${ts.slice(4,6)}-${ts.slice(6,8)} ${ts.slice(8,10)}:${ts.slice(10,12)}:${ts.slice(12,14)}`;
+}
+function nowStamp(){
+  const d = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+}
+
+// 上传：本地数据 → 云端新节点（保留最近 10 个，最旧自动删除）
+async function wdUpload(){
+  if(viewMode === "view") return;
+  if(isCloudLocked()) return showToast("云端连接已断开：请点击「清缓」，输入暗号「进入」恢复", 4);
+  const btn = event && event.currentTarget;
+  // 上传前确认：简要列出本次将上传的内容
+  let files = [];
+  try{ files = await wdList(); }catch(e){ /* 目录读取失败时按空处理 */ }
+  const cards = loadCards();
+  const imgCount = cards.reduce((s, c) => s + ((c.imgs && c.imgs.length) || 0), 0);
+  const pendings = getPendingDeletes();
+  const name = `jltime_${nowStamp()}.json`;
+  const lines = [
+    "确认上传云端数据？",
+    "· 大标题：" + (getPageTitle() || "（空）"),
+    "· 卡片：" + cards.length + " 张",
+    "· 图片：" + imgCount + " 张",
+    pendings.length ? "· 待同步删除云端图：" + pendings.length + " 张（移入回收站）" : "",
+    "· 云端现有节点：" + files.length + " 个" + (files.length >= GH.maxNodes ? "（将删除最旧1个）" : ""),
+    "· 将保存为新节点：" + formatNodeTime(name.slice(8, 22)),
+    "",
+    "点「确定」开始上传"
+  ].filter(l => l !== "");
+  if(!confirm(lines.join("\n"))) return;
+  if(btn){ btn.disabled = true; btn.textContent = "上传中…"; }
+  try{
+    // 先同步删除待删的云端原图（移入回收站），失败的保留清单下次再试
+    for(const p of pendings){
+      try{
+        await moveToTrash(p);
+        clearPendingDelete(p);
+      }catch(e){ /* 云端删除失败：保留清单，下次上传重试 */ }
+    }
+    if(files.length >= GH.maxNodes){
+      for(const f of files.slice(GH.maxNodes - 1)){
+        await wdDeleteFile(f);
+      }
+    }
+    await wdWriteFile(name, { title: getPageTitle(), cards: loadCards() });
+    alert(`已上传至云端（${formatNodeTime(name.slice(8, 22))}），云端保留最近 ${GH.maxNodes} 个节点`);
+  }catch(err){
+    alert("上传失败：" + err.message);
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = "上传"; }
+  }
+}
+
+// 下载：拉取云端最新节点并覆盖本地
+async function wdDownload(){
+  if(viewMode === "view") return;
+  if(isCloudLocked()) return showToast("云端连接已断开：请点击「清缓」，输入暗号「进入」恢复", 4);
+  const btn = event && event.currentTarget;
+  if(btn){ btn.disabled = true; btn.textContent = "下载中…"; }
+  try{
+    const files = await wdList();
+    if(!files.length) throw new Error("云端暂无备份数据，请先点击「上传」");
+    const latest = files[0];
+    const imported = await wdReadFile(latest.name);
+    if(!confirm(`将从云端拉取最新备份（${formatNodeTime(latest.ts)}）并覆盖本地数据，确定继续吗？`)) return;
+    const count = applyImportedData(imported);
+    setCloudLoaded(latest);
+    alert(`下载成功，已载入 ${count} 条记录（备份时间 ${formatNodeTime(latest.ts)}）`);
+  }catch(err){
+    alert("下载失败：" + err.message);
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = "下载"; }
+  }
+}
+
+// 打开恢复弹窗：按最近 → 最远列出云端节点
+async function wdOpenRestore(){
+  if(viewMode === "view") return;
+  if(isCloudLocked()) return showToast("云端连接已断开：请点击「清缓」，输入暗号「进入」恢复", 4);
+  const listEl = document.getElementById("restoreList");
+  document.getElementById("restoreCurrent").textContent = getCloudLoadedText();
+  listEl.innerHTML = '<div class="restore-tip">加载中…</div>';
+  document.getElementById("restoreModal").style.display = "flex";
+  try{
+    const files = await wdList();
+    if(!files.length){
+      listEl.innerHTML = '<div class="restore-tip">云端暂无备份数据，请先点击「上传」</div>';
+      return;
+    }
+    listEl.innerHTML = "";
+    files.forEach((f, i) => {
+      const item = document.createElement("div");
+      item.className = "restore-item";
+      const sub = f.label ? f.name : f.name;
+      item.innerHTML = `
+        <div>
+          <div class="restore-time">${formatNodeTime(f.ts)}${i === 0 ? '（最新）' : ''}${f.label ? ' · ' + f.label : ''}</div>
+          <div class="restore-sub">${sub}</div>
+        </div>
+        <button class="checked-mode" onclick="wdRestoreNode('${f.name}')">恢复</button>`;
+      listEl.appendChild(item);
+    });
+  }catch(err){
+    listEl.innerHTML = `<div class="restore-tip">加载失败：${err.message}</div>`;
+  }
+}
+function closeRestoreModal(){ document.getElementById("restoreModal").style.display = "none"; }
+
+// 恢复指定节点并覆盖本地
+async function wdRestoreNode(name){
+  const m = name.match(/^(?:jltime|xinglin)_(\d{14})/);
+  const ts = m ? m[1] : name.replace(/^(?:jltime|xinglin)_/, "").replace(".json", "");
+  if(!confirm(`确定恢复到 ${formatNodeTime(ts)} 这个备份点？本地当前数据将被覆盖！`)) return;
+  try{
+    const imported = await wdReadFile(name);
+    const count = applyImportedData(imported);
+    setCloudLoaded({ name, ts, label: (name.match(/^(?:jltime|xinglin)_\d{14}(?:_[^/]+)?\.json$/) && name.length > 22) ? name.replace(/^(?:jltime|xinglin)_\d{14}_/, "").slice(0, -5) : "" });
+    closeRestoreModal();
+    alert(`已恢复到 ${formatNodeTime(ts)} 的备份，共载入 ${count} 条记录`);
+  }catch(err){
+    alert("恢复失败：" + err.message);
+  }
+}
+
+/* ---------- 大标题编辑 ---------- */
+function openTitleEditModal(){
+  if(viewMode === "view") return;
+  document.getElementById("titleInput").value = getPageTitle();
+  document.getElementById("titleModal").style.display = "flex";
+}
+function closeTitleEditModal(){ document.getElementById("titleModal").style.display = "none"; }
+function savePageTitle(){
+  const t = document.getElementById("titleInput").value.trim();
+  if(!t) return alert("标题不能为空");
+  setPageTitle(t);
+  document.getElementById("pageTitle").textContent = t;
+  closeTitleEditModal();
+}
+
+/* ---------- 复制通用函数 ---------- */
+function copyText(text, done){
+  const onOk = () => { if(done) done(); };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(onOk).catch(() => fallbackCopy(text, onOk));
+  }else{
+    fallbackCopy(text, onOk);
+  }
+}
+function fallbackCopy(text, done){
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.position = "fixed";
+  ta.style.opacity = "0";
+  document.body.appendChild(ta);
+  ta.select();
+  try{ document.execCommand("copy"); }catch(e){}
+  document.body.removeChild(ta);
+  done();
+}
+
+/* ---------- 缓存确认弹窗（含暗号校验） ----------
+   mode: "startup"（打开页面弹窗）→ 输暗号（123=访客模式，328=编辑模式），清缓存后拉取云端
+         "clearOnly"（顶部清缓键）→ 免暗号，仅清除本地缓存，不拉云端
+   暗号：
+     123                          → 访客模式：隐藏编辑按钮/编辑链接，日期标题点击直接跳外部链接
+     328                          → 编辑模式：所有编辑功能可见（源码中以编码形式保存） */
+const VIEW_PWD = atob("MTIz");     // 123 访客模式（编码混淆）
+const EDIT_PWD = atob("MzI4");     // 328 编辑模式（编码混淆）
+let viewMode = "full";   // "full" | "view"
+function openCacheConfirm(){
+  document.getElementById("cachePwd").value = "";
+  document.getElementById("cacheConfirmModal").style.display = "flex";
+  // 弹窗出现同时聚焦密码框（手机端自动弹出键盘）
+  setTimeout(() => { const p = document.getElementById("cachePwd"); if(p) p.focus(); }, 350);
+}
+function closeCacheConfirm(){ document.getElementById("cacheConfirmModal").style.display = "none"; }
+
+// 应用显示模式：full 完整 / view 访客（隐藏编辑相关）
+function applyViewMode(mode){
+  viewMode = mode;
+  sessionStorage.setItem("view_mode", mode);
+  const zone = document.getElementById("editZone");
+  if(zone) zone.style.display = (mode === "full" && isAuthGranted()) ? "contents" : "none";
+  const lbBtn = document.getElementById("lightboxEditLinkBtn");
+  if(lbBtn) lbBtn.style.display = mode === "view" ? "none" : "";
+  renderAllCards();
+}
+
+// 授权状态：只有输入正确暗号「进入」后才为 1，未授权时不显示任何数据、编辑与云端操作不可用
+function isAuthGranted(){ return sessionStorage.getItem("auth_granted") === "1"; }
+
+// 云端连接锁定状态：点「确定」清缓存后断开云端，下载/上传/恢复不可用，直到输入暗号「进入」
+function isCloudLocked(){ return sessionStorage.getItem("cloud_locked") === "1"; }
+
+// 清除本地缓存（含下载/恢复写入的数据与“当前载入”版本记录；令牌与暗号保留）
+function clearLocalCache(){
+  localStorage.removeItem(STORAGE.cards);
+  localStorage.removeItem(STORAGE.title);
+  localStorage.removeItem("cloud_loaded");
+  sessionStorage.setItem("cache_prompt_shown", "1");
+  if("caches" in window){
+    caches.keys().then(keys => keys.forEach(key => caches.delete(key)));
+  }
+  document.getElementById("pageTitle").textContent = getPageTitle();
+  renderAllCards();
+}
+
+// 确定：无需密码，直接清除本地缓存并断开云端连接（仍属未授权）
+function confirmClearCache(){
+  sessionStorage.setItem("auth_granted", "0");
+  clearLocalCache();
+  sessionStorage.setItem("cloud_locked", "1");
+  closeCacheConfirm();
+  showToast("本地缓存已清除，云端连接已断开", 3);
+}
+
+// 进入：校验暗号（123 访客 / 328 编辑），解锁云端，清缓存后拉取云端
+function enterWithPwd(){
+  const pwd = document.getElementById("cachePwd").value.trim();
+  let mode = "";
+  if(pwd === VIEW_PWD){
+    mode = "view";
+  }else if(pwd === EDIT_PWD){
+    mode = "full";
+  }else{
+    alert("暗号错误：请输入 123（访客）或 328（编辑）");
+    return;
+  }
+  sessionStorage.setItem("auth_granted", "1");
+  applyViewMode(mode);
+  sessionStorage.removeItem("cloud_locked");
+  clearLocalCache();
+  closeCacheConfirm();
+  cloudPullAfterClear();
+}
+
+// 记录当前载入的云端版本（恢复页小字展示用）
+function setCloudLoaded(f){
+  const info = { name: f.name, ts: f.ts, label: f.label || "" };
+  localStorage.setItem("cloud_loaded", JSON.stringify(info));
+}
+function getCloudLoadedText(){
+  const raw = localStorage.getItem("cloud_loaded");
+  if(!raw) return "当前载入：本地数据";
+  try{
+    const f = JSON.parse(raw);
+    return `当前载入：${formatNodeTime(f.ts)}${f.label ? "（" + f.label + "）" : ""}`;
+  }catch(e){
+    return "当前载入：本地数据";
+  }
+}
+
+// 清除缓存后自动拉取云端最新数据覆盖（结果用 3 秒自动关闭的提示条显示）
+async function cloudPullAfterClear(){
+  try{
+    const files = await wdList();
+    if(!files.length){
+      showToast("本地缓存已清除；云端暂无备份", 3);
+      return;
+    }
+    const latest = files[0];
+    const imported = await wdReadFile(latest.name);
+    const count = applyImportedData(imported);
+    setCloudLoaded(latest);
+    showToast(`已载入云端最新数据（${formatNodeTime(latest.ts)}，共 ${count} 条记录）`, 3);
+    cleanTrash().catch(() => {});                        // 后台清理回收站中超过30天的图片
+  }catch(err){
+    showToast("云端拉取失败：" + err.message, 4);
+  }
+}
+
+// 通用提示条：居中显示，seconds 秒后自动关闭
+let toastTimerId = null;
+function showToast(msg, seconds){
+  const el = document.getElementById("globalToast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimerId);
+  toastTimerId = setTimeout(() => el.classList.remove("show"), (seconds || 3) * 1000);
+}
+
+document.getElementById("cacheOkBtn").addEventListener("click", confirmClearCache);
+document.getElementById("cacheCancelBtn").addEventListener("click", function(){
+  // 取消：不清除本地缓存，直接浏览本地数据；云端连接保持断开（下载/上传/恢复不可用）
+  sessionStorage.setItem("auth_granted", "1");
+  sessionStorage.setItem("cloud_locked", "1");
+  closeCacheConfirm();
+  renderAllCards();
+});
+document.getElementById("cacheEnterBtn").addEventListener("click", enterWithPwd);
+
+/* ---------- 备注文本框：回车自动缩进两个字符（全角空格） ---------- */
+function bindNoteIndent(taId){
+  const ta = document.getElementById(taId);
+  ta.addEventListener("keydown", function(e){
+    if(e.key === "Enter" && !e.shiftKey){
+      e.preventDefault();
+      const s = this.selectionStart;
+      const end = this.selectionEnd;
+      const indent = "\n　　";   // 换行 + 两个全角空格（正好两个字符宽）
+      this.value = this.value.slice(0, s) + indent + this.value.slice(end);
+      const pos = s + indent.length;
+      this.selectionStart = this.selectionEnd = pos;
+    }
+  });
+}
+bindNoteIndent("noteText");
+bindNoteIndent("newCardDesc");
+
+/* ---------- 排序按钮 ---------- */
+document.getElementById("sortDateBtn").addEventListener("click", function(){
+  state.sortBy = "date";
+  state.sortAsc = !state.sortAsc;
+  this.textContent = state.sortAsc ? "时间↑早-晚" : "时间↓晚-早";
+  renderAllCards();
+});
+document.getElementById("sortLocBtn").addEventListener("click", function(){
+  state.sortBy = "location";
+  state.sortAsc = !state.sortAsc;
+  this.textContent = state.sortAsc ? "地点↓Z-A" : "地点↑A-Z";
+  renderAllCards();
+});
+
+/* ============================================================
+   惊喜彩蛋：随机烟花 / 漂浮爱心气泡 / 点按涟漪
+   ============================================================ */
+const SURPRISE = { canvas: null, ctx: null, parts: [], raf: null, timer: null };
+
+function initFxCanvas(){
+  const cv = document.createElement("canvas");
+  cv.id = "fxCanvas";
+  document.body.appendChild(cv);
+  SURPRISE.canvas = cv;
+  SURPRISE.ctx = cv.getContext("2d");
+  const resize = () => { cv.width = innerWidth; cv.height = innerHeight; };
+  resize();
+  addEventListener("resize", resize);
+}
+
+// 在 (x, y) 处放一束烟花（count 个粒子）
+function launchFireworks(x, y, count){
+  if(!SURPRISE.ctx) return;
+  const colors = ["#ff7da9","#ffb84d","#7dd3fc","#c084fc","#fda4af","#a7f3d0","#fde68a"];
+  for(let i = 0; i < (count || 34); i++){
+    const a = Math.random() * Math.PI * 2;
+    const sp = 2 + Math.random() * 5;
+    SURPRISE.parts.push({
+      x: x !== undefined ? x : innerWidth / 2,
+      y: y !== undefined ? y : innerHeight * 0.4,
+      vx: Math.cos(a) * sp,
+      vy: Math.sin(a) * sp,
+      life: 1,
+      decay: 0.012 + Math.random() * 0.02,
+      size: 1.6 + Math.random() * 2.4,
+      color: colors[(Math.random() * colors.length) | 0]
+    });
+  }
+  if(!SURPRISE.raf) tickFireworks();
+}
+function tickFireworks(){
+  const { ctx, parts } = SURPRISE;
+  ctx.clearRect(0, 0, SURPRISE.canvas.width, SURPRISE.canvas.height);
+  for(let i = parts.length - 1; i >= 0; i--){
+    const p = parts[i];
+    p.x += p.vx; p.y += p.vy; p.vy += 0.045; p.vx *= 0.985; p.life -= p.decay;
+    if(p.life <= 0){ parts.splice(i, 1); continue; }
+    ctx.globalAlpha = Math.max(p.life, 0);
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  if(parts.length){
+    SURPRISE.raf = requestAnimationFrame(tickFireworks);
+  }else{
+    SURPRISE.raf = null;
+    ctx.clearRect(0, 0, SURPRISE.canvas.width, SURPRISE.canvas.height);
+  }
+}
+
+// 每 3~6 分钟随机放一次烟花
+function scheduleFireworks(){
+  clearTimeout(SURPRISE.timer);
+  SURPRISE.timer = setTimeout(() => {
+    launchFireworks(innerWidth * (0.15 + Math.random() * 0.7), innerHeight * (0.2 + Math.random() * 0.45), 30 + ((Math.random() * 20) | 0));
+    scheduleFireworks();
+  }, (180 + Math.random() * 180) * 1000);
+}
+
+/* 漂浮小物：爱心/小花/小星星/小气球，撞边缘反弹，随机位置淡化消失，同时最多 3 个 */
+const FLOATERS = { items: [], raf: null, spawnTimer: null };
+const FLOAT_ICONS = ["♥","★","✦","❀","✿","✧","☘","♡"];
+const FLOAT_COLORS = ["#ff7da9","#ffb25e","#6fc6e8","#a98ef0","#8ed6a0","#f6c766","#f48fb1"];
+
+function spawnFloater(){
+  FLOATERS.items = FLOATERS.items.filter(o => !o.done);
+  if(FLOATERS.items.length < 3){
+    const el = document.createElement("span");
+    el.className = "float-heart";
+    el.textContent = FLOAT_ICONS[(Math.random() * FLOAT_ICONS.length) | 0];
+    el.style.color = FLOAT_COLORS[(Math.random() * FLOAT_COLORS.length) | 0];
+    el.style.fontSize = (16 + Math.random() * 16) + "px";
+    el.style.left = "0px";
+    el.style.top = "0px";
+    document.body.appendChild(el);
+    // 从上下左右随机一个方向出现，斜向飘入，撞边反弹
+    const W = innerWidth, H = innerHeight;
+    const side = (Math.random() * 4) | 0;   // 0底 1顶 2左 3右
+    const speed = 1.2 + Math.random() * 1.2;
+    const o = {
+      el, x: 0, y: 0, vx: 0, vy: 0,
+      rot: (Math.random() - 0.5) * 60,
+      vr: (Math.random() - 0.5) * 1.6,
+      life: 1,
+      decay: 0.0018 + Math.random() * 0.0014,   // 可持续 5~9 秒，慢慢淡化
+      done: false
+    };
+    if(side === 0){ o.x = 10 + Math.random() * (W - 40); o.y = H + 20; o.vx = (Math.random() - 0.5) * 1.6; o.vy = -speed; }
+    else if(side === 1){ o.x = 10 + Math.random() * (W - 40); o.y = -20; o.vx = (Math.random() - 0.5) * 1.6; o.vy = speed; }
+    else if(side === 2){ o.x = -20; o.y = 10 + Math.random() * (H - 40); o.vx = speed; o.vy = (Math.random() - 0.5) * 1.2; }
+    else{ o.x = W + 20; o.y = 10 + Math.random() * (H - 40); o.vx = -speed; o.vy = (Math.random() - 0.5) * 1.2; }
+    FLOATERS.items.push(o);
+    if(!FLOATERS.raf) tickFloaters();
+  }
+  // 8~16 秒随机再飘一个（保持同时不超过3个）
+  clearTimeout(FLOATERS.spawnTimer);
+  FLOATERS.spawnTimer = setTimeout(spawnFloater, 8000 + Math.random() * 8000);
+}
+function tickFloaters(){
+  const W = innerWidth, H = innerHeight;
+  for(const o of FLOATERS.items){
+    if(o.done) continue;
+    o.x += o.vx; o.y += o.vy; o.rot += o.vr;
+    // 撞到上下左右边缘都反弹
+    if(o.x < 6){ o.x = 6; o.vx = Math.abs(o.vx); }
+    if(o.x > W - 26){ o.x = W - 26; o.vx = -Math.abs(o.vx); }
+    if(o.y < 6){ o.y = 6; o.vy = Math.abs(o.vy); }
+    if(o.y > H - 26){ o.y = H - 26; o.vy = -Math.abs(o.vy); }
+    o.life -= o.decay;
+    if(o.life <= 0){ o.done = true; o.el.remove(); continue; }
+    o.el.style.transform = "translate(" + o.x + "px," + o.y + "px) rotate(" + o.rot + "deg)";
+    // 前半段全亮，后半段渐变淡出
+    o.el.style.opacity = Math.min(1, o.life * 1.6);
+  }
+  FLOATERS.items = FLOATERS.items.filter(o => !o.done);
+  if(FLOATERS.items.length){
+    FLOATERS.raf = requestAnimationFrame(tickFloaters);
+  }else{
+    FLOATERS.raf = null;
+  }
+}
+
+/* 点按涟漪：正常点击出现小水波；累计若干次后在点击处爆出小花/彩带/星星 */
+let rippleCount = 0;
+const BURST_ICONS = ["❀","✿","♥","★","✦","❥","✧"];
+const BURST_COLORS = ["#ff9ec4","#ffb98a","#7fd4e8","#b7a6f5","#a8e6b0","#f8d49a","#f5a8c9"];
+function bindRipple(){
+  document.addEventListener("pointerdown", e => {
+    // 普通涟漪
+    const r = document.createElement("span");
+    r.className = "ripple";
+    r.style.left = (e.clientX - 5) + "px";
+    r.style.top = (e.clientY - 5) + "px";
+    document.body.appendChild(r);
+    setTimeout(() => r.remove(), 800);
+    // 每 5~8 次点击爆一次花
+    rippleCount++;
+    if(rippleCount >= 5 + ((Math.random() * 4) | 0)){
+      rippleCount = 0;
+      burstAt(e.clientX, e.clientY);
+    }
+  }, { passive: true });
+}
+function burstAt(x, y){
+  const n = 9 + ((Math.random() * 5) | 0);
+  for(let i = 0; i < n; i++){
+    const a = (Math.PI * 2 * i) / n + Math.random() * 0.5;
+    const dist = 60 + Math.random() * 90;
+    const p = document.createElement("span");
+    p.className = "burst-part";
+    p.textContent = BURST_ICONS[(Math.random() * BURST_ICONS.length) | 0];
+    p.style.color = BURST_COLORS[(Math.random() * BURST_COLORS.length) | 0];
+    p.style.left = x + "px";
+    p.style.top = y + "px";
+    p.style.fontSize = (11 + Math.random() * 10) + "px";
+    p.style.setProperty("--dx", Math.cos(a) * dist + "px");
+    p.style.setProperty("--dy", Math.sin(a) * dist + "px");
+    p.style.setProperty("--rot", ((Math.random() - 0.5) * 200) + "deg");
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 1000);
+  }
+}
+
+/* 大标题两侧爱心跳动：随机切换 左/右/都在左/都在右 */
+function titleHeartDance(){
+  const a = document.getElementById("titleHeartA");
+  const b = document.getElementById("titleHeartB");
+  if(!a || !b) return;
+  const states = [
+    { a: { left: "-52px", right: "auto" }, b: { right: "-52px", left: "auto" } },   // 一左一右
+    { a: { left: "-52px", right: "auto" }, b: { left: "-12px", right: "auto" } },   // 都在左
+    { a: { right: "-12px", left: "auto" }, b: { right: "-52px", left: "auto" } }    // 都在右
+  ];
+  const apply = () => {
+    const s = states[(Math.random() * states.length) | 0];
+    a.style.left = s.a.left; a.style.right = s.a.right;
+    b.style.left = s.b.left; b.style.right = s.b.right;
+    // 每 4.5~7 秒才跳一次（低频跳动）
+    setTimeout(apply, 4500 + Math.random() * 2500);
+  };
+  apply();
+}
+
+function startSurprises(){
+  initFxCanvas();
+  bindRipple();
+  scheduleFireworks();
+  titleHeartDance();
+  setTimeout(spawnFloater, 3000);
+}
+
+/* ---------- 初始化 ---------- */
+function init(){
+  document.getElementById("pageTitle").textContent = getPageTitle();
+  applyViewMode(sessionStorage.getItem("view_mode") === "view" ? "view" : "full");
+  if(!sessionStorage.getItem("cache_prompt_shown")) openCacheConfirm();
+  bindLightboxSwipe();
+  startSurprises();
+}
+if(document.readyState === "loading"){
+  document.addEventListener("DOMContentLoaded", init);
+}else{
+  init();
+}
+</script>
+</body>
+</html>
