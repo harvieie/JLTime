@@ -149,9 +149,12 @@ body{
 .title-wrap{position:relative;display:inline-block;}
 .title-heart{
   position:absolute;top:50%;transform:translateY(-50%);color:#ff7da9;font-size:24px;opacity:.85;
-  transition:left .9s cubic-bezier(.3,1.2,.4,1),right .9s cubic-bezier(.3,1.2,.4,1);
+  transition:left 1.2s cubic-bezier(.3,1.3,.4,1),right 1.2s cubic-bezier(.3,1.3,.4,1);
   pointer-events:none;
 }
+/* 左心戴墨镜、右心带蝴蝶结 */
+#titleHeartA::before{content:"🕶";position:absolute;left:50%;top:-13px;transform:translateX(-50%);font-size:12px;}
+#titleHeartB::after{content:"🎀";position:absolute;right:-15px;top:-8px;font-size:13px;}
 button{border-radius:12px;}
 .card{
   background:linear-gradient(160deg,#ffffff 0%,#fff7f9 100%);
@@ -447,7 +450,7 @@ const STORAGE = { cards: "timeline_cards", title: "page_title" };
 /* ---------- GitHub 云存储配置 ----------
    数据以 json 文件存放在你的 GitHub 仓库 data/ 文件夹中，
    页面直接调用 GitHub API（官方支持浏览器跨域），无需本地代理。
-   打开暗号：输入 123 = 访客模式（只读浏览）；输入 328 = 编辑模式（全部功能）。
+   打开暗号：访客模式（只读浏览）或编辑模式（全部功能）。
    令牌以混淆编码内嵌（源码不直接出现完整令牌），
    令牌到期或更换仓库可在「恢复」弹窗 →「云端登录」中直接修改。 */
 const GH = {
@@ -929,16 +932,32 @@ function bindLightboxSwipe(){
 
 function showGalleryImage(){
   state.fullImageLoaded = false;
-  document.getElementById("galleryImg").src = getThumbnailUrl(state.galleryImages[state.galleryIndex]);
-  // 每切到一张新图都重新显示「查看原图」按钮（当前图始终以缩略图展示，可随时点开原图）
-  document.getElementById("loadFullBtn").style.display = "inline-block";
+  const img = document.getElementById("galleryImg");
+  const btn = document.getElementById("loadFullBtn");
+  img.onload = null; img.onerror = null;
+  btn.textContent = "查看原图";
+  btn.disabled = false;
+  btn.style.display = "inline-block";
+  img.src = getThumbnailUrl(state.galleryImages[state.galleryIndex]);
   updateGalleryPageInfo();
 }
 function loadFullRes(){
   if(state.fullImageLoaded) return;
-  document.getElementById("galleryImg").src = state.galleryImages[state.galleryIndex];
-  state.fullImageLoaded = true;
-  document.getElementById("loadFullBtn").style.display = "none";
+  const btn = document.getElementById("loadFullBtn");
+  const img = document.getElementById("galleryImg");
+  btn.textContent = "原图加载中…";
+  btn.disabled = true;
+  img.onload = () => {
+    state.fullImageLoaded = true;
+    btn.style.display = "none";
+    btn.disabled = false;
+  };
+  img.onerror = () => {
+    btn.textContent = "查看原图（失败，重试）";
+    btn.disabled = false;
+    img.onerror = null;
+  };
+  img.src = state.galleryImages[state.galleryIndex];
 }
 function galleryFirst(){ state.galleryIndex = 0; showGalleryImage(); }
 function galleryLast(){ state.galleryIndex = state.galleryImages.length - 1; showGalleryImage(); }
@@ -1611,13 +1630,13 @@ function fallbackCopy(text, done){
 }
 
 /* ---------- 缓存确认弹窗（含暗号校验） ----------
-   mode: "startup"（打开页面弹窗）→ 输暗号（123=访客模式，328=编辑模式），清缓存后拉取云端
+   mode: "startup"（打开页面弹窗）→ 输暗号（访客/编辑两种模式），清缓存后拉取云端
          "clearOnly"（顶部清缓键）→ 免暗号，仅清除本地缓存，不拉云端
    暗号：
-     123                          → 访客模式：隐藏编辑按钮/编辑链接，日期标题点击直接跳外部链接
-     328                          → 编辑模式：所有编辑功能可见（源码中以编码形式保存） */
-const VIEW_PWD = atob("MTIz");     // 123 访客模式（编码混淆）
-const EDIT_PWD = atob("MzI4");     // 328 编辑模式（编码混淆）
+     访客模式：隐藏编辑按钮/编辑链接，日期标题点击直接跳外部链接
+     编辑模式：所有编辑功能可见（源码中以编码形式保存） */
+const VIEW_PWD = atob("MTIz");     // 访客模式（编码混淆）
+const EDIT_PWD = atob("MzI4");     // 编辑模式（编码混淆）
 let viewMode = "full";   // "full" | "view"
 function openCacheConfirm(){
   document.getElementById("cachePwd").value = "";
@@ -1666,7 +1685,7 @@ function confirmClearCache(){
   showToast("本地缓存已清除，云端连接已断开", 3);
 }
 
-// 进入：校验暗号（123 访客 / 328 编辑），解锁云端，清缓存后拉取云端
+// 进入：校验暗号（访客/编辑两种模式），解锁云端，清缓存后拉取云端
 function enterWithPwd(){
   const pwd = document.getElementById("cachePwd").value.trim();
   let mode = "";
@@ -1675,7 +1694,7 @@ function enterWithPwd(){
   }else if(pwd === EDIT_PWD){
     mode = "full";
   }else{
-    alert("暗号错误：请输入 123（访客）或 328（编辑）");
+    alert("密语不对，请重新输入");
     return;
   }
   sessionStorage.setItem("auth_granted", "1");
@@ -1789,21 +1808,21 @@ function initFxCanvas(){
   addEventListener("resize", resize);
 }
 
-// 在 (x, y) 处放一束烟花（count 个粒子）
+// 在 (x, y) 处放一束烟花（count 个粒子，飘得慢、留得久）
 function launchFireworks(x, y, count){
   if(!SURPRISE.ctx) return;
   const colors = ["#ff7da9","#ffb84d","#7dd3fc","#c084fc","#fda4af","#a7f3d0","#fde68a"];
   for(let i = 0; i < (count || 34); i++){
     const a = Math.random() * Math.PI * 2;
-    const sp = 2 + Math.random() * 5;
+    const sp = 1.4 + Math.random() * 3.2;
     SURPRISE.parts.push({
       x: x !== undefined ? x : innerWidth / 2,
       y: y !== undefined ? y : innerHeight * 0.4,
       vx: Math.cos(a) * sp,
       vy: Math.sin(a) * sp,
       life: 1,
-      decay: 0.012 + Math.random() * 0.02,
-      size: 1.6 + Math.random() * 2.4,
+      decay: 0.005 + Math.random() * 0.007,
+      size: 1.8 + Math.random() * 2.8,
       color: colors[(Math.random() * colors.length) | 0]
     });
   }
@@ -1814,7 +1833,7 @@ function tickFireworks(){
   ctx.clearRect(0, 0, SURPRISE.canvas.width, SURPRISE.canvas.height);
   for(let i = parts.length - 1; i >= 0; i--){
     const p = parts[i];
-    p.x += p.vx; p.y += p.vy; p.vy += 0.045; p.vx *= 0.985; p.life -= p.decay;
+    p.x += p.vx; p.y += p.vy; p.vy += 0.018; p.vx *= 0.992; p.life -= p.decay;
     if(p.life <= 0){ parts.splice(i, 1); continue; }
     ctx.globalAlpha = Math.max(p.life, 0);
     ctx.fillStyle = p.color;
@@ -1847,7 +1866,8 @@ const FLOAT_COLORS = ["#ff7da9","#ffb25e","#6fc6e8","#a98ef0","#8ed6a0","#f6c766
 
 function spawnFloater(){
   FLOATERS.items = FLOATERS.items.filter(o => !o.done);
-  if(FLOATERS.items.length < 3){
+  // 每次成对出现两个（上限 4 个 = 2 对）
+  while(FLOATERS.items.length < 4){
     const el = document.createElement("span");
     el.className = "float-heart";
     el.textContent = FLOAT_ICONS[(Math.random() * FLOAT_ICONS.length) | 0];
@@ -1873,11 +1893,11 @@ function spawnFloater(){
     else if(side === 2){ o.x = -20; o.y = 10 + Math.random() * (H - 40); o.vx = speed; o.vy = (Math.random() - 0.5) * 1.2; }
     else{ o.x = W + 20; o.y = 10 + Math.random() * (H - 40); o.vx = -speed; o.vy = (Math.random() - 0.5) * 1.2; }
     FLOATERS.items.push(o);
-    if(!FLOATERS.raf) tickFloaters();
   }
-  // 8~16 秒随机再飘一个（保持同时不超过3个）
+  if(!FLOATERS.raf) tickFloaters();
+  // 10~18 秒后成对再飘两个
   clearTimeout(FLOATERS.spawnTimer);
-  FLOATERS.spawnTimer = setTimeout(spawnFloater, 8000 + Math.random() * 8000);
+  FLOATERS.spawnTimer = setTimeout(spawnFloater, 10000 + Math.random() * 8000);
 }
 function tickFloaters(){
   const W = innerWidth, H = innerHeight;
@@ -1944,24 +1964,31 @@ function burstAt(x, y){
   }
 }
 
-/* 大标题两侧爱心跳动：随机切换 左/右/都在左/都在右 */
+/* 大标题两侧爱心跳动：大部分时间一左一右，偶尔（8~14秒）跳到同一侧再弹回 */
 function titleHeartDance(){
   const a = document.getElementById("titleHeartA");
   const b = document.getElementById("titleHeartB");
   if(!a || !b) return;
-  const states = [
-    { a: { left: "-52px", right: "auto" }, b: { right: "-52px", left: "auto" } },   // 一左一右
-    { a: { left: "-52px", right: "auto" }, b: { left: "-12px", right: "auto" } },   // 都在左
-    { a: { right: "-12px", left: "auto" }, b: { right: "-52px", left: "auto" } }    // 都在右
-  ];
-  const apply = () => {
-    const s = states[(Math.random() * states.length) | 0];
-    a.style.left = s.a.left; a.style.right = s.a.right;
-    b.style.left = s.b.left; b.style.right = s.b.right;
-    // 每 4.5~7 秒才跳一次（低频跳动）
-    setTimeout(apply, 4500 + Math.random() * 2500);
+  const toSides = () => {           // 默认：一左一右
+    a.style.left = "-52px"; a.style.right = "auto";
+    b.style.right = "-52px"; b.style.left = "auto";
   };
-  apply();
+  const jump = () => {
+    const both = (Math.random() * 2) | 0;   // 0=都去左边 1=都去右边
+    if(both === 0){
+      a.style.left = "-52px"; a.style.right = "auto";
+      b.style.left = "-12px"; b.style.right = "auto";
+    }else{
+      a.style.right = "-12px"; a.style.left = "auto";
+      b.style.right = "-52px"; b.style.left = "auto";
+    }
+    // 跳到同一边停留 2.5 秒后弹回两侧
+    setTimeout(toSides, 2500);
+    // 8~14 秒后再跳一次（大部分时间保持两侧）
+    setTimeout(jump, 8000 + Math.random() * 6000);
+  };
+  toSides();
+  setTimeout(jump, 8000 + Math.random() * 6000);
 }
 
 function startSurprises(){
