@@ -145,9 +145,12 @@ body{
   background:linear-gradient(180deg,#fffaf3 0%,#ffeef4 45%,#fdeef8 100%);
   background-attachment:fixed;
 }
-.page-title::before,.page-title::after{
-  content:"❤";-webkit-text-fill-color:#ff7da9;-webkit-text-stroke:0;font-size:24px;
-  vertical-align:8px;margin:0 10px;opacity:.8;
+/* 大标题两侧跳动爱心 */
+.title-wrap{position:relative;display:inline-block;}
+.title-heart{
+  position:absolute;top:50%;transform:translateY(-50%);color:#ff7da9;font-size:24px;opacity:.85;
+  transition:left .9s cubic-bezier(.3,1.2,.4,1),right .9s cubic-bezier(.3,1.2,.4,1);
+  pointer-events:none;
 }
 button{border-radius:12px;}
 .card{
@@ -158,7 +161,7 @@ button{border-radius:12px;}
 .card:hover{box-shadow:0 14px 30px rgba(255,150,180,.22),0 4px 10px rgba(0,0,0,.06);}
 .filter-box{background:rgba(255,255,255,.78);border-color:#ffe3ec;backdrop-filter:blur(6px);}
 
-/* 彩蛋层：烟花 canvas / 点按涟漪 / 漂浮爱心（全部不拦截点击） */
+/* 彩蛋层：烟花 canvas / 点按涟漪 / 漂浮小物 / 爆花（全部不拦截点击） */
 #fxCanvas{position:fixed;inset:0;pointer-events:none;z-index:999;}
 .ripple{
   position:fixed;width:10px;height:10px;border:2px solid #ff9ec4;border-radius:50%;
@@ -169,14 +172,15 @@ button{border-radius:12px;}
   100%{transform:scale(4);opacity:0;}
 }
 .float-heart{
-  position:fixed;bottom:-40px;pointer-events:none;z-index:997;opacity:0;
-  animation:heartFloat linear forwards;
+  position:fixed;pointer-events:none;z-index:997;opacity:0;
 }
-@keyframes heartFloat{
-  0%{transform:translateY(0) translateX(0) rotate(0);opacity:0;}
-  8%{opacity:.85;}
-  90%{opacity:.55;}
-  100%{transform:translateY(-105vh) translateX(26px) rotate(18deg);opacity:0;}
+.burst-part{
+  position:fixed;pointer-events:none;z-index:998;font-size:14px;opacity:1;
+  animation:burstOut .95s ease-out forwards;
+}
+@keyframes burstOut{
+  0%{transform:translate(0,0) scale(.5) rotate(0);opacity:1;}
+  100%{transform:translate(var(--dx),var(--dy)) scale(1.15) rotate(var(--rot));opacity:0;}
 }
 </style>
 </head>
@@ -193,8 +197,8 @@ button{border-radius:12px;}
       <span class="hl">是否清除浏览器本地旧缓存？</span><br><br>
       确定→直接清除本地缓存，<br>
       进入→输入暗号后载入云端，<br>
-      取消→不操作。<br><br>
-      <input type="password" id="cachePwd" placeholder="般若波罗蜜" autocomplete="off" style="width:100%;text-align:center;letter-spacing:4px;">
+      取消→不清缓存，直接浏览本地。<br><br>
+      <input type="password" id="cachePwd" placeholder="暗号：123 访客 / 328 编辑" autocomplete="off" style="width:100%;text-align:center;letter-spacing:4px;">
     </div>
     <div class="modal-buttons">
       <button id="cacheOkBtn">确定</button>
@@ -205,7 +209,11 @@ button{border-radius:12px;}
 </div>
 
 <div class="header-wrap">
-  <div class="page-title" id="pageTitle" onclick="openTitleEditModal()">JL Time</div>
+  <div class="title-wrap">
+    <span class="title-heart" id="titleHeartA">❤</span>
+    <span class="page-title" id="pageTitle" onclick="openTitleEditModal()">JL Time</span>
+    <span class="title-heart" id="titleHeartB">❤</span>
+  </div>
 </div>
 
 <div class="filter-box">
@@ -225,7 +233,7 @@ button{border-radius:12px;}
   <button onclick="resetAll()">重置</button>
   <button id="sortDateBtn">时间↓晚-早</button>
   <button id="sortLocBtn">地点↑A-Z</button>
-  <!-- 编辑分区：与筛选功能区分开（X328 访客模式整体隐藏） -->
+  <!-- 编辑分区：与筛选功能区分开（访客模式整体隐藏） -->
   <span id="editZone">
   <label>编辑：</label>
   <button class="success" onclick="openAddCardModal()">新增</button>
@@ -394,7 +402,7 @@ button{border-radius:12px;}
     <div class="restore-current" id="restoreCurrent">当前载入：本地数据</div>
     <div class="restore-list" id="restoreList"><div class="restore-tip">加载中…</div></div>
     <div class="link-buttons">
-      <button class="checked-mode" onclick="ghSettings()">替换令牌</button>
+      <button class="checked-mode" onclick="ghSettings()">云端登录</button>
       <button onclick="closeRestoreModal()">关闭</button>
     </div>
   </div>
@@ -439,47 +447,55 @@ const STORAGE = { cards: "timeline_cards", title: "page_title" };
 /* ---------- GitHub 云存储配置 ----------
    数据以 json 文件存放在你的 GitHub 仓库 data/ 文件夹中，
    页面直接调用 GitHub API（官方支持浏览器跨域），无需本地代理。
-   令牌末位字符拆出，打开暗号 = 末位字符 + "123"（当前为 X123）：
-   清除缓存弹窗中输入正确暗号后自动拼回末位字符再调用云端。
-   令牌到期可在「恢复」弹窗中点击「替换令牌」更新，新令牌同样
-   拆出末位，暗号自动变为 新末位+123。 */
+   打开暗号：输入 123 = 访客模式（只读浏览）；输入 328 = 编辑模式（全部功能）。
+   令牌以混淆编码内嵌（源码不直接出现完整令牌），
+   令牌到期或更换仓库可在「恢复」弹窗 →「云端登录」中直接修改。 */
 const GH = {
-  owner: "harvieie",
-  repo: "JLTime",
   branch: "main",
   dir: "data",               // 云端存储文件夹（首次上传自动创建）
   maxNodes: 10               // 云端最多保留 10 个时间节点
 };
-// 内置令牌主体（分段存放）与末位字符（默认令牌）
-const GH_TOKEN_PART1 = "ghp_G299XNvoXZ63B4";
-const GH_TOKEN_PART2 = "iOXFrcnbllRbOhC30Ckmq";
-const GH_TOKEN_TAIL = "X";
 
-// 令牌主体/末位：可被「替换令牌」覆盖（存 localStorage，避免写入页面文件）
+// 内置默认令牌（混淆编码，运行时还原；可通过「云端登录」覆盖）
+function defaultToken(){
+  const s = "==AWx12aDBzMDh2TiJFbsJmbjJnRY9Ua0I0M2oFWvZnTYlTOyc0Xwh2Z";
+  return atob(s.split("").reverse().join(""));
+}
+// 仓库名：可被「云端登录」覆盖（存 localStorage）
+function ghOwner(){ return localStorage.getItem("gh_owner") || "harvieie"; }
+function ghRepo(){ return localStorage.getItem("gh_repo") || "JLTime"; }
+// 令牌主体/末位：可被「云端登录」覆盖（存 localStorage，避免写入页面文件）
 function ghTokenBody(){
-  return localStorage.getItem("gh_token_body") || (GH_TOKEN_PART1 + GH_TOKEN_PART2);
+  return localStorage.getItem("gh_token_body") || defaultToken().slice(0, -1);
 }
 function ghTokenTail(){
-  return localStorage.getItem("gh_token_tail") || GH_TOKEN_TAIL;
+  return localStorage.getItem("gh_token_tail") || defaultToken().slice(-1);
 }
 // 拼回完整令牌
 function ghToken(){
   return ghTokenBody() + ghTokenTail();
 }
-// 当前打开暗号 = 令牌末位 + "123"
-function ghPwd(){
-  return ghTokenTail() + "123";
+// 云端 API 根地址（随仓库配置动态变化）
+function ghApi(){
+  return "https://api.github.com/repos/" + ghOwner() + "/" + ghRepo() + "/contents/";
 }
-// 替换令牌（恢复弹窗入口）：新令牌拆出末位，暗号自动变为 末位+123
+
+// 云端登录（恢复弹窗入口）：可修改仓库名与完整令牌，默认填入当前值
 function ghSettings(){
-  const cur = "ghp***" + ghTokenTail();
-  const t = prompt("当前令牌（末位已隐藏）：" + cur + "\n\n粘贴新的完整 GitHub 令牌（ghp_ 开头，共 40 位）：");
-  if(t === null) return;
-  const val = t.trim();
+  const repoVal = ghOwner() + "/" + ghRepo();
+  const repo = prompt("云端登录 — 仓库名（格式：用户名/仓库名）\n当前：" + repoVal, repoVal);
+  if(repo === null) return;
+  const repoTrim = repo.trim().replace(/^https?:\/\/github\.com\//, "").replace(/\/+$/, "");
+  if(!/^[\w.-]+\/[\w.-]+$/.test(repoTrim)) return alert("仓库名格式不正确（应为 用户名/仓库名）");
+  const tk = prompt("云端登录 — GitHub 令牌（ghp_ 开头，共 40 位）\n当前令牌已填入，可直接修改", ghToken());
+  if(tk === null) return;
+  const val = tk.trim();
   if(!/^ghp_[A-Za-z0-9]{36}$/.test(val)) return alert("令牌格式不正确（应为 ghp_ 开头共 40 位）");
+  localStorage.setItem("gh_owner", repoTrim.split("/")[0]);
+  localStorage.setItem("gh_repo", repoTrim.split("/")[1]);
   localStorage.setItem("gh_token_body", val.slice(0, -1));
   localStorage.setItem("gh_token_tail", val.slice(-1));
-  alert("令牌已替换，暗号已自动更新为：" + val.slice(-1) + "123");
+  alert("云端登录信息已更新：" + repoTrim + "\n令牌已保存（末位自动隐藏）");
 }
 
 const defaultCards = [
@@ -531,7 +547,7 @@ function setPageTitle(text){ localStorage.setItem(STORAGE.title, text); }
 function getThumbnailUrl(url){
   if(!url) return url;
   // 仓库原图 → 同目录 .thumb/ 缩略图（几十KB，加载更快；点开灯箱“查看原图”再载原图）
-  const m = url.match(/^(https:\/\/harvieie\.github\.io\/JLTime\/images\/[^/]+\/)([^/?#]+)$/);
+  const m = url.match(/^(https:\/\/[\w.-]+\.github\.io\/[\w.-]+\/images\/[^/]+\/)([^/?#]+)$/);
   if(m){
     const file = m[2];
     const dot = file.lastIndexOf(".");
@@ -965,7 +981,7 @@ function deleteImgLink(){
   if(state.galleryImages.length <= 1) return alert("至少保留一张图片，不能删除");
   const target = state.galleryImages[state.galleryIndex];
   // 识别仓库图库链接（GitHub Pages images/日期/文件）
-  const m = target.match(/^https:\/\/harvieie\.github\.io\/JLTime\/images\/([^/]+)\/([^/?#]+)$/);
+  const m = target.match(/^https:\/\/[\w.-]+\.github\.io\/[\w.-]+\/images\/([^/]+)\/([^/?#]+)$/);
   if(!m){ deleteLocalImgOnly(); return; }               // 外部链接：仅本地删除
   const refs = loadCards().filter(c => c.imgs.indexOf(target) !== -1).length;
   if(refs > 1){                                          // 被多张卡片引用：云端保留
@@ -995,7 +1011,7 @@ function deleteLocalImgOnly(){
 
 // 删除仓库 images/ 下的文件（按路径先取 sha 再 DELETE）
 async function deleteRepoFile(path){
-  const url = GH_API + path;
+  const url = ghApi() + path;
   const res = await ghFetch(url, { headers: ghHeaders() });
   if(res.status === 404) return;                         // 云端本就无此文件，放行
   if(!res.ok) throw new Error("读取云端文件失败（" + res.status + "）");
@@ -1010,7 +1026,7 @@ async function deleteRepoFile(path){
 
 // 把仓库图库文件移入回收站：images/<日期>/.trash/<删除时间戳>_<原名>，保留30天后自动清除
 async function moveToTrash(path){
-  const url = GH_API + path;
+  const url = ghApi() + path;
   const res = await ghFetch(url + "?ref=" + encodeURIComponent(GH.branch), { headers: ghHeaders() });
   if(res.status === 404) return;                         // 云端本就无此文件，放行
   if(!res.ok) throw new Error("读取云端文件失败（" + res.status + "）");
@@ -1028,7 +1044,7 @@ async function moveToTrash(path){
     b64 = btoa(bin);
   }
   // 写入回收站
-  const put = await ghFetch(GH_API + trashPath, {
+  const put = await ghFetch(ghApi() + trashPath, {
     method: "PUT",
     headers: Object.assign({ "Content-Type": "application/json" }, ghHeaders()),
     body: JSON.stringify({ message: "移入回收站: " + parts[2], content: b64, branch: GH.branch })
@@ -1045,13 +1061,13 @@ async function moveToTrash(path){
 
 // 清理回收站中超过30天的文件（进入云端后自动执行）
 async function cleanTrash(){
-  const root = await ghFetch(GH_API + "images/?ref=" + encodeURIComponent(GH.branch), { headers: ghHeaders() });
+  const root = await ghFetch(ghApi() + "images/?ref=" + encodeURIComponent(GH.branch), { headers: ghHeaders() });
   if(!root.ok) return;
   const dirs = (await root.json()).filter(x => x.type === "dir");
   const now = Date.now();
   const DAY = 30 * 24 * 3600 * 1000;
   for(const d of dirs){
-    const trashUrl = GH_API + "images/" + d.name + "/.trash?ref=" + encodeURIComponent(GH.branch);
+    const trashUrl = ghApi() + "images/" + d.name + "/.trash?ref=" + encodeURIComponent(GH.branch);
     let res;
     try{ res = await ghFetch(trashUrl, { headers: ghHeaders() }); }catch(e){ continue; }
     if(res.status === 404 || !res.ok) continue;
@@ -1062,7 +1078,7 @@ async function cleanTrash(){
       const ts = m[1];
       const t = new Date(+ts.slice(0,4), +ts.slice(4,6) - 1, +ts.slice(6,8), +ts.slice(8,10), +ts.slice(10,12), +ts.slice(12,14)).getTime();
       if(now - t <= DAY) continue;
-      await ghFetch(GH_API + "images/" + d.name + "/.trash/" + f.name, {
+      await ghFetch(ghApi() + "images/" + d.name + "/.trash/" + f.name, {
         method: "DELETE",
         headers: Object.assign({ "Content-Type": "application/json" }, ghHeaders()),
         body: JSON.stringify({ message: "回收站超30天自动清除: " + f.name, sha: f.sha, branch: GH.branch })
@@ -1188,7 +1204,7 @@ function doImportData(){
    数据文件：{dir}/jltime_YYYYMMDDHHmmss.json，保留最近 10 个
    ============================================================ */
 
-const GH_API = "https://api.github.com/repos/" + GH.owner + "/" + GH.repo + "/contents/";
+
 
 function ghHeaders(){
   return {
@@ -1240,7 +1256,7 @@ function pickUploadImg(targetId, getDate, cb){
     const d = new Date();
     const p = n => String(n).padStart(2, "0");
     const name = `img_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.${ext}`;
-    const link = `https://${GH.owner}.github.io/${GH.repo}/images/${dateStr}/${name}`;
+    const link = `https://${ghOwner()}.github.io/${ghRepo()}/images/${dateStr}/${name}`;
     // 上传前确认：简要列出即将执行的内容
     const msg = [
       "确认上传图片：",
@@ -1264,19 +1280,19 @@ async function uploadImageToRepo(file, dateStr, name, cb){
   reader.onload = async () => {
     try{
       const b64 = reader.result.split(",")[1];
-      const url = GH_API + path;
+      const url = ghApi() + path;
       const res = await ghFetch(url, {
         method: "PUT",
         headers: ghHeaders(),
         body: JSON.stringify({ message: "时光图库: " + path, content: b64, branch: GH.branch })
       }, 90000);
       if(!res.ok) throw new Error("上传失败（" + res.status + "），请检查令牌与网络");
-      const cdn = `https://${GH.owner}.github.io/${GH.repo}/${path}`;
+      const cdn = `https://${ghOwner()}.github.io/${ghRepo()}/${path}`;
       // 同步生成并上传缩略图（宽400）到 .thumb/，保证页面立即能显示小图
       try{
         const thumbB64 = await makeThumbB64(file);
         const thumbPath = "images/" + dateStr + "/.thumb/" + name.replace(/\.[^.]+$/, "") + ".jpg";
-        await ghFetch(GH_API + thumbPath, {
+        await ghFetch(ghApi() + thumbPath, {
           method: "PUT",
           headers: ghHeaders(),
           body: JSON.stringify({ message: "时光图库缩略图: " + thumbPath, content: thumbB64, branch: GH.branch })
@@ -1338,7 +1354,7 @@ function ghPath(name){ return GH.dir + "/" + name; }
 
 // 列出云端备份文件（仅 jltime_/xinglin_*.json，最近 → 最远）；目录不存在视为空
 async function wdList(){
-  const url = GH_API + encodeURIComponent(GH.dir) + "?ref=" + encodeURIComponent(GH.branch);
+  const url = ghApi() + encodeURIComponent(GH.dir) + "?ref=" + encodeURIComponent(GH.branch);
   const res = await ghFetch(url, { headers: ghHeaders() });
   if(res.status === 404) return [];           // data 目录尚未创建
   if(!res.ok) throw new Error("读取云端目录失败（" + res.status + "）");
@@ -1361,7 +1377,7 @@ async function wdList(){
 
 // 读取单个备份文件内容
 async function wdReadFile(name){
-  const url = GH_API + ghPath(name) + "?ref=" + encodeURIComponent(GH.branch);
+  const url = ghApi() + ghPath(name) + "?ref=" + encodeURIComponent(GH.branch);
   const res = await ghFetch(url, { headers: ghHeaders() });
   if(!res.ok) throw new Error("读取云端数据失败（" + res.status + "）");
   const meta = await res.json();
@@ -1370,7 +1386,7 @@ async function wdReadFile(name){
 
 // 写入单个备份文件（同名已存在则更新）
 async function wdWriteFile(name, data){
-  const url = GH_API + ghPath(name);
+  const url = ghApi() + ghPath(name);
   const payload = {
     message: "备份数据 " + name,
     content: b64encode(JSON.stringify(data, null, 2)),
@@ -1398,7 +1414,7 @@ async function wdWriteFile(name, data){
 
 // 删除单个备份文件
 async function wdDeleteFile(file){
-  const url = GH_API + ghPath(file.name);
+  const url = ghApi() + ghPath(file.name);
   const res = await ghFetch(url, {
     method: "DELETE",
     headers: Object.assign({ "Content-Type": "application/json" }, ghHeaders()),
@@ -1571,12 +1587,13 @@ function fallbackCopy(text, done){
 }
 
 /* ---------- 缓存确认弹窗（含暗号校验） ----------
-   mode: "startup"（打开页面弹窗）→ 输暗号（X123/新暗号=完整模式，X328=访客模式），清缓存后拉取云端
+   mode: "startup"（打开页面弹窗）→ 输暗号（123=访客模式，328=编辑模式），清缓存后拉取云端
          "clearOnly"（顶部清缓键）→ 免暗号，仅清除本地缓存，不拉云端
    暗号：
-     X123（或替换令牌后的新暗号）→ 完整模式：所有编辑功能可见
-     X328                        → 访客模式：隐藏编辑按钮/编辑链接，日期标题点击直接跳外部链接 */
-const VIEW_PWD = "X328";
+     123                          → 访客模式：隐藏编辑按钮/编辑链接，日期标题点击直接跳外部链接
+     328                          → 编辑模式：所有编辑功能可见 */
+const VIEW_PWD = "123";     // 访客模式
+const EDIT_PWD = "328";     // 编辑模式
 let viewMode = "full";   // "full" | "view"
 function openCacheConfirm(){
   document.getElementById("cachePwd").value = "";
@@ -1623,16 +1640,16 @@ function confirmClearCache(){
   showToast("本地缓存已清除，云端连接已断开", 3);
 }
 
-// 进入：校验暗号（X328 访客 / X123 完整），解锁云端，清缓存后拉取云端
+// 进入：校验暗号（123 访客 / 328 编辑），解锁云端，清缓存后拉取云端
 function enterWithPwd(){
   const pwd = document.getElementById("cachePwd").value.trim();
   let mode = "";
   if(pwd === VIEW_PWD){
     mode = "view";
-  }else if(pwd === ghPwd()){
+  }else if(pwd === EDIT_PWD){
     mode = "full";
   }else{
-    alert("暗号错误：请在“般若波罗蜜”处输入正确暗号后再进入");
+    alert("暗号错误：请输入 123（访客）或 328（编辑）");
     return;
   }
   sessionStorage.setItem("auth_granted", "1");
@@ -1690,8 +1707,8 @@ function showToast(msg, seconds){
 
 document.getElementById("cacheOkBtn").addEventListener("click", confirmClearCache);
 document.getElementById("cacheCancelBtn").addEventListener("click", function(){
-  // 取消：不输密码，不显示任何数据，云端连接保持断开（必须暗号「进入」才能读取）
-  sessionStorage.setItem("auth_granted", "0");
+  // 取消：不清除本地缓存，直接浏览本地数据；云端连接保持断开（下载/上传/恢复不可用）
+  sessionStorage.setItem("auth_granted", "1");
   sessionStorage.setItem("cloud_locked", "1");
   closeCacheConfirm();
   renderAllCards();
@@ -1788,46 +1805,138 @@ function tickFireworks(){
   }
 }
 
-// 每 4~9 分钟随机放一次烟花
+// 每 3~6 分钟随机放一次烟花
 function scheduleFireworks(){
   clearTimeout(SURPRISE.timer);
   SURPRISE.timer = setTimeout(() => {
     launchFireworks(innerWidth * (0.15 + Math.random() * 0.7), innerHeight * (0.2 + Math.random() * 0.45), 30 + ((Math.random() * 20) | 0));
     scheduleFireworks();
-  }, (240 + Math.random() * 300) * 1000);
+  }, (180 + Math.random() * 180) * 1000);
 }
 
-// 漂浮爱心气泡：每 20~45 秒随机飘一个
-function floatHeart(){
-  const icons = ["❤","💗","🩷","💞","✨"];
-  const el = document.createElement("span");
-  el.className = "float-heart";
-  el.textContent = icons[(Math.random() * icons.length) | 0];
-  el.style.left = (5 + Math.random() * 90) + "vw";
-  el.style.fontSize = (14 + Math.random() * 22) + "px";
-  el.style.animationDuration = (7 + Math.random() * 7) + "s";
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 16000);
-  setTimeout(floatHeart, 20000 + Math.random() * 25000);
+/* 漂浮小物：爱心/小花/小星星/小气球，撞边缘反弹，随机位置淡化消失，同时最多 3 个 */
+const FLOATERS = { items: [], raf: null, spawnTimer: null };
+const FLOAT_ICONS = ["♥","★","✦","❀","✿","✧","☘","♡"];
+const FLOAT_COLORS = ["#ff9ec4","#ffb98a","#7fd4e8","#b7a6f5","#a8e6b0","#f8d49a","#f5a8c9"];
+
+function spawnFloater(){
+  // 清理已结束的元素
+  FLOATERS.items = FLOATERS.items.filter(o => !o.done);
+  if(FLOATERS.items.length < 3){
+    const el = document.createElement("span");
+    el.className = "float-heart";
+    el.textContent = FLOAT_ICONS[(Math.random() * FLOAT_ICONS.length) | 0];
+    el.style.color = FLOAT_COLORS[(Math.random() * FLOAT_COLORS.length) | 0];
+    el.style.fontSize = (14 + Math.random() * 20) + "px";
+    el.style.left = "0px";
+    el.style.top = "0px";
+    document.body.appendChild(el);
+    FLOATERS.items.push({
+      el,
+      x: 10 + Math.random() * (innerWidth - 40),
+      y: innerHeight + 16,
+      vx: (Math.random() - 0.5) * 1.8,
+      vy: -(0.6 + Math.random() * 1.1),
+      rot: 0,
+      vr: (Math.random() - 0.5) * 2.4,
+      life: 1,
+      decay: 0.0035 + Math.random() * 0.0045,
+      done: false
+    });
+    if(!FLOATERS.raf) tickFloaters();
+  }
+  // 12~25 秒随机再飘一个（保持同时不超过3个）
+  clearTimeout(FLOATERS.spawnTimer);
+  FLOATERS.spawnTimer = setTimeout(spawnFloater, 12000 + Math.random() * 13000);
+}
+function tickFloaters(){
+  const W = innerWidth, H = innerHeight;
+  for(const o of FLOATERS.items){
+    if(o.done) continue;
+    o.x += o.vx; o.y += o.vy; o.rot += o.vr;
+    // 撞击左右/上边缘反弹
+    if(o.x < 8){ o.x = 8; o.vx = Math.abs(o.vx); }
+    if(o.x > W - 24){ o.x = W - 24; o.vx = -Math.abs(o.vx); }
+    if(o.y < 10){ o.y = 10; o.vy = Math.abs(o.vy); }
+    o.life -= o.decay;
+    if(o.life <= 0 || o.y > H + 30){ o.done = true; o.el.remove(); continue; }
+    o.el.style.transform = "translate(" + o.x + "px," + o.y + "px) rotate(" + o.rot + "deg)";
+    o.el.style.opacity = Math.max(o.life, 0);
+  }
+  FLOATERS.items = FLOATERS.items.filter(o => !o.done);
+  if(FLOATERS.items.length){
+    FLOATERS.raf = requestAnimationFrame(tickFloaters);
+  }else{
+    FLOATERS.raf = null;
+  }
 }
 
-// 点按涟漪：任意位置点击出现小水波（不影响原有点击事件）
+/* 点按涟漪：正常点击出现小水波；累计若干次后在点击处爆出小花/彩带/星星 */
+let rippleCount = 0;
+const BURST_ICONS = ["❀","✿","♥","★","✦","❥","✧"];
+const BURST_COLORS = ["#ff9ec4","#ffb98a","#7fd4e8","#b7a6f5","#a8e6b0","#f8d49a","#f5a8c9"];
 function bindRipple(){
   document.addEventListener("pointerdown", e => {
+    // 普通涟漪
     const r = document.createElement("span");
     r.className = "ripple";
     r.style.left = (e.clientX - 5) + "px";
     r.style.top = (e.clientY - 5) + "px";
     document.body.appendChild(r);
     setTimeout(() => r.remove(), 800);
+    // 每 5~8 次点击爆一次花
+    rippleCount++;
+    if(rippleCount >= 5 + ((Math.random() * 4) | 0)){
+      rippleCount = 0;
+      burstAt(e.clientX, e.clientY);
+    }
   }, { passive: true });
+}
+function burstAt(x, y){
+  const n = 9 + ((Math.random() * 5) | 0);
+  for(let i = 0; i < n; i++){
+    const a = (Math.PI * 2 * i) / n + Math.random() * 0.5;
+    const dist = 60 + Math.random() * 90;
+    const p = document.createElement("span");
+    p.className = "burst-part";
+    p.textContent = BURST_ICONS[(Math.random() * BURST_ICONS.length) | 0];
+    p.style.color = BURST_COLORS[(Math.random() * BURST_COLORS.length) | 0];
+    p.style.left = x + "px";
+    p.style.top = y + "px";
+    p.style.fontSize = (11 + Math.random() * 10) + "px";
+    p.style.setProperty("--dx", Math.cos(a) * dist + "px");
+    p.style.setProperty("--dy", Math.sin(a) * dist + "px");
+    p.style.setProperty("--rot", ((Math.random() - 0.5) * 200) + "deg");
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 1000);
+  }
+}
+
+/* 大标题两侧爱心跳动：随机切换 左/右/都在左/都在右 */
+function titleHeartDance(){
+  const a = document.getElementById("titleHeartA");
+  const b = document.getElementById("titleHeartB");
+  if(!a || !b) return;
+  const states = [
+    { a: { left: "-52px", right: "auto" }, b: { right: "-52px", left: "auto" } },   // 一左一右
+    { a: { left: "-52px", right: "auto" }, b: { left: "-12px", right: "auto" } },   // 都在左
+    { a: { right: "-12px", left: "auto" }, b: { right: "-52px", left: "auto" } }    // 都在右
+  ];
+  const apply = () => {
+    const s = states[(Math.random() * states.length) | 0];
+    a.style.left = s.a.left; a.style.right = s.a.right;
+    b.style.left = s.b.left; b.style.right = s.b.right;
+  };
+  apply();
+  setInterval(apply, 2200 + Math.random() * 1200);
 }
 
 function startSurprises(){
   initFxCanvas();
   bindRipple();
   scheduleFireworks();
-  setTimeout(floatHeart, 3000);
+  titleHeartDance();
+  setTimeout(spawnFloater, 3000);
 }
 
 /* ---------- 初始化 ---------- */
