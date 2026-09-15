@@ -1633,8 +1633,8 @@ function fallbackCopy(text, done){
    暗号：
      访客模式：隐藏编辑按钮/编辑链接，日期标题点击直接跳外部链接
      编辑模式：所有编辑功能可见（源码中以编码形式保存） */
-const VIEW_PWD = atob("MTIz");     // 123 访客模式（编码混淆）
-const EDIT_PWD = atob("MzI4");     // 328 编辑模式（编码混淆）
+const VIEW_PWD = atob("MTIz");     // 访客模式（编码混淆）
+const EDIT_PWD = atob("MzI4");     // 编辑模式（编码混淆）
 let viewMode = "full";   // "full" | "view"
 function openCacheConfirm(){
   document.getElementById("cachePwd").value = "";
