@@ -65,6 +65,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 .card .date{font-weight:bold;color:#3b82f6;margin:8px 0;cursor:pointer;font-size:15px;text-indent:2em;}
 .card .date:hover{text-decoration:underline;}
 .card .desc{color:#555;line-height:1.65;cursor:pointer;text-indent:2em;white-space:pre-wrap;word-break:break-word;}
+.card .desc a{color:#ff7da9;text-decoration:underline;cursor:pointer;}
 .card .desc:hover{color:#3b82f6;}
 .card-checkbox{position:absolute;top:12px;left:12px;width:20px;height:20px;cursor:pointer;z-index:5;}
 
@@ -79,6 +80,21 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 .lightbox .close-btn{color:#fff;font-size:16px;cursor:pointer;padding:6px 12px;border:1px solid rgba(255,255,255,.5);border-radius:6px;}
 .lightbox .close-btn:hover{background:rgba(255,255,255,.15);}
 .lightbox .page-num{color:#fff;font-size:15px;min-width:60px;text-align:center;}
+/* 脚印拼图视图 */
+.mosaic{
+  position:fixed;inset:0;z-index:998;background:rgba(20,10,20,.92);
+  display:none;flex-direction:column;padding:14px;box-sizing:border-box;
+}
+.mosaic-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.mosaic-grid{
+  flex:1;overflow-y:auto;display:grid;gap:10px;
+  grid-template-columns:repeat(auto-fill,minmax(150px,1fr));align-content:start;
+}
+.mosaic-grid img{
+  width:100%;height:150px;object-fit:cover;border-radius:10px;cursor:pointer;
+  border:2px solid rgba(255,255,255,.15);transition:transform .15s ease,border-color .15s ease;
+}
+.mosaic-grid img:hover{transform:scale(1.04);border-color:#ff9ec4;}
 
 /* ===== 通用弹窗 ===== */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;padding:20px;display:none;align-items:center;justify-content:center;}
@@ -296,17 +312,26 @@ button{border-radius:12px;}
 
 <!-- 大图灯箱 -->
 <div class="lightbox" id="lightbox">
-  <div class="lightbox-img-wrap"><img id="galleryImg"></div>
+  <div class="lightbox-img-wrap"><img id="galleryImg" style="transition:transform .25s ease;"></div>
   <div class="nav">
     <button onclick="galleryFirst()">最前</button>
     <button onclick="galleryPrev()">上一张</button>
     <span class="page-num" id="galleryPageNum">0 / 0</span>
     <button onclick="galleryNext()">下一张</button>
     <button onclick="galleryLast()">最后</button>
-    <button id="loadFullBtn" class="ghost" onclick="loadFullRes()">查看原图</button>
     <button id="lightboxEditLinkBtn" class="success" onclick="openImgEditModal()">编辑链接</button>
+    <button id="loadFullBtn" class="ghost" onclick="loadFullRes()">查看原图</button>
     <span class="close-btn" onclick="closeGallery()">关闭</span>
   </div>
+</div>
+
+<!-- 脚印拼图：把某张卡片所有缩略图铺满屏幕 -->
+<div class="mosaic" id="mosaicModal">
+  <div class="mosaic-bar">
+    <span id="mosaicTitle" style="color:#fff;font-size:15px;"></span>
+    <span class="close-btn" onclick="closeMosaic()">关闭</span>
+  </div>
+  <div class="mosaic-grid" id="mosaicGrid"></div>
 </div>
 
 <!-- 编辑备注 -->
@@ -578,9 +603,21 @@ function applySort(list){
   return list;
 }
 
+function escapeHtml(s){
+  return String(s == null ? "" : s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+// 备注里的网址自动识别成可点击链接（点链接不触发编辑备注弹窗）
+function linkifyNote(text){
+  return escapeHtml(text).replace(
+    /(https?:\/\/[^\s<]+)/g,
+    '<a href="$1" target="_blank" rel="noopener" onclick="event.stopPropagation()">$1</a>'
+  );
+}
+
 function footprintSvg(side){
   if(side === "left"){
-    return `<svg class="footprint" viewBox="0 0 34 44" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    return `<svg class="footprint" style="cursor:pointer" onclick="openMosaic(this)" viewBox="0 0 34 44" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
   <ellipse cx="17" cy="37" rx="7" ry="5"/>
   <path d="M10,34 C6,28 7,22 11,17 C14,14 19,13 23,15 C27,17 28,22 26,28 C24,33 20,36 17,37"/>
   <ellipse cx="9" cy="14" rx="3.2" ry="4.4"/>
@@ -590,7 +627,7 @@ function footprintSvg(side){
   <ellipse cx="24.7" cy="14.3" rx="2.1" ry="3"/>
 </svg>`;
   }
-  return `<svg class="footprint" viewBox="0 0 34 44" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  return `<svg class="footprint" style="cursor:pointer" onclick="openMosaic(this)" viewBox="0 0 34 44" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
   <ellipse cx="17" cy="37" rx="7" ry="5"/>
   <path d="M11,34 C8,28 7,22 9,17 C12,14 17,13 21,15 C25,17 28,22 27,28 C25,33 21,36 17,37"/>
   <ellipse cx="9.5" cy="14" rx="3.2" ry="4.4"/>
@@ -675,7 +712,7 @@ function renderAllCards(){
         <div class="card-imgs" data-imgs='${JSON.stringify(card.imgs)}'>
           <img loading="lazy" decoding="async" src="${getThumbnailUrl(card.imgs[0])}" onclick="openGallery(this)" alt="${card.locs.join(',')}">
         </div>
-        <p class="desc" ${viewMode === "view" ? "" : `onclick="openNote(this)"`}>${card.note}</p>
+        <p class="desc" ${viewMode === "view" ? "" : `onclick="openNote(this)"`}>${linkifyNote(card.note)}</p>
       </div>
       ${footprintSvg(side)}`;
 
@@ -889,10 +926,7 @@ function openGallery(imgEl){
   state.galleryImages = JSON.parse(imgWrap.dataset.imgs);
   state.galleryIndex = 0;
   state.activeImageIndex = 0;
-  state.fullImageLoaded = false;
-  document.getElementById("loadFullBtn").style.display = "inline-block";
-  document.getElementById("galleryImg").src = getThumbnailUrl(state.galleryImages[0]);
-  updateGalleryPageInfo();
+  showGalleryImage();
   document.getElementById("lightbox").style.display = "flex";
   document.body.style.overflow = "hidden";
   // 惊喜：打开大图有 30% 概率在图片周围放一次小烟花
@@ -900,31 +934,87 @@ function openGallery(imgEl){
 }
 function closeGallery(){
   document.getElementById("lightbox").style.display = "none";
+  // 若拼图视图还开着，关闭灯箱后回到拼图（保持锁定滚动）；否则恢复页面滚动
+  const mosaicOpen = document.getElementById("mosaicModal").style.display === "flex";
+  document.body.style.overflow = mosaicOpen ? "hidden" : "";
+}
+
+/* ---------- 脚印拼图：铺出该卡片所有缩略图 ---------- */
+function openMosaic(footprintEl){
+  const item = footprintEl.closest(".timeline-item");
+  if(!item) return;
+  const imgWrap = item.querySelector(".card-imgs");
+  const imgs = JSON.parse(imgWrap.dataset.imgs);
+  const locs = JSON.parse(item.dataset.locs || "[]");
+  document.getElementById("mosaicTitle").textContent =
+    `${item.dataset.date} · ${locs.join(",")}（${imgs.length} 张）`;
+  const grid = document.getElementById("mosaicGrid");
+  grid.innerHTML = "";
+  grid.dataset.imgs = JSON.stringify(imgs);
+  imgs.forEach((u, i) => {
+    const img = document.createElement("img");
+    img.loading = "lazy";
+    img.src = getThumbnailUrl(u);
+    img.alt = "第" + (i + 1) + "张";
+    img.onclick = () => openGalleryFromList(i);
+    grid.appendChild(img);
+  });
+  document.getElementById("mosaicModal").style.display = "flex";
+  document.body.style.overflow = "hidden";
+}
+function closeMosaic(){
+  document.getElementById("mosaicModal").style.display = "none";
   document.body.style.overflow = "";
+}
+function openGalleryFromList(idx){
+  const grid = document.getElementById("mosaicGrid");
+  state.galleryImages = JSON.parse(grid.dataset.imgs);
+  state.galleryIndex = idx;
+  state.activeImageIndex = idx;
+  state.activeCardDom = null;
+  showGalleryImage();
+  document.getElementById("lightbox").style.display = "flex";   // lightbox 层级在 mosaic 之上
+  // 保持 body overflow hidden（mosaic/灯箱都开着，关闭灯箱后回到 mosaic）
 }
 
 /* 灯箱左右滑动切图（触屏手势：左滑下一张 / 右滑上一张） */
 let lbTouchX = 0, lbTouchY = 0, lbTouchMoved = false;
 function bindLightboxSwipe(){
-  const lb = document.getElementById("lightbox");
-  if(!lb || lb.dataset.swipeBound) return;
-  lb.dataset.swipeBound = "1";
-  lb.addEventListener("touchstart", e => {
+  const img = document.getElementById("galleryImg");
+  if(!img || img.dataset.swipeBound) return;
+  img.dataset.swipeBound = "1";
+  // 左右滑动只在图片区域生效（按钮/关闭区不触发切图）
+  img.addEventListener("touchstart", e => {
     lbTouchX = e.touches[0].clientX;
     lbTouchY = e.touches[0].clientY;
     lbTouchMoved = false;
   }, { passive: true });
-  lb.addEventListener("touchmove", e => {
+  img.addEventListener("touchmove", e => {
     const dx = e.touches[0].clientX - lbTouchX;
     const dy = e.touches[0].clientY - lbTouchY;
     if(Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy)) lbTouchMoved = true;
   }, { passive: true });
-  lb.addEventListener("touchend", e => {
+  img.addEventListener("touchend", e => {
     if(!lbTouchMoved) return;
     const dx = e.changedTouches[0].clientX - lbTouchX;
     if(dx < -45){ galleryNext(); }
     else if(dx > 45){ galleryPrev(); }
   }, { passive: true });
+  // 双击图片放大 / 还原
+  img.addEventListener("dblclick", () => {
+    img.style.transform = (img.style.transform === "scale(1.8)") ? "" : "scale(1.8)";
+  });
+}
+
+/* 已加载过原图的 URL 记忆（未清缓存前再打开直接显示原图，不用再点） */
+function loadFullUrlSet(){
+  try{ return new Set(JSON.parse(localStorage.getItem("loaded_full_urls") || "[]")); }
+  catch(e){ return new Set(); }
+}
+function rememberFullUrl(u){
+  const s = loadFullUrlSet();
+  s.add(u);
+  try{ localStorage.setItem("loaded_full_urls", JSON.stringify([...s])); }catch(e){}
 }
 
 function showGalleryImage(){
@@ -932,11 +1022,20 @@ function showGalleryImage(){
   const img = document.getElementById("galleryImg");
   const btn = document.getElementById("loadFullBtn");
   img.onload = null; img.onerror = null;
+  img.style.transform = "";   // 切图时复位双击缩放
   btn.textContent = "查看原图";
   btn.disabled = false;
-  btn.style.display = "inline-block";
-  // 始终先加载缩略图（几十KB，快）；点「查看原图」才按需加载原图，不影响缩略图速度
-  img.src = getThumbnailUrl(state.galleryImages[state.galleryIndex]);
+  const cur = state.galleryImages[state.galleryIndex];
+  if(loadFullUrlSet().has(cur)){
+    // 这张原图之前已加载过（浏览器有缓存），直接显示原图
+    state.fullImageLoaded = true;
+    img.src = cur;
+    btn.style.display = "none";
+  }else{
+    // 先加载缩略图（几十KB，快）；点「查看原图」才按需加载原图，不影响缩略图速度
+    img.src = getThumbnailUrl(cur);
+    btn.style.display = "inline-block";
+  }
   updateGalleryPageInfo();
 }
 function loadFullRes(){
@@ -947,6 +1046,7 @@ function loadFullRes(){
   btn.disabled = true;
   img.onload = () => {
     state.fullImageLoaded = true;
+    rememberFullUrl(state.galleryImages[state.galleryIndex]);
     btn.style.display = "none";
     btn.disabled = false;
   };
@@ -971,6 +1071,7 @@ function openImgEditModal(){
 function closeImgEditModal(){ document.getElementById("imgEditModal").style.display = "none"; }
 
 function persistGalleryImages(){
+  if(!state.activeCardDom) return;   // 从拼图视图打开时不落地编辑
   const id = state.activeCardDom.dataset.cardId;
   const cards = loadCards();
   const card = cards.find(c => c.id === id);
@@ -1666,6 +1767,7 @@ function clearLocalCache(){
   localStorage.removeItem(STORAGE.cards);
   localStorage.removeItem(STORAGE.title);
   localStorage.removeItem("cloud_loaded");
+  localStorage.removeItem("loaded_full_urls");   // 清缓存后原图需重新点「查看原图」
   sessionStorage.setItem("cache_prompt_shown", "1");
   if("caches" in window){
     caches.keys().then(keys => keys.forEach(key => caches.delete(key)));
