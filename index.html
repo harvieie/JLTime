@@ -110,13 +110,8 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 }
 .mosaic-grid img:hover{transform:scale(1.04);border-color:#ff9ec4;}
 .mosaic-grid img{position:relative;}
-.sort-bar{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;
-  background:rgba(0,0,0,.45);border-radius:0 0 10px 10px;padding:4px;}
-.sort-bar span{
-  color:#fff;font-size:14px;cursor:pointer;padding:2px 8px;border-radius:6px;
-  background:rgba(255,255,255,.2);line-height:1.4;
-}
-.sort-bar span:active{background:rgba(255,255,255,.45);}
+.mosaic-grid img.dragging{opacity:.35;outline:2px dashed #fff;transform:scale(.96);}
+.mosaic-grid img[draggable="true"]:active{cursor:grabbing;}
 
 /* ===== 通用弹窗 ===== */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;padding:20px;display:none;align-items:center;justify-content:center;}
@@ -1151,6 +1146,7 @@ function closeGallery(){
 /* ---------- 脚印拼图：铺出该卡片所有缩略图，支持排序 ---------- */
 let mosaicSorting = false;
 let mosaicCardId = null;
+let dragSrcIdx = null;
 function openMosaic(footprintEl){
   const item = footprintEl.closest(".timeline-item");
   if(!item) return;
@@ -1174,6 +1170,21 @@ function openMosaic(footprintEl){
     img.alt = "第" + (i + 1) + "张";
     img.onerror = () => imgFallback(img);
     img.onclick = () => { if(!mosaicSorting) openGalleryFromList(i); };
+    // 拖拽排序（排序模式下生效）
+    img.addEventListener("dragstart", e => {
+      if(!mosaicSorting){ e.preventDefault(); return; }
+      dragSrcIdx = [...grid.children].indexOf(img);
+      e.dataTransfer.effectAllowed = "move";
+      img.classList.add("dragging");
+    });
+    img.addEventListener("dragover", e => { if(mosaicSorting) e.preventDefault(); });
+    img.addEventListener("drop", e => {
+      if(!mosaicSorting) return;
+      e.preventDefault();
+      const targetIdx = [...grid.children].indexOf(img);
+      if(dragSrcIdx !== null && dragSrcIdx !== targetIdx) moveMosaicImg(dragSrcIdx, targetIdx);
+    });
+    img.addEventListener("dragend", () => img.classList.remove("dragging"));
     grid.appendChild(img);
   });
   document.getElementById("mosaicModal").style.display = "flex";
@@ -1183,49 +1194,25 @@ function toggleMosaicSort(){
   mosaicSorting = !mosaicSorting;
   document.getElementById("mosaicSortBtn").textContent = mosaicSorting ? "完成" : "排序";
   const grid = document.getElementById("mosaicGrid");
-  [...grid.children].forEach((el, i) => {
+  [...grid.children].forEach(el => {
+    el.draggable = mosaicSorting;
+    el.style.cursor = mosaicSorting ? "grab" : "pointer";
     let bar = el.querySelector(".sort-bar");
-    if(mosaicSorting){
-      if(!bar){
-        bar = document.createElement("div");
-        bar.className = "sort-bar";
-        el.appendChild(bar);
-      }
-      renderSortBar(bar, i);
-    }else if(bar){
-      bar.remove();
-    }
+    if(bar) bar.remove();
   });
 }
-function renderSortBar(bar, i){
-  bar.innerHTML = `<span class="sort-left" data-i="${i}">◀</span><span class="sort-right" data-i="${i}">▶</span>`;
-  bar.querySelectorAll("span").forEach(s => s.onclick = e => {
-    e.stopPropagation();
-    swapMosaicImg(+s.dataset.i, s.classList.contains("sort-right") ? 1 : -1);
-  });
-}
-function swapMosaicImg(i, dir){
+function moveMosaicImg(src, target){
   const grid = document.getElementById("mosaicGrid");
   const arr = JSON.parse(grid.dataset.imgs);
-  const j = i + dir;
-  if(j < 0 || j >= arr.length) return;
-  [arr[i], arr[j]] = [arr[j], arr[i]];
+  if(src < 0 || src >= arr.length || target < 0 || target >= arr.length) return;
+  const [moved] = arr.splice(src, 1);
+  arr.splice(target, 0, moved);
   grid.dataset.imgs = JSON.stringify(arr);
-  // 重画缩略图
   [...grid.children].forEach((el, k) => {
     const u = arr[k];
     const tu = getThumbnailUrl(u);
     el.src = tu;
     el.dataset.src = tu;
-    if(k !== i && k !== j){
-      const bar = el.querySelector(".sort-bar");
-      if(bar) renderSortBar(bar, k);
-    }
-  });
-  // 更新交换两张图的按钮 index
-  [i, j].forEach(k => {
-    const bar = grid.children[k].querySelector(".sort-bar");
-    if(bar) renderSortBar(bar, k);
   });
   // 保存回写卡片
   if(!mosaicCardId) return;
