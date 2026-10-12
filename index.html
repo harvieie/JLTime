@@ -216,6 +216,14 @@ button{border-radius:12px;}
 <!-- 自动关闭提示条 -->
 <div class="toast" id="globalToast"></div>
 
+<!-- 上传图片进度条 -->
+<div id="uploadTip" style="display:none;position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:3000;background:rgba(40,20,30,.92);color:#fff;padding:10px 16px;border-radius:14px;font-size:13px;min-width:230px;box-shadow:0 6px 20px rgba(0,0,0,.25);">
+  <div id="uploadTipText" style="margin-bottom:6px;">正在上传图片…</div>
+  <div style="height:4px;background:rgba(255,255,255,.2);border-radius:2px;overflow:hidden;">
+    <div id="uploadTipBar" style="height:100%;width:0%;background:linear-gradient(90deg,#ff9ec4,#ffb84d);transition:width .2s;"></div>
+  </div>
+</div>
+
 <!-- 缓存确认弹窗（首次打开 & 顶部清缓按钮共用） -->
 <div class="modal-overlay" id="cacheConfirmModal">
   <div class="modal-box">
@@ -1532,6 +1540,36 @@ function pickUploadImg(targetId, getDate, cb){
   fi.click();
 }
 
+// 进度条控制
+function setUploadTip(text, pct){
+  const t = document.getElementById("uploadTip");
+  t.style.display = "block";
+  if(text != null) document.getElementById("uploadTipText").textContent = text;
+  if(pct != null) document.getElementById("uploadTipBar").style.width = Math.max(0, Math.min(100, pct)) + "%";
+}
+function hideUploadTip(){ document.getElementById("uploadTip").style.display = "none"; }
+
+// XMLHttpRequest 上传（带上传进度回调），返回 GitHub API 响应 JSON
+function ghUploadXHR(url, headers, bodyObj, onProgress){
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", url, true);
+    for(const k in headers) xhr.setRequestHeader(k, headers[k]);
+    xhr.upload.onprogress = e => {
+      if(e.lengthComputable && onProgress) onProgress(Math.round(e.loaded / e.total * 100));
+    };
+    xhr.onload = () => {
+      if(xhr.status >= 200 && xhr.status < 300){
+        try{ resolve(JSON.parse(xhr.responseText)); }catch(e){ resolve({}); }
+      }else{
+        reject(new Error("上传失败（" + xhr.status + "）"));
+      }
+    };
+    xhr.onerror = () => reject(new Error("网络错误，上传失败"));
+    xhr.send(JSON.stringify(bodyObj));
+  });
+}
+
 // 上传单张图片到 images/<日期>/（name 已由确认窗口预生成），成功后回传 GitHub Pages 链接
 async function uploadImageToRepo(file, dateStr, name, cb){
   const path = "images/" + dateStr + "/" + name;
@@ -1539,15 +1577,12 @@ async function uploadImageToRepo(file, dateStr, name, cb){
   reader.onload = async () => {
     try{
       const b64 = reader.result.split(",")[1];
-      const url = ghApi() + path;
-      const res = await ghFetch(url, {
-        method: "PUT",
-        headers: ghHeaders(),
-        body: JSON.stringify({ message: "时光图库: " + path, content: b64, branch: GH.branch })
-      }, 90000);
-      if(!res.ok) throw new Error("上传失败（" + res.status + "），请检查令牌与网络");
+      setUploadTip("正在上传原图… 0%", 0);
+      await ghUploadXHR(ghApi() + path, ghHeaders(),
+        { message: "时光图库: " + path, content: b64, branch: GH.branch },
+        pct => setUploadTip("正在上传原图… " + pct + "%", pct));
       const cdn = `https://${ghOwner()}.github.io/${ghRepo()}/${path}`;
-      // 同步生成并上传缩略图（宽400）到 .thumb/，保证页面立即能显示小图
+      setUploadTip("正在生成缩略图…", null);
       try{
         const thumbB64 = await makeThumbB64(file);
         const thumbPath = "images/" + dateStr + "/.thumb/" + name.replace(/\.[^.]+$/, "") + ".jpg";
@@ -1557,8 +1592,11 @@ async function uploadImageToRepo(file, dateStr, name, cb){
           body: JSON.stringify({ message: "时光图库缩略图: " + thumbPath, content: thumbB64, branch: GH.branch })
         }, 90000);
       }catch(e){ /* 缩略图失败不影响原图上传 */ }
+      setUploadTip("上传完成 ✓", 100);
+      setTimeout(hideUploadTip, 900);
       cb(cdn);
     }catch(err){
+      hideUploadTip();
       alert("图片上传失败：" + err.message);
     }
   };
