@@ -8,6 +8,7 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <title>JL Time</title>
 <style>
+:root{--primary:#ff7da9;}
 *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;}
 body{background:#ffffff;color:#333;padding:20px;}
 
@@ -65,7 +66,9 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 }
 .card:hover{transform:translateY(-4px);box-shadow:0 10px 24px rgba(0,0,0,.09);}
 .card img{width:100%;aspect-ratio:4/3;border-radius:12px;object-fit:cover;max-height:320px;cursor:pointer;}
-.card .date{font-weight:bold;color:#3b82f6;margin:8px 0;cursor:pointer;font-size:15px;text-indent:2em;}
+.card .date{font-weight:bold;color:var(--primary);margin:8px 0;cursor:pointer;font-size:15px;text-indent:2em;}
+#cloudUploadBtn{background:var(--primary);}
+#cloudUploadBtn:hover{filter:brightness(.92);}
 .card .date:hover{text-decoration:underline;}
 .card .desc{color:#555;line-height:1.65;cursor:pointer;text-indent:2em;white-space:pre-wrap;word-break:break-word;}
 .card .desc a{color:#ff7da9;text-decoration:underline;cursor:pointer;}
@@ -179,7 +182,7 @@ body[data-season="winter"]{--bg1:#fffdf4;--bg2:#fbf2da;--bg3:#fdf6e0;} /* 浅金
 .anni-chips{margin-top:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
 .anni-chip{
   display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.8);
-  border:1px solid #ffd6e4;border-radius:20px;padding:3px 12px;font-size:13px;color:#c2567f;
+  border:1px solid var(--primary);border-radius:20px;padding:3px 12px;font-size:13px;color:var(--primary);
   cursor:pointer;box-shadow:0 2px 6px rgba(255,150,180,.12);
 }
 /* 脚印上的纪念图标角标 */
@@ -189,9 +192,6 @@ body[data-season="winter"]{--bg1:#fffdf4;--bg2:#fbf2da;--bg3:#fdf6e0;} /* 浅金
 }
 /* 卡片标题后的纪念图标（兜底展示） */
 .badge-inline{font-size:15px;}
-/* 卡片上的地图小图标 */
-.map-pin{cursor:pointer;font-size:14px;opacity:.75;}
-.map-pin:hover{opacity:1;}
 /* 上传按钮未同步红点 */
 #cloudUploadBtn{position:relative;}
 #cloudUploadBtn.dirty::after{
@@ -205,7 +205,7 @@ body[data-season="winter"]{--bg1:#fffdf4;--bg2:#fbf2da;--bg3:#fdf6e0;} /* 浅金
 /* 背景音乐悬浮按钮 */
 .music-fab{
   position:fixed;right:16px;bottom:20px;z-index:1500;width:46px;height:46px;border-radius:50%;
-  background:linear-gradient(135deg,#ff9ec4,#ffb84d);color:#fff;border:none;font-size:18px;
+  background:var(--primary);color:#fff;border:none;font-size:18px;
   cursor:pointer;box-shadow:0 4px 14px rgba(255,130,160,.4);display:flex;align-items:center;justify-content:center;
 }
 .music-fab.playing{animation:musicSpin 3s linear infinite;}
@@ -213,7 +213,7 @@ body[data-season="winter"]{--bg1:#fffdf4;--bg2:#fbf2da;--bg3:#fdf6e0;} /* 浅金
 /* 大标题两侧跳动爱心 */
 .title-wrap{position:relative;display:inline-block;}
 .title-heart{
-  position:absolute;top:50%;transform:translateY(-50%);color:#ff7da9;font-size:24px;opacity:.85;
+  position:absolute;top:50%;transform:translateY(-50%);color:var(--primary);font-size:24px;opacity:.85;
   transition:left .9s cubic-bezier(.3,1.2,.4,1),right .9s cubic-bezier(.3,1.2,.4,1);
   pointer-events:none;
 }
@@ -299,18 +299,6 @@ button{border-radius:12px;}
   style="display:none;position:fixed;right:18px;bottom:80px;z-index:1400;width:42px;height:42px;border-radius:50%;
   border:none;background:rgba(255,158,196,.95);color:#fff;font-size:18px;cursor:pointer;box-shadow:0 4px 12px rgba(255,130,160,.4);">↑</button>
 
-<!-- 地图弹窗 -->
-<div class="modal-overlay" id="mapModal">
-  <div class="modal-box" style="max-width:420px;">
-    <div class="modal-title" id="mapTitle">📍 地图</div>
-    <iframe id="mapFrame" style="width:100%;height:280px;border:0;border-radius:10px;background:#f0f4f8;margin:8px 0;" loading="lazy"></iframe>
-    <div class="modal-buttons">
-      <a id="mapAmapLink" href="#" target="_blank" style="text-decoration:none;"><button>高德打开</button></a>
-      <button onclick="closeMapModal()">✕</button>
-    </div>
-  </div>
-</div>
-
 <!-- 主题设置弹窗 -->
 <div class="modal-overlay" id="themeModal">
   <div class="modal-box" style="max-width:380px;">
@@ -332,15 +320,15 @@ button{border-radius:12px;}
 
 <div class="filter-box">
   <label>筛选：</label>
-  <select id="yearSel"><option value="">全部年份</option></select>
-  <select id="monthSel">
+  <select id="yearSel" onchange="doSearch()"><option value="">全部年份</option></select>
+  <select id="monthSel" onchange="doSearch()">
     <option value="">全部月份</option>
     <option value="01">01</option><option value="02">02</option><option value="03">03</option>
     <option value="04">04</option><option value="05">05</option><option value="06">06</option>
     <option value="07">07</option><option value="08">08</option><option value="09">09</option>
     <option value="10">10</option><option value="11">11</option><option value="12">12</option>
   </select>
-  <select id="locationSel"><option value="">全部地点</option></select>
+  <select id="locationSel" onchange="doSearch()"><option value="">全部地点</option></select>
   <input type="text" id="searchInput" placeholder="搜索时间/地点/描述" oninput="doSearch()">
   <span id="countTip" class="count-tip">0 条</span>
   <button onclick="doSearch()">搜索</button>
@@ -878,7 +866,7 @@ function renderAllCards(){
     itemDiv.innerHTML = `
       <div class="card">
         ${checkbox}
-        <div class="date" onclick="${viewMode === "view" ? `openComboView('${card.id}')` : `openComboEdit('${card.id}')`}">${makeCardLabel(card.date, card.locs)} <span class="map-pin" onclick="event.stopPropagation();openMapModal(${JSON.stringify(card.locs).replace(/"/g,"&quot;")})">📍</span></div>
+        <div class="date" onclick="${viewMode === "view" ? `openComboView('${card.id}')` : `openComboEdit('${card.id}')`}">${makeCardLabel(card.date, card.locs)}</div>
         <div class="card-imgs" data-imgs='${JSON.stringify(card.imgs)}'>
           <img loading="lazy" decoding="async" src="${getThumbnailUrl(card.imgs[0])}" data-src="${getThumbnailUrl(card.imgs[0])}" onerror="imgFallback(this)" onclick="openGallery(this)" alt="${card.locs.join(',')}">
         </div>
@@ -1491,6 +1479,17 @@ async function cleanTrash(){
   }
 }
 
+function packCloudData(){
+  return {
+    title: getPageTitle(),
+    cards: loadCards(),
+    anniversaries: localStorage.getItem("anniversaries"),
+    theme: localStorage.getItem("jlt_theme"),
+    card_badges: localStorage.getItem("card_badges"),
+    last_music: localStorage.getItem("last_music")
+  };
+}
+
 // 把当前本地卡片数据作为新节点推上云端（保持本地云端统一）
 async function pushCloudSnapshot(note){
   if(viewMode === "view") return;
@@ -1504,7 +1503,7 @@ async function pushCloudSnapshot(note){
       for(const f of files.slice(GH.maxNodes - 1)) await wdDeleteFile(f);
     }
     const name = `jltime_${nowStamp()}${note ? "_" + note : ""}.json`;
-    await wdWriteFile(name, { title: getPageTitle(), cards: loadCards() });
+    await wdWriteFile(name, packCloudData());
   }catch(err){
     showToast("云端数据更新失败：" + err.message, 4);
   }
@@ -1573,12 +1572,19 @@ function applyImportedData(imported){
   }else if(imported && Array.isArray(imported.cards)){
     cards = imported.cards;
     if(typeof imported.title === "string" && imported.title.trim()) newTitle = imported.title.trim();
+    // 同步恢复纪念日 / 主题 / 脚印图标 / 上次音乐
+    if(imported.anniversaries) localStorage.setItem("anniversaries", typeof imported.anniversaries === "string" ? imported.anniversaries : JSON.stringify(imported.anniversaries));
+    if(imported.theme) localStorage.setItem("jlt_theme", typeof imported.theme === "string" ? imported.theme : JSON.stringify(imported.theme));
+    if(imported.card_badges) localStorage.setItem("card_badges", typeof imported.card_badges === "string" ? imported.card_badges : JSON.stringify(imported.card_badges));
+    if(imported.last_music) localStorage.setItem("last_music", imported.last_music);
   }else{
     throw new Error("数据格式不正确：需要卡片数组，或 {title, cards} 对象");
   }
   saveCards(migrateCardData(cards));
   if(newTitle) setPageTitle(newTitle);
   document.getElementById("pageTitle").textContent = getPageTitle();
+  renderAnniChips();
+  applyTheme();
   renderAllCards();
   return cards.length;
 }
@@ -1905,7 +1911,7 @@ async function wdUpload(){
         await wdDeleteFile(f);
       }
     }
-    await wdWriteFile(name, { title: getPageTitle(), cards: loadCards() });
+    await wdWriteFile(name, packCloudData());
     if(typeof clearDirty === "function") clearDirty();
     alert(`已上传至云端（${formatNodeTime(name.slice(8, 22))}），云端保留最近 ${GH.maxNodes} 个节点`);
   }catch(err){
@@ -2048,6 +2054,11 @@ function applyViewMode(mode){
   if(zone) zone.style.display = (mode === "full" && isAuthGranted()) ? "contents" : "none";
   const lbBtn = document.getElementById("lightboxEditLinkBtn");
   if(lbBtn) lbBtn.style.display = mode === "view" ? "none" : "";
+  // 访客模式：主题弹窗里只看不能改（隐藏上传/清除背景图）
+  const isEdit = mode === "full" && isAuthGranted();
+  document.querySelectorAll("#themeModal button").forEach(b => {
+    if(b.textContent.includes("上传背景图") || b.textContent.includes("清除背景图")) b.style.display = isEdit ? "" : "none";
+  });
   renderAllCards();
 }
 
@@ -2713,12 +2724,12 @@ function bindFootLongPress(){
   });
 }
 
-/* ---------- 未上传小红点 ---------- */
-function markDirty(){ localStorage.setItem("local_dirty", "1"); updateDirtyDot(); }
-function clearDirty(){ localStorage.removeItem("local_dirty"); updateDirtyDot(); }
+/* ---------- 未上传小红点（本次会话内有改动才亮，刷新/重开页面自动干净） ---------- */
+function markDirty(){ sessionStorage.setItem("session_dirty", "1"); updateDirtyDot(); }
+function clearDirty(){ sessionStorage.removeItem("session_dirty"); updateDirtyDot(); }
 function updateDirtyDot(){
   const b = document.getElementById("cloudUploadBtn");
-  if(b) b.classList.toggle("dirty", localStorage.getItem("local_dirty") === "1");
+  if(b) b.classList.toggle("dirty", sessionStorage.getItem("session_dirty") === "1");
 }
 
 /* ---------- 回到顶部 ---------- */
@@ -2728,38 +2739,6 @@ function bindBackTop(){
     btn.style.display = window.scrollY > 500 ? "block" : "none";
   }, { passive: true });
 }
-
-/* ---------- 地图弹窗 ---------- */
-const CITY_COORDS = {
-  "郑州":[34.7466,113.6254],"上海":[31.2304,121.4737],"苏州":[31.2989,120.5853],
-  "成都":[30.5728,104.0668],"洛阳":[34.6197,112.4540],"合肥":[31.8206,117.2272],
-  "嘉兴":[30.7461,120.7555],"南京":[32.0603,118.7969],"北京":[39.9042,116.4074],
-  "杭州":[30.2741,120.1551],"广州":[23.1291,113.2644],"深圳":[22.5431,114.0579],
-  "西安":[34.3416,108.9398],"重庆":[29.5630,106.5516],"武汉":[30.5928,114.3055],
-  "长沙":[28.2282,112.9388],"天津":[39.3434,117.3616],"青岛":[36.0671,120.3826],
-  "厦门":[24.4798,118.0894],"昆明":[25.0389,102.7183],"大理":[25.6065,100.2676]
-};
-function findCity(locs){
-  for(const loc of locs){
-    for(const city in CITY_COORDS) if(loc.includes(city)) return city;
-  }
-  return null;
-}
-function openMapModal(locs){
-  if(typeof locs === "string"){ try{ locs = JSON.parse(locs); }catch(e){ locs = [locs]; } }
-  const city = findCity(locs || []);
-  document.getElementById("mapTitle").textContent = "📍 " + (locs.join(" / ") || "地图");
-  if(city){
-    const [lat, lon] = CITY_COORDS[city];
-    document.getElementById("mapFrame").src =
-      `https://www.openstreetmap.org/export/embed.html?bbox=${lon-0.15}%2C${lat-0.1}%2C${lon+0.15}%2C${lat+0.1}&layer=mapnik&marker=${lat}%2C${lon}`;
-  }else{
-    document.getElementById("mapFrame").src = "about:blank";
-  }
-  document.getElementById("mapAmapLink").href = "https://www.amap.com/search?query=" + encodeURIComponent(locs.join(" "));
-  document.getElementById("mapModal").style.display = "flex";
-}
-function closeMapModal(){ document.getElementById("mapModal").style.display = "none"; }
 
 /* ---------- 主题色/背景 ---------- */
 const SOLID_THEMES = [
@@ -2774,7 +2753,13 @@ const GRAD_THEMES = [
   { name:"薄荷清晨", bg:"linear-gradient(135deg,#d4fc79 0%,#96e6a1 100%)" },
   { name:"奶油蜜桃", bg:"linear-gradient(135deg,#fff1eb 0%,#ace0f9 100%)" },
   { name:"樱花飞舞", bg:"linear-gradient(135deg,#ffecd2 0%,#fcb69f 100%)" },
-  { name:"深海静谧", bg:"linear-gradient(135deg,#a1c4fd 0%,#c2e9fb 100%)" }
+  { name:"深海静谧", bg:"linear-gradient(135deg,#a1c4fd 0%,#c2e9fb 100%)" },
+  { name:"玫瑰慕斯", bg:"linear-gradient(135deg,#fbc2eb 0%,#a6c1ee 100%)" },
+  { name:"落日熔金", bg:"linear-gradient(135deg,#ffd1ff 0%,#ffb199 100%)" },
+  { name:"雾霾蓝", bg:"linear-gradient(135deg,#c1dfc4 0%,#deecdd 100%)" },
+  { name:"初恋粉", bg:"linear-gradient(135deg,#ffddee 0%,#fff0f5 50%,#ffe4ec 100%)" },
+  { name:"薰衣草田", bg:"linear-gradient(135deg,#d3cce3 0%,#e9e4f0 100%)" },
+  { name:"橘子汽水", bg:"linear-gradient(135deg,#ffecd2 0%,#fbd786 100%)" }
 ];
 function applyTheme(){
   const t = JSON.parse(localStorage.getItem("jlt_theme") || "{}");
