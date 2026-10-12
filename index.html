@@ -311,10 +311,10 @@ button{border-radius:12px;}
 
 <!-- 回到顶部 -->
 <button id="backTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="回到顶部"
-  style="display:none;position:fixed;right:18px;bottom:80px;z-index:1400;width:42px;height:42px;border-radius:50%;
+  style="display:none;position:fixed;right:18px;bottom:80px;z-index:2500;width:42px;height:42px;border-radius:50%;
   border:none;background:rgba(255,158,196,.95);color:#fff;font-size:18px;cursor:pointer;box-shadow:0 4px 12px rgba(255,130,160,.4);">↑</button>
 <button id="btnBottom" onclick="rewindTimeline()" title="滑到最底，再倒带回顶部"
-  style="display:none;position:fixed;right:18px;bottom:80px;z-index:1400;width:42px;height:42px;border-radius:50%;
+  style="display:none;position:fixed;right:18px;bottom:80px;z-index:2500;width:42px;height:42px;border-radius:50%;
   border:none;background:rgba(120,180,220,.95);color:#fff;font-size:18px;cursor:pointer;box-shadow:0 4px 12px rgba(100,150,200,.4);">↓</button>
 
 <!-- 主题设置弹窗 -->
@@ -1147,6 +1147,7 @@ function closeGallery(){
 let mosaicSorting = false;
 let mosaicCardId = null;
 let dragSrcIdx = null;
+let touchDrag = null;
 function openMosaic(footprintEl){
   const item = footprintEl.closest(".timeline-item");
   if(!item) return;
@@ -1185,6 +1186,35 @@ function openMosaic(footprintEl){
       if(dragSrcIdx !== null && dragSrcIdx !== targetIdx) moveMosaicImg(dragSrcIdx, targetIdx);
     });
     img.addEventListener("dragend", () => img.classList.remove("dragging"));
+    // 手机端触摸拖拽
+    img.addEventListener("touchstart", e => {
+      if(!mosaicSorting) return;
+      const t = e.touches[0];
+      touchDrag = {
+        src: [...grid.children].indexOf(img),
+        el: img
+      };
+      img.classList.add("dragging");
+    }, {passive:true});
+    img.addEventListener("touchmove", e => {
+      if(!touchDrag) return;
+      e.preventDefault();
+      const t = e.touches[0];
+      const under = document.elementFromPoint(t.clientX, t.clientY);
+      if(under && under.tagName === "IMG" && under !== img && under.parentElement === grid){
+        const targetIdx = [...grid.children].indexOf(under);
+        if(targetIdx !== touchDrag.src){
+          moveMosaicImg(touchDrag.src, targetIdx);
+          touchDrag.src = targetIdx;
+        }
+      }
+    }, {passive:false});
+    img.addEventListener("touchend", () => {
+      if(touchDrag){
+        touchDrag.el.classList.remove("dragging");
+        touchDrag = null;
+      }
+    });
     grid.appendChild(img);
   });
   document.getElementById("mosaicModal").style.display = "flex";
