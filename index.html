@@ -149,6 +149,14 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 .empty-tip{text-align:center;color:#aaa;padding:90px 0;font-size:15px;line-height:2.1;}
 
 /* ===== 自动关闭提示条 ===== */
+.rewind-btn{
+  border:1px solid rgba(255,143,171,.45);
+  background:rgba(255,143,171,.12);
+  color:rgba(255,143,171,.75);
+  font-size:16px;width:44px;height:32px;line-height:1;
+  border-radius:16px;cursor:pointer;transition:all .2s;opacity:.85;
+}
+.rewind-btn:hover{background:rgba(255,143,171,.28);color:#ff7da9;opacity:1;}
 .toast{
   position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
   background:rgba(17,24,39,.92);color:#fff;padding:18px 28px;border-radius:14px;
@@ -159,6 +167,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 
 /* ===== 移动端 ===== */
 @media (max-width:640px){
+  #rewindRow{text-align:left;margin-left:8px;}
   .filter-box{justify-content:flex-start;}
   .filter-box label{text-align:left;}
   .timeline-path{left:22px;transform:none;width:32px;}
@@ -361,8 +370,8 @@ button{border-radius:12px;}
   </span>
 </div>
 
-<div style="text-align:center;margin:2px 0 14px;">
-  <button class="btn-sec" onclick="rewindTimeline()" id="rewindBtn" style="font-size:13px;padding:6px 16px;">⏪ 倒带看我们的故事</button>
+<div style="text-align:center;margin:2px 0 14px;" id="rewindRow">
+  <button class="rewind-btn" onclick="rewindTimeline()" id="rewindBtn" title="倒带看我们的故事">⏪</button>
 </div>
 
 <div class="timeline" id="timelineWrap">
