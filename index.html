@@ -797,15 +797,29 @@ function escapeHtml(s){
 // 备注里的网址自动识别成可点击链接（点链接不触发编辑备注弹窗）
 function linkifyNote(text){
   let h = escapeHtml(text);
-  // 链接转 🔗 图标
+  // 分割线 ---
+  h = h.replace(/^-{3,}\s*$/gm, '<hr style="border:none;border-top:1px dashed #ffb3c8;margin:8px 0;">');
+  // 引用 >
+  h = h.replace(/^&gt;\s?(.*)$/gm, '<div style="border-left:3px solid #ffb3c8;padding-left:8px;color:#888;margin:4px 0;">$1</div>');
+  // 任务列表 - [ ] / - [x]（要在无序列表之前）
+  h = h.replace(/^- \[ \]\s?(.*)$/gm, '<div style="padding-left:6px;">☐ $1</div>');
+  h = h.replace(/^- \[x\]\s?(.*)$/gim, '<div style="padding-left:6px;">☑ $1</div>');
+  // 无序列表 -
+  h = h.replace(/^- \s?(.*)$/gm, '<div style="padding-left:14px;">• $1</div>');
+  // Markdown 链接 [文字](url)
+  h = h.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+    '<a href="$2" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#ff7da9;">$1</a>');
+  // 裸 URL → 🔗
   h = h.replace(/(https?:\/\/[^\s<]+)/g,
     '<a href="$1" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="$1" style="display:inline-block;margin:0 2px;text-decoration:none;">🔗</a>');
   // 粗体 **xx**
   h = h.replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>');
   // 斜体 *xx*
   h = h.replace(/(^|[\s(\[])\*([^*\n]+)\*/g, '$1<i>$2</i>');
-  // 行内代码 `xx`
-  h = h.replace(/`([^`]+)`/g, '<code style="background:#f3f4f6;padding:1px 5px;border-radius:4px;font-size:.9em;color:#d63384;">$1</code>');
+  // 高亮 ==xx==
+  h = h.replace(/==([^=\n]+)==/g, '<span style="background:linear-gradient(transparent 60%, #ffe58f 60%);padding:0 2px;">$1</span>');
+  // 下划线 <u>xx</u>（已转义）
+  h = h.replace(/&lt;u&gt;([\s\S]*?)&lt;\/u&gt;/g, '<u>$1</u>');
   return h;
 }
 
