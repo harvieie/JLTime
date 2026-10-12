@@ -192,12 +192,19 @@ body[data-season="winter"]{--bg1:#fffdf4;--bg2:#fbf2da;--bg3:#fdf6e0;} /* 浅金
 }
 /* 卡片标题后的纪念图标（兜底展示） */
 .badge-inline{font-size:15px;}
-/* 上传按钮未同步红点 */
-#cloudUploadBtn{position:relative;}
-#cloudUploadBtn.dirty::after{
-  content:"";position:absolute;top:-4px;right:-4px;width:10px;height:10px;border-radius:50%;
-  background:#ff3b30;border:2px solid #fff;
-}
+/* 统一按钮样式 */
+.btn-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px;}
+.btn-pri{background:var(--primary);color:#fff;border:none;padding:8px 20px;border-radius:20px;cursor:pointer;font-size:14px;}
+.btn-pri:hover{filter:brightness(.94);}
+.btn-sec{background:#f1f3f5;color:#555;border:none;padding:8px 16px;border-radius:20px;cursor:pointer;font-size:14px;}
+.btn-sec:hover{background:#e9ecef;}
+.btn-danger{background:#ffe3e3;color:#c92a2a;border:none;padding:8px 16px;border-radius:20px;cursor:pointer;font-size:14px;}
+.btn-danger:hover{background:#ffc9c9;}
+.btn-icon{width:30px;height:30px;border-radius:50%;border:none;cursor:pointer;font-size:13px;line-height:1;}
+.btn-icon.up{background:#e7f5ff;color:#1971c2;}
+.btn-icon.down{background:#e7f5ff;color:#1971c2;}
+.btn-icon.edit{background:#fff3bf;color:#e67700;}
+.btn-icon.del{background:#ffe3e3;color:#c92a2a;}
 /* 纪念日列表拖拽排序 */
 .anni-item{transition:transform .18s ease,background .18s ease;}
 .anni-item.anni-dragging{opacity:.55;background:#fff0f5;transform:scale(1.01);}
@@ -308,12 +315,12 @@ button{border-radius:12px;}
     <div style="text-align:left;font-size:13px;color:#888;margin:6px 0 4px;">渐变色：</div>
     <div id="gradPalette" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"></div>
     <div style="text-align:left;font-size:13px;color:#888;margin:6px 0 4px;">背景图：</div>
-    <div style="display:flex;gap:6px;margin-bottom:8px;">
-      <button onclick="pickBgImage()">⬆ 上传背景图</button>
-      <button onclick="clearBgImage()">清除背景图</button>
+    <div class="btn-row" style="justify-content:flex-start;">
+      <button class="btn-sec" onclick="pickBgImage()">⬆ 上传背景</button>
+      <button class="btn-danger" onclick="clearBgImage()">清除背景</button>
     </div>
-    <div class="modal-buttons">
-      <button onclick="closeThemeModal()">✕</button>
+    <div class="btn-row">
+      <button class="btn-sec" onclick="closeThemeModal()">✕ 关闭</button>
     </div>
   </div>
 </div>
@@ -428,19 +435,19 @@ button{border-radius:12px;}
     <div class="modal-title">纪念日天数</div>
     <div id="anniList" style="max-height:50vh;overflow:auto;text-align:left;margin:10px 0;"></div>
     <div id="anniEditBox" style="display:none;text-align:left;border-top:1px solid #ffe3ec;padding-top:10px;">
-      <input id="anniLabel" placeholder="名称，如：在一起 / 求婚" style="width:100%;padding:6px;margin-bottom:8px;box-sizing:border-box;">
-      <input type="date" id="anniDate" style="width:100%;padding:6px;margin-bottom:8px;box-sizing:border-box;">
+      <input id="anniLabel" placeholder="名称，如：在一起 / 求婚" style="width:100%;padding:8px;margin-bottom:8px;border:1px solid #e9ecef;border-radius:10px;box-sizing:border-box;outline:none;">
+      <input type="date" id="anniDate" style="width:100%;padding:8px;margin-bottom:8px;border:1px solid #e9ecef;border-radius:10px;box-sizing:border-box;outline:none;">
       <div style="font-size:13px;color:#888;margin-bottom:6px;">选一个小图标：</div>
       <div id="anniIconPick" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;font-size:20px;"></div>
-      <div style="display:flex;gap:6px;margin-bottom:10px;">
-        <input id="anniIconInput" placeholder="也可以输入任意图标/文字" style="flex:1;padding:6px;box-sizing:border-box;">
-        <button onclick="pickAnniIconInput()" title="用输入的内容">✓</button>
+      <div style="display:flex;gap:6px;margin-bottom:12px;">
+        <input id="anniIconInput" placeholder="也可以输入任意图标/文字" style="flex:1;padding:8px;border:1px solid #e9ecef;border-radius:20px;box-sizing:border-box;outline:none;">
+        <button class="btn-pri" onclick="pickAnniIconInput()">用</button>
       </div>
-      <button onclick="saveAnni()" style="width:100%;">保存</button>
+      <button class="btn-pri" onclick="saveAnni()" style="width:100%;padding:10px;">保存</button>
     </div>
-    <div class="modal-buttons">
-      <button id="anniAddBtn" onclick="openAnniEditor()" title="添加">＋</button>
-      <button onclick="closeAnniModal()" title="关闭">✕</button>
+    <div class="btn-row">
+      <button class="btn-pri" id="anniAddBtn" onclick="openAnniEditor()">＋ 添加纪念日</button>
+      <button class="btn-sec" onclick="closeAnniModal()">✕ 关闭</button>
     </div>
   </div>
 </div>
@@ -450,11 +457,11 @@ button{border-radius:12px;}
   <div class="modal-box">
     <div class="modal-title">背景音乐</div>
     <div id="musicList" style="max-height:40vh;overflow:auto;text-align:left;margin:10px 0;"></div>
-    <div class="modal-buttons">
-      <button onclick="musicPrev()" title="上一首">◀</button>
-      <button onclick="musicNext()" title="下一首">▶</button>
-      <button onclick="pickMusicFile()" title="上传音乐">⬆</button>
-      <button onclick="closeMusicModal()" title="关闭">✕</button>
+    <div class="btn-row">
+      <button class="btn-sec" onclick="musicPrev()" title="上一首">◀ 上一首</button>
+      <button class="btn-sec" onclick="musicNext()" title="下一首">下一首 ▶</button>
+      <button class="btn-pri" onclick="pickMusicFile()" title="上传音乐">⬆ 上传</button>
+      <button class="btn-sec" onclick="closeMusicModal()" title="关闭">✕ 关闭</button>
     </div>
   </div>
 </div>
@@ -465,12 +472,12 @@ button{border-radius:12px;}
     <div class="modal-title">给脚印加个标记</div>
     <div id="footIconGrid" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:12px 0;font-size:26px;"></div>
     <div style="display:flex;gap:6px;margin-bottom:10px;">
-      <input id="footIconInput" placeholder="也可以输入任意图标/文字" style="flex:1;padding:6px;box-sizing:border-box;">
-      <button onclick="setFootBadgeInput()" title="用输入的内容">✓</button>
+      <input id="footIconInput" placeholder="也可以输入任意图标/文字" style="flex:1;padding:8px;border:1px solid #e9ecef;border-radius:20px;box-sizing:border-box;outline:none;">
+      <button class="btn-pri" onclick="setFootBadgeInput()" title="用输入的内容">用</button>
     </div>
-    <div class="modal-buttons">
-      <button onclick="clearFootBadge()" title="去掉标记">✕</button>
-      <button onclick="closeFootIconModal()" title="完成">✓</button>
+    <div class="btn-row">
+      <button class="btn-danger" onclick="clearFootBadge()">清除标记</button>
+      <button class="btn-sec" onclick="closeFootIconModal()">完成</button>
     </div>
   </div>
 </div>
@@ -815,10 +822,30 @@ function refreshFilterOptions(){
 
   const allLocs = [];
   cards.forEach(c => allLocs.push(...c.locs));
-  [...new Set(allLocs)].sort((a, b) => a.localeCompare(b, "zh")).forEach(l => {
-    const opt = document.createElement("option");
-    opt.value = l; opt.textContent = l;
-    locSel.appendChild(opt);
+  const locs = [...new Set(allLocs)].sort((a, b) => a.localeCompare(b, "zh"));
+  // 按拼音首字母分组（内置常见城市首字母，未知名归 #）
+  const CITY_INITIAL = {
+    "上海":"S","苏州":"S","郑州":"Z","洛阳":"L","合肥":"H","嘉兴":"J","成都":"C",
+    "登封":"D","南京":"N","杭州":"H","西安":"X","北京":"B","重庆":"C","武汉":"W",
+    "长沙":"C","天津":"T","青岛":"Q","厦门":"X","昆明":"K","大理":"D","广州":"G",
+    "深圳":"S","宁波":"N","无锡":"W","常州":"C","徐州":"X","扬州":"Y","绍兴":"S",
+    "上海":"S","苏州":"S","郑州":"Z","洛阳":"L","合肥":"H","嘉兴":"J","成都":"C"
+  };
+  const initialOf = loc => CITY_INITIAL[loc] || CITY_INITIAL[loc[0]] || "#";
+  const groups = {};
+  locs.forEach(l => {
+    const k = initialOf(l);
+    (groups[k] = groups[k] || []).push(l);
+  });
+  Object.keys(groups).sort().forEach(k => {
+    const og = document.createElement("optgroup");
+    og.label = k;
+    groups[k].forEach(l => {
+      const opt = document.createElement("option");
+      opt.value = l; opt.textContent = l;
+      og.appendChild(opt);
+    });
+    locSel.appendChild(og);
   });
 
   yearSel.value = oldYear;
@@ -2452,15 +2479,17 @@ function renderAnniList(){
   list.innerHTML = arr.map(a => {
     const days = daysBetween(a.date);
     const editBtn = viewMode === "view" ? "" :
-      `<button onclick="moveAnni('${a.id}',-1)" title="上移" style="margin-left:6px;">⬆</button>
-       <button onclick="moveAnni('${a.id}',1)" title="下移" style="margin-left:4px;">⬇</button>
-       <button onclick="openAnniEditor('${a.id}')" title="编辑" style="margin-left:4px;">✏️</button>
-       <button onclick="delAnni('${a.id}')" title="删除" style="margin-left:4px;">🗑</button>`;
-    return `<div class="anni-item" data-id="${a.id}" style="padding:10px 4px;border-bottom:1px dashed #ffe3ec;">
+      `<span style="float:right;display:flex;gap:4px;">
+        <button class="btn-icon up" onclick="moveAnni('${a.id}',-1)" title="上移">↑</button>
+        <button class="btn-icon down" onclick="moveAnni('${a.id}',1)" title="下移">↓</button>
+        <button class="btn-icon edit" onclick="openAnniEditor('${a.id}')" title="编辑">✏️</button>
+        <button class="btn-icon del" onclick="delAnni('${a.id}')" title="删除">🗑</button>
+      </span>`;
+    return `<div class="anni-item" data-id="${a.id}" style="padding:10px 4px;border-bottom:1px dashed #ffe3ec;overflow:hidden;">
       <span style="font-size:18px;">${a.icon||"💛"}</span>
       <b>${escapeHtml(a.label||"纪念日")}</b>
       <span style="color:#888;">（${a.date}）</span>
-      → <span style="color:#c2567f;font-weight:bold;">第 ${days} 天</span>${editBtn}
+      → <span style="color:var(--primary);font-weight:bold;">第 ${days} 天</span>${editBtn}
     </div>`;
   }).join("");
 }
@@ -2609,9 +2638,11 @@ function renderMusicList(){
     if(!list.length){ box.innerHTML = '<div style="color:#999;text-align:center;padding:16px;">还没有音乐，点下面上传一首</div>'; return; }
     const cur = localStorage.getItem("last_music");
     box.innerHTML = list.map(n =>
-      `<div style="padding:6px 4px;${n===cur?"color:#c2567f;font-weight:bold;":""}">🎵 ${escapeHtml(n)}
-        <button onclick="playMusic('${n}')" title="播放" style="margin-left:6px;">▶</button>
-        <button onclick="delMusic('${n}')" title="删除" style="margin-left:4px;">🗑</button>
+      `<div style="padding:8px 4px;${n===cur?"color:var(--primary);font-weight:bold;":""};overflow:hidden;">🎵 ${escapeHtml(n)}
+        <span style="float:right;display:flex;gap:4px;">
+          <button class="btn-icon up" onclick="playMusic('${n}')" title="播放">▶</button>
+          <button class="btn-icon del" onclick="delMusic('${n}')" title="删除">🗑</button>
+        </span>
       </div>`).join("");
   });
 }
@@ -2724,13 +2755,10 @@ function bindFootLongPress(){
   });
 }
 
-/* ---------- 未上传小红点（本次会话内有改动才亮，刷新/重开页面自动干净） ---------- */
-function markDirty(){ sessionStorage.setItem("session_dirty", "1"); updateDirtyDot(); }
-function clearDirty(){ sessionStorage.removeItem("session_dirty"); updateDirtyDot(); }
-function updateDirtyDot(){
-  const b = document.getElementById("cloudUploadBtn");
-  if(b) b.classList.toggle("dirty", sessionStorage.getItem("session_dirty") === "1");
-}
+/* ---------- 未上传小红点：已按用户要求取消 ---------- */
+function markDirty(){}
+function clearDirty(){}
+function updateDirtyDot(){}
 
 /* ---------- 回到顶部 ---------- */
 function bindBackTop(){
