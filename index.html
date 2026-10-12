@@ -2388,16 +2388,27 @@ function renderAnniList(){
   list.innerHTML = arr.map(a => {
     const days = daysBetween(a.date);
     const editBtn = viewMode === "view" ? "" :
-      `<button onclick="openAnniEditor('${a.id}')" title="编辑" style="margin-left:6px;">✏️</button>
+      `<button onclick="moveAnni('${a.id}',-1)" title="上移" style="margin-left:6px;">⬆</button>
+       <button onclick="moveAnni('${a.id}',1)" title="下移" style="margin-left:4px;">⬇</button>
+       <button onclick="openAnniEditor('${a.id}')" title="编辑" style="margin-left:4px;">✏️</button>
        <button onclick="delAnni('${a.id}')" title="删除" style="margin-left:4px;">🗑</button>`;
-    return `<div class="anni-item" data-id="${a.id}" style="padding:10px 4px;border-bottom:1px dashed #ffe3ec;cursor:grab;">
+    return `<div class="anni-item" data-id="${a.id}" style="padding:10px 4px;border-bottom:1px dashed #ffe3ec;">
       <span style="font-size:18px;">${a.icon||"💛"}</span>
       <b>${escapeHtml(a.label||"纪念日")}</b>
       <span style="color:#888;">（${a.date}）</span>
       → <span style="color:#c2567f;font-weight:bold;">第 ${days} 天</span>${editBtn}
     </div>`;
   }).join("");
-  bindAnniDragSort();
+}
+function moveAnni(id, dir){
+  const list = loadAnniversaries();
+  const i = list.findIndex(x => x.id === id);
+  const j = i + dir;
+  if(i < 0 || j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+  saveAnniversaries(list);
+  renderAnniChips();
+  renderAnniList();
 }
 function openAnniEditor(id){
   editingAnniId = id || null;
@@ -2444,59 +2455,6 @@ function delAnni(id){
   saveAnniversaries(loadAnniversaries().filter(x => x.id !== id));
   renderAnniChips();
   renderAnniList();
-}
-/* 纪念日列表：长按 400ms 进入拖动，松手按 DOM 顺序保存 */
-function bindAnniDragSort(){
-  const list = document.getElementById("anniList");
-  if(list.dataset.dragBound) return;
-  list.dataset.dragBound = "1";
-  let dragEl = null, timer = null, active = false, startY = 0, ph = null;
-  const cancel = () => { clearTimeout(timer); };
-  list.addEventListener("pointerdown", e => {
-    const el = e.target.closest(".anni-item");
-    if(!el || e.target.closest("button")) return;
-    dragEl = el;
-    startY = e.clientY;
-    timer = setTimeout(() => {
-      active = true;
-      dragEl.classList.add("anni-dragging");
-      ph = document.createElement("div");
-      ph.className = "anni-placeholder";
-      ph.style.height = dragEl.offsetHeight + "px";
-      list.insertBefore(ph, dragEl);
-    }, 400);
-  }, { passive: true });
-  list.addEventListener("pointermove", e => {
-    if(!active || !dragEl) return;
-    const dy = e.clientY - startY;
-    dragEl.style.transform = "translateY(" + dy + "px)";
-    const cur = dragEl.getBoundingClientRect().top + dy + dragEl.offsetHeight / 2;
-    const others = [...list.querySelectorAll(".anni-item")].filter(x => x !== dragEl);
-    for(const it of others){
-      const r = it.getBoundingClientRect();
-      const mid = r.top + r.height / 2;
-      if(cur < mid && ph.nextSibling === it) list.insertBefore(ph, it);
-      else if(cur > mid && ph.previousSibling === it) list.insertBefore(ph, it.nextSibling);
-    }
-  }, { passive: true });
-  const finish = (save) => {
-    cancel();
-    if(active && dragEl && ph){
-      if(save){
-        list.insertBefore(dragEl, ph);   // 插到占位处，DOM 顺序即新顺序
-        const ids = [...list.querySelectorAll(".anni-item")].map(x => x.dataset.id);
-        const map = {}; loadAnniversaries().forEach(a => map[a.id] = a);
-        saveAnniversaries(ids.map(id => map[id]).filter(Boolean));
-        renderAnniChips();
-      }
-      dragEl.classList.remove("anni-dragging");
-      dragEl.style.transform = "";
-    }
-    if(ph && ph.parentNode) ph.parentNode.removeChild(ph);
-    dragEl = null; ph = null; active = false;
-  };
-  list.addEventListener("pointerup", () => finish(true), { passive: true });
-  list.addEventListener("pointercancel", () => finish(false), { passive: true });
 }
 /* 纪念日当天彩蛋：打开页面时若今天是某个纪念日，放烟花并提醒 */
 function checkAnniToday(){
