@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#ff7da9">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
 <title>JL Time</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;}
@@ -186,6 +189,15 @@ body[data-season="winter"]{--bg1:#fffdf4;--bg2:#fbf2da;--bg3:#fdf6e0;} /* 浅金
 }
 /* 卡片标题后的纪念图标（兜底展示） */
 .badge-inline{font-size:15px;}
+/* 卡片上的地图小图标 */
+.map-pin{cursor:pointer;font-size:14px;opacity:.75;}
+.map-pin:hover{opacity:1;}
+/* 上传按钮未同步红点 */
+#cloudUploadBtn{position:relative;}
+#cloudUploadBtn.dirty::after{
+  content:"";position:absolute;top:-4px;right:-4px;width:10px;height:10px;border-radius:50%;
+  background:#ff3b30;border:2px solid #fff;
+}
 /* 纪念日列表拖拽排序 */
 .anni-item{transition:transform .18s ease,background .18s ease;}
 .anni-item.anni-dragging{opacity:.55;background:#fff0f5;transform:scale(1.01);}
@@ -282,6 +294,42 @@ button{border-radius:12px;}
 <button class="music-fab" id="musicFab" title="背景音乐（长按管理）" onclick="toggleMusic()">♪</button>
 <audio id="bgmAudio" loop preload="none"></audio>
 
+<!-- 回到顶部 -->
+<button id="backTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="回到顶部"
+  style="display:none;position:fixed;right:18px;bottom:80px;z-index:1400;width:42px;height:42px;border-radius:50%;
+  border:none;background:rgba(255,158,196,.95);color:#fff;font-size:18px;cursor:pointer;box-shadow:0 4px 12px rgba(255,130,160,.4);">↑</button>
+
+<!-- 地图弹窗 -->
+<div class="modal-overlay" id="mapModal">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-title" id="mapTitle">📍 地图</div>
+    <iframe id="mapFrame" style="width:100%;height:280px;border:0;border-radius:10px;background:#f0f4f8;margin:8px 0;" loading="lazy"></iframe>
+    <div class="modal-buttons">
+      <a id="mapAmapLink" href="#" target="_blank" style="text-decoration:none;"><button>高德打开</button></a>
+      <button onclick="closeMapModal()">✕</button>
+    </div>
+  </div>
+</div>
+
+<!-- 主题设置弹窗 -->
+<div class="modal-overlay" id="themeModal">
+  <div class="modal-box" style="max-width:380px;">
+    <div class="modal-title">主题</div>
+    <div style="text-align:left;font-size:13px;color:#888;margin:6px 0 4px;">纯色：</div>
+    <div id="solidPalette" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"></div>
+    <div style="text-align:left;font-size:13px;color:#888;margin:6px 0 4px;">渐变色：</div>
+    <div id="gradPalette" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"></div>
+    <div style="text-align:left;font-size:13px;color:#888;margin:6px 0 4px;">背景图：</div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;">
+      <button onclick="pickBgImage()">⬆ 上传背景图</button>
+      <button onclick="clearBgImage()">清除背景图</button>
+    </div>
+    <div class="modal-buttons">
+      <button onclick="closeThemeModal()">✕</button>
+    </div>
+  </div>
+</div>
+
 <div class="filter-box">
   <label>筛选：</label>
   <select id="yearSel"><option value="">全部年份</option></select>
@@ -308,9 +356,10 @@ button{border-radius:12px;}
   <button class="import" onclick="openImportModal()">导入</button>
   <!-- 云端同步：下载 / 上传 / 恢复 -->
   <button onclick="wdDownload()">下载</button>
-  <button class="success" onclick="wdUpload()">上传</button>
+  <button class="success" id="cloudUploadBtn" onclick="wdUpload()">上传</button>
   <button class="checked-mode" onclick="wdOpenRestore()">恢复</button>
   <button class="danger" onclick="openCacheConfirm()">清缓</button>
+  <button onclick="openThemeModal()" title="主题色/背景">🎨</button>
   </span>
 </div>
 
@@ -532,6 +581,7 @@ button{border-radius:12px;}
     <div class="restore-list" id="restoreList"><div class="restore-tip">加载中…</div></div>
     <div class="link-buttons">
       <button class="checked-mode" onclick="ghSettings()">云端登录</button>
+      <button class="danger" onclick="emptyTrash()">清空回收站</button>
       <button onclick="closeRestoreModal()">关闭</button>
     </div>
   </div>
@@ -668,10 +718,11 @@ function loadCards(){
 
 function saveCards(list){
   localStorage.setItem(STORAGE.cards, JSON.stringify(list));
+  if(typeof markDirty === "function") markDirty();
 }
 
 function getPageTitle(){ return localStorage.getItem(STORAGE.title) || "JL Time"; }
-function setPageTitle(text){ localStorage.setItem(STORAGE.title, text); }
+function setPageTitle(text){ localStorage.setItem(STORAGE.title, text); if(typeof markDirty === "function") markDirty(); }
 
 /* 图片失败占位图（灰粉底+文字） */
 const IMG_PLACEHOLDER = "data:image/svg+xml;utf8," + encodeURIComponent(
@@ -827,7 +878,7 @@ function renderAllCards(){
     itemDiv.innerHTML = `
       <div class="card">
         ${checkbox}
-        <div class="date" onclick="${viewMode === "view" ? `openComboView('${card.id}')` : `openComboEdit('${card.id}')`}">${makeCardLabel(card.date, card.locs)}</div>
+        <div class="date" onclick="${viewMode === "view" ? `openComboView('${card.id}')` : `openComboEdit('${card.id}')`}">${makeCardLabel(card.date, card.locs)} <span class="map-pin" onclick="event.stopPropagation();openMapModal(${JSON.stringify(card.locs).replace(/"/g,"&quot;")})">📍</span></div>
         <div class="card-imgs" data-imgs='${JSON.stringify(card.imgs)}'>
           <img loading="lazy" decoding="async" src="${getThumbnailUrl(card.imgs[0])}" data-src="${getThumbnailUrl(card.imgs[0])}" onerror="imgFallback(this)" onclick="openGallery(this)" alt="${card.locs.join(',')}">
         </div>
@@ -1855,6 +1906,7 @@ async function wdUpload(){
       }
     }
     await wdWriteFile(name, { title: getPageTitle(), cards: loadCards() });
+    if(typeof clearDirty === "function") clearDirty();
     alert(`已上传至云端（${formatNodeTime(name.slice(8, 22))}），云端保留最近 ${GH.maxNodes} 个节点`);
   }catch(err){
     alert("上传失败：" + err.message);
@@ -1877,6 +1929,7 @@ async function wdDownload(){
     if(!confirm(`将从云端拉取最新备份（${formatNodeTime(latest.ts)}）并覆盖本地数据，确定继续吗？`)) return;
     const count = applyImportedData(imported);
     setCloudLoaded(latest);
+    if(typeof clearDirty === "function") clearDirty();
     alert(`下载成功，已载入 ${count} 条记录（备份时间 ${formatNodeTime(latest.ts)}）`);
   }catch(err){
     alert("下载失败：" + err.message);
@@ -2660,6 +2713,157 @@ function bindFootLongPress(){
   });
 }
 
+/* ---------- 未上传小红点 ---------- */
+function markDirty(){ localStorage.setItem("local_dirty", "1"); updateDirtyDot(); }
+function clearDirty(){ localStorage.removeItem("local_dirty"); updateDirtyDot(); }
+function updateDirtyDot(){
+  const b = document.getElementById("cloudUploadBtn");
+  if(b) b.classList.toggle("dirty", localStorage.getItem("local_dirty") === "1");
+}
+
+/* ---------- 回到顶部 ---------- */
+function bindBackTop(){
+  const btn = document.getElementById("backTopBtn");
+  window.addEventListener("scroll", () => {
+    btn.style.display = window.scrollY > 500 ? "block" : "none";
+  }, { passive: true });
+}
+
+/* ---------- 地图弹窗 ---------- */
+const CITY_COORDS = {
+  "郑州":[34.7466,113.6254],"上海":[31.2304,121.4737],"苏州":[31.2989,120.5853],
+  "成都":[30.5728,104.0668],"洛阳":[34.6197,112.4540],"合肥":[31.8206,117.2272],
+  "嘉兴":[30.7461,120.7555],"南京":[32.0603,118.7969],"北京":[39.9042,116.4074],
+  "杭州":[30.2741,120.1551],"广州":[23.1291,113.2644],"深圳":[22.5431,114.0579],
+  "西安":[34.3416,108.9398],"重庆":[29.5630,106.5516],"武汉":[30.5928,114.3055],
+  "长沙":[28.2282,112.9388],"天津":[39.3434,117.3616],"青岛":[36.0671,120.3826],
+  "厦门":[24.4798,118.0894],"昆明":[25.0389,102.7183],"大理":[25.6065,100.2676]
+};
+function findCity(locs){
+  for(const loc of locs){
+    for(const city in CITY_COORDS) if(loc.includes(city)) return city;
+  }
+  return null;
+}
+function openMapModal(locs){
+  if(typeof locs === "string"){ try{ locs = JSON.parse(locs); }catch(e){ locs = [locs]; } }
+  const city = findCity(locs || []);
+  document.getElementById("mapTitle").textContent = "📍 " + (locs.join(" / ") || "地图");
+  if(city){
+    const [lat, lon] = CITY_COORDS[city];
+    document.getElementById("mapFrame").src =
+      `https://www.openstreetmap.org/export/embed.html?bbox=${lon-0.15}%2C${lat-0.1}%2C${lon+0.15}%2C${lat+0.1}&layer=mapnik&marker=${lat}%2C${lon}`;
+  }else{
+    document.getElementById("mapFrame").src = "about:blank";
+  }
+  document.getElementById("mapAmapLink").href = "https://www.amap.com/search?query=" + encodeURIComponent(locs.join(" "));
+  document.getElementById("mapModal").style.display = "flex";
+}
+function closeMapModal(){ document.getElementById("mapModal").style.display = "none"; }
+
+/* ---------- 主题色/背景 ---------- */
+const SOLID_THEMES = [
+  { name:"樱花粉", color:"#ff7da9" }, { name:"天空蓝", color:"#5aa9e6" },
+  { name:"薰衣草紫", color:"#a78bfa" }, { name:"抹茶绿", color:"#6fbf8f" },
+  { name:"暖阳橙", color:"#ffa94d" }, { name:"玫瑰红", color:"#f06272" },
+  { name:"奶咖棕", color:"#b08968" }, { name:"星空灰", color:"#6b7280" }
+];
+const GRAD_THEMES = [
+  { name:"粉橙日落", bg:"linear-gradient(135deg,#ffdde1 0%,#ffb6a3 50%,#ff9a8b 100%)" },
+  { name:"蓝紫梦境", bg:"linear-gradient(135deg,#e0c3fc 0%,#8ec5fc 100%)" },
+  { name:"薄荷清晨", bg:"linear-gradient(135deg,#d4fc79 0%,#96e6a1 100%)" },
+  { name:"奶油蜜桃", bg:"linear-gradient(135deg,#fff1eb 0%,#ace0f9 100%)" },
+  { name:"樱花飞舞", bg:"linear-gradient(135deg,#ffecd2 0%,#fcb69f 100%)" },
+  { name:"深海静谧", bg:"linear-gradient(135deg,#a1c4fd 0%,#c2e9fb 100%)" }
+];
+function applyTheme(){
+  const t = JSON.parse(localStorage.getItem("jlt_theme") || "{}");
+  if(t.color){
+    document.documentElement.style.setProperty("--primary", t.color);
+    document.querySelectorAll(".title-heart").forEach(h => h.style.color = t.color);
+  }
+  if(t.gradient) document.body.style.background = t.gradient;
+  else if(t.bgImage){ document.body.style.background = "url(" + t.bgImage + ") center/cover fixed no-repeat"; }
+  else document.body.style.background = "";
+}
+function openThemeModal(){
+  const sp = document.getElementById("solidPalette");
+  sp.innerHTML = SOLID_THEMES.map((t,i) =>
+    `<div onclick="setSolidTheme(${i})" title="${t.name}" style="width:38px;height:38px;border-radius:50%;background:${t.color};cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.15);"></div>`).join("");
+  const gp = document.getElementById("gradPalette");
+  gp.innerHTML = GRAD_THEMES.map((t,i) =>
+    `<div onclick="setGradTheme(${i})" title="${t.name}" style="width:56px;height:38px;border-radius:8px;background:${t.bg};cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.15);"></div>`).join("");
+  document.getElementById("themeModal").style.display = "flex";
+}
+function closeThemeModal(){ document.getElementById("themeModal").style.display = "none"; }
+function setSolidTheme(i){
+  localStorage.setItem("jlt_theme", JSON.stringify({ color: SOLID_THEMES[i].color }));
+  applyTheme(); markDirty();
+}
+function setGradTheme(i){
+  localStorage.setItem("jlt_theme", JSON.stringify({ gradient: GRAD_THEMES[i].bg }));
+  applyTheme(); markDirty();
+}
+function pickBgImage(){
+  const fi = document.createElement("input");
+  fi.type = "file"; fi.accept = "image/*";
+  fi.onchange = () => {
+    const file = fi.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const b64 = reader.result.split(",")[1];
+      setUploadTip("正在上传背景图… 0%", 0);
+      ghUploadXHR(ghApi() + "bg/bg.jpg", ghHeaders(),
+        { message: "背景图", content: b64, branch: GH.branch },
+        pct => setUploadTip("正在上传背景图… " + pct + "%", pct))
+        .then(() => {
+          setUploadTip("完成 ✓", 100); setTimeout(hideUploadTip, 900);
+          const url = musicCdn && ghOwner() ? `https://${ghOwner()}.github.io/${ghRepo()}/bg/bg.jpg?v=${Date.now()}` : "";
+          localStorage.setItem("jlt_theme", JSON.stringify({ bgImage: url }));
+          applyTheme(); markDirty();
+        })
+        .catch(err => { hideUploadTip(); alert("上传失败：" + err.message); });
+    };
+    reader.readAsDataURL(file);
+  };
+  fi.click();
+}
+function clearBgImage(){
+  localStorage.setItem("jlt_theme", "{}");
+  applyTheme(); markDirty();
+}
+
+/* ---------- 回收站清空 ---------- */
+async function emptyTrash(){
+  if(!confirm("确定清空所有卡片文件夹里的回收站？此操作不可恢复。")) return;
+  try{
+    setUploadTip("正在扫描回收站…", 0);
+    const res = await ghFetch(ghApi() + "images", { headers: ghHeaders() }, 20000);
+    if(!res.ok) throw new Error("无法列出图片目录");
+    const dirs = await res.json();
+    let total = 0;
+    for(const d of dirs){
+      if(d.type !== "dir" || d.name === ".trash") continue;
+      const tr = await ghFetch(ghApi() + "images/" + d.name + "/.trash", { headers: ghHeaders() }, 15000);
+      if(!tr.ok) continue;
+      const files = await tr.json();
+      for(const f of files){
+        await ghFetch(ghApi() + "images/" + d.name + "/.trash/" + f.name, {
+          method: "DELETE", headers: ghHeaders(),
+          body: JSON.stringify({ message: "清空回收站", sha: f.sha, branch: GH.branch })
+        }, 15000);
+        total++;
+        setUploadTip("已清空 " + total + " 个回收站文件…", Math.min(95, total * 10));
+      }
+    }
+    setUploadTip("完成 ✓", 100); setTimeout(hideUploadTip, 1200);
+    alert("回收站已清空，共删除 " + total + " 个文件。");
+  }catch(e){
+    hideUploadTip();
+    alert("清空失败：" + e.message);
+  }
+}
+
 /* ---------- 初始化 ---------- */
 /* 季节皮肤：随月份自动换一点暖色调 */
 function applySeason(){
@@ -2695,6 +2899,9 @@ function init(){
   bindLightboxSwipe();
   bindGalleryKeys();
   applySeason();
+  applyTheme();
+  bindBackTop();
+  updateDirtyDot();
   registerSW();
   renderAnniChips();
   seedAnniversaries();
