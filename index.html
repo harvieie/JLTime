@@ -48,6 +48,8 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 /* ===== 双轨蜿蜒小路时间轴 ===== */
 .timeline{max-width:800px;margin:0 auto;position:relative;padding:40px 0;}
 .timeline-path{position:absolute;left:50%;top:0;bottom:0;width:52px;transform:translateX(-50%);pointer-events:none;z-index:0;}
+.rewind-hit{position:absolute;left:50%;top:-6px;transform:translateX(-50%);width:40px;height:36px;cursor:pointer;z-index:1;text-align:center;color:#ff8fab;font-size:18px;line-height:36px;opacity:.8;}
+.rewind-hit:hover{opacity:1;}
 .timeline-path svg{width:100%;height:100%;display:block;overflow:visible;}
 .timeline-item{width:50%;position:relative;z-index:1;padding-bottom:60px;}
 .timeline-item.left{padding-right:50px;text-align:right;}
@@ -360,9 +362,7 @@ button{border-radius:12px;}
 </div>
 
 <div class="timeline" id="timelineWrap">
-  <div style="text-align:center;margin:0 0 10px;">
-    <button class="btn-sec" onclick="rewindTimeline()" title="从最早的故事一路回到现在">⏪ 倒带看我们的故事</button>
-  </div>
+  <div class="rewind-hit" onclick="rewindTimeline()" title="点这里，倒带看我们的故事">⏪</div>
   <div class="timeline-path" id="timelinePath">
     <svg viewBox="0 0 52 1400" preserveAspectRatio="none">
       <defs>
@@ -727,12 +727,16 @@ function setPageTitle(text){ localStorage.setItem(STORAGE.title, text); if(typeo
 const IMG_PLACEHOLDER = "data:image/svg+xml;utf8," + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="100%" height="100%" fill="#f5e9ef"/><text x="50%" y="48%" fill="#c9a0b4" font-size="20" text-anchor="middle" font-family="sans-serif">图片加载失败</text><text x="50%" y="62%" fill="#d8bccb" font-size="13" text-anchor="middle" font-family="sans-serif">点查看原图再试</text></svg>'
 );
-/* 图片加载失败：3 秒后自动重试一次（加随机参数绕缓存），再失败显示占位图 */
+/* 图片加载失败：3 秒后自动重试一次（绕缓存）；再失败若有原图地址就直接显示原图，否则占位 */
 function imgFallback(img){
   if(!img.dataset.retried){
     img.dataset.retried = "1";
     const u = img.dataset.src || img.src.split("?")[0];
-    setTimeout(() => { img.src = u + (u.includes("?") ? "&" : "?") + "_retry=" + Date.now(); }, 3000);
+    setTimeout(() => { img.src = u + (u.includes("?") ? "&" : "?") + "_retry=" + Date.now(); }, 2000);
+  }else if(img.dataset.full && !img.dataset.fellBack){
+    // 缩略图真的 404（.thumb 没生成），直接 fallback 到原图
+    img.dataset.fellBack = "1";
+    img.src = img.dataset.full;
   }else{
     img.src = IMG_PLACEHOLDER;
   }
@@ -899,7 +903,7 @@ function renderAllCards(){
         ${checkbox}
         <div class="date" onclick="${viewMode === "view" ? `openComboView('${card.id}')` : `openComboEdit('${card.id}')`}">${makeCardLabel(card.date, card.locs)}</div>
         <div class="card-imgs" data-imgs='${JSON.stringify(card.imgs)}'>
-          <img loading="lazy" decoding="async" src="${getThumbnailUrl(card.imgs[0])}" data-src="${getThumbnailUrl(card.imgs[0])}" onerror="imgFallback(this)" onclick="openGallery(this)" alt="${card.locs.join(',')}">
+          <img loading="lazy" decoding="async" src="${getThumbnailUrl(card.imgs[0])}" data-src="${getThumbnailUrl(card.imgs[0])}" data-full="${card.imgs[0]}" onerror="imgFallback(this)" onclick="openGallery(this)" alt="${card.locs.join(',')}">
         </div>
         <p class="desc" ${viewMode === "view" ? "" : `onclick="openNote(this)"`}>${linkifyNote(card.note)}</p>
       </div>
@@ -1325,17 +1329,24 @@ function loadFullRes(){
   };
   img.src = state.galleryImages[state.galleryIndex];   // 原图较大，按需加载
 }
-// 刷新当前图片：加随机参数强制绕过浏览器缓存，重新加载（新上传图片的缩略图也能刷出来）
+// 刷新当前图片：强制绕过缓存重新加载；缩略图缺失/404 时直接显示原图
 function refreshGalleryImage(){
   const img = document.getElementById("galleryImg");
   const btn = document.getElementById("loadFullBtn");
+  const cur = state.galleryImages[state.galleryIndex];
   state.fullImageLoaded = false;
   btn.textContent = "查看原图";
   btn.disabled = false;
   btn.style.display = "inline-block";
-  const thumb = getThumbnailUrl(state.galleryImages[state.galleryIndex]);
   img.dataset.s = 1; img.dataset.tx = 0; img.dataset.ty = 0; img.dataset.zoomed = "";
   img.style.transform = "";
+  // 先 head 检查缩略图是否存在，存在就刷缩略图，不存在直接加载原图
+  const thumb = getThumbnailUrl(cur);
+  img.dataset.retried = "";
+  img.dataset.fellBack = "";
+  img.dataset.full = cur;
+  img.dataset.src = thumb;
+  img.onerror = () => imgFallback(img);
   img.src = thumb + (thumb.includes("?") ? "&" : "?") + "_r=" + Date.now();
 }
 function galleryFirst(){ state.galleryIndex = 0; showGalleryImage(); }
@@ -1761,15 +1772,23 @@ async function uploadImageToRepo(file, dateStr, name, cb){
         pct => setUploadTip("正在上传原图… " + pct + "%", pct));
       const cdn = `https://${ghOwner()}.github.io/${ghRepo()}/${path}`;
       setUploadTip("正在生成缩略图…", null);
-      try{
-        const thumbB64 = await makeThumbB64(file);
-        const thumbPath = "images/" + dateStr + "/.thumb/" + name.replace(/\.[^.]+$/, "") + ".jpg";
-        await ghFetch(ghApi() + thumbPath, {
-          method: "PUT",
-          headers: ghHeaders(),
-          body: JSON.stringify({ message: "时光图库缩略图: " + thumbPath, content: thumbB64, branch: GH.branch })
-        }, 90000);
-      }catch(e){ /* 缩略图失败不影响原图上传 */ }
+      const thumbPath = "images/" + dateStr + "/.thumb/" + name.replace(/\.[^.]+$/, "") + ".jpg";
+      let thumbOk = false;
+      for(let attempt = 0; attempt < 2 && !thumbOk; attempt++){
+        try{
+          const thumbB64 = await makeThumbB64(file);
+          await ghFetch(ghApi() + thumbPath, {
+            method: "PUT",
+            headers: ghHeaders(),
+            body: JSON.stringify({ message: "时光图库缩略图: " + thumbPath, content: thumbB64, branch: GH.branch })
+          }, 90000);
+          thumbOk = true;
+        }catch(e){
+          setUploadTip("缩略图第" + (attempt + 1) + "次失败，重试…", null);
+          await new Promise(r => setTimeout(r, 600));
+        }
+      }
+      if(!thumbOk) setUploadTip("缩略图未生成，点击灯箱里的「刷新」可重试", null);
       setUploadTip("上传完成 ✓", 100);
       setTimeout(hideUploadTip, 900);
       cb(cdn);
@@ -2770,25 +2789,27 @@ function markDirty(){}
 function clearDirty(){}
 function updateDirtyDot(){}
 
-/* ---------- 倒带模式：从最早卡片一路平滑滚到最新 ---------- */
+/* ---------- 倒带模式：点时间轴顶端触发，从最早卡片一路平滑滚到最新；用户手动滑动即打断 ---------- */
 let rewinding = false;
 async function rewindTimeline(){
   if(rewinding) return;
   rewinding = true;
-  const btn = event && event.currentTarget;
-  if(btn){ btn.disabled = true; btn.textContent = "⏪ 播放中…"; }
   const items = [...document.querySelectorAll(".timeline-item")].filter(el => el.style.display !== "none");
+  // 用户一旦手动滚动就停止倒带
+  const stop = () => { rewinding = false; };
+  window.addEventListener("wheel", stop, { passive: true });
+  window.addEventListener("touchmove", stop, { passive: true });
   if(items.length){
-    // 先滚到最早（列表最后一个），再一张张回到最新
     items[items.length - 1].scrollIntoView({behavior: "smooth", block: "center"});
     await new Promise(r => setTimeout(r, 1800));
-    for(let i = items.length - 1; i >= 0; i--){
+    for(let i = items.length - 1; i >= 0 && rewinding; i--){
       if(items[i].style.display === "none") continue;
       items[i].scrollIntoView({behavior: "smooth", block: "center"});
       await new Promise(r => setTimeout(r, 1100));
     }
   }
-  if(btn){ btn.disabled = false; btn.textContent = "⏪ 倒带看我们的故事"; }
+  window.removeEventListener("wheel", stop);
+  window.removeEventListener("touchmove", stop);
   rewinding = false;
 }
 
