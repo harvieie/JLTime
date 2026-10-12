@@ -149,14 +149,6 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 .empty-tip{text-align:center;color:#aaa;padding:90px 0;font-size:15px;line-height:2.1;}
 
 /* ===== 自动关闭提示条 ===== */
-.rewind-btn{
-  border:1px solid rgba(255,143,171,.45);
-  background:rgba(255,143,171,.12);
-  color:rgba(255,143,171,.75);
-  font-size:16px;width:44px;height:32px;line-height:1;
-  border-radius:16px;cursor:pointer;transition:all .2s;opacity:.85;
-}
-.rewind-btn:hover{background:rgba(255,143,171,.28);color:#ff7da9;opacity:1;}
 .toast{
   position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
   background:rgba(17,24,39,.92);color:#fff;padding:18px 28px;border-radius:14px;
@@ -167,7 +159,6 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 
 /* ===== 移动端 ===== */
 @media (max-width:640px){
-  #rewindRow{text-align:left;margin-left:2px;}
   .filter-box{justify-content:flex-start;}
   .filter-box label{text-align:left;}
   .timeline-path{left:22px;transform:none;width:32px;}
@@ -319,6 +310,9 @@ button{border-radius:12px;}
 <button id="backTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="回到顶部"
   style="display:none;position:fixed;right:18px;bottom:80px;z-index:1400;width:42px;height:42px;border-radius:50%;
   border:none;background:rgba(255,158,196,.95);color:#fff;font-size:18px;cursor:pointer;box-shadow:0 4px 12px rgba(255,130,160,.4);">↑</button>
+<button id="btnBottom" onclick="rewindTimeline()" title="滑到最底，再倒带回顶部"
+  style="display:none;position:fixed;right:18px;bottom:80px;z-index:1400;width:42px;height:42px;border-radius:50%;
+  border:none;background:rgba(120,180,220,.95);color:#fff;font-size:16px;cursor:pointer;box-shadow:0 4px 12px rgba(100,150,200,.4);">⏬</button>
 
 <!-- 主题设置弹窗 -->
 <div class="modal-overlay" id="themeModal">
@@ -368,10 +362,6 @@ button{border-radius:12px;}
   <button class="danger" onclick="openCacheConfirm()">清缓</button>
   <button onclick="openThemeModal()" title="主题色/背景">🎨</button>
   </span>
-</div>
-
-<div style="text-align:center;margin:0 0 8px;" id="rewindRow">
-  <button class="rewind-btn" onclick="rewindTimeline()" id="rewindBtn" title="倒带看我们的故事">⏪</button>
 </div>
 
 <div class="timeline" id="timelineWrap">
@@ -930,18 +920,6 @@ function renderAllCards(){
   updateCountTip();
   renderFootBadges();
   bindFootLongPress();
-  // 倒带按钮悬浮在第一个和第二个脚印之间
-  const rw = document.getElementById("rewindRow");
-  const fps = wrap.querySelectorAll(".footprint");
-  if(rw){
-    if(fps.length){
-      const anchor = fps.length > 1 ? fps[1].closest(".timeline-item") : fps[0].closest(".timeline-item");
-      if(anchor && anchor.parentNode === wrap){ wrap.insertBefore(rw, anchor); }
-      else{ wrap.appendChild(rw); }
-    }else{
-      if(rw.parentNode !== wrap.parentNode){ document.body.insertBefore(rw, wrap); }
-    }
-  }
 }
 
 function updateCountTip(){
@@ -2892,8 +2870,19 @@ async function rewindTimeline(){
 /* ---------- 回到顶部 ---------- */
 function bindBackTop(){
   const btn = document.getElementById("backTopBtn");
+  const btm = document.getElementById("btnBottom");
   window.addEventListener("scroll", () => {
-    btn.style.display = window.scrollY > 500 ? "block" : "none";
+    const y = window.scrollY;
+    if(y > 600){
+      btn.style.display = "block";
+      btm.style.display = "none";
+    }else if(y > 250){
+      btn.style.display = "none";
+      btm.style.display = "block";
+    }else{
+      btn.style.display = "none";
+      btm.style.display = "none";
+    }
   }, { passive: true });
 }
 
