@@ -198,7 +198,7 @@ body[data-season="winter"]{--bg1:#fffdf4;--bg2:#fbf2da;--bg3:#fdf6e0;} /* 浅金
 /* 卡片标题后的纪念图标（兜底展示） */
 .badge-inline{font-size:15px;}
 /* 地点分组字母小标题小一点 */
-select optgroup{font-size:11px;color:#aaa;font-style:normal;padding:2px 0;}
+select optgroup{font-size:10px;color:#d6dae0;font-style:normal;padding:2px 0;}
 select optgroup option{font-size:14px;color:#333;}
 /* 统一按钮样式 */
 .btn-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px;}
@@ -2971,7 +2971,7 @@ async function rewindTimeline(){
     for(let i = items.length - 1; i >= 0 && rewinding; i--){
       if(items[i].style.display === "none") continue;
       items[i].scrollIntoView({behavior: "smooth", block: "center"});
-      await new Promise(r => setTimeout(r, 1100));
+      await new Promise(r => setTimeout(r, 2200));
     }
   }
   window.removeEventListener("wheel", stop);
