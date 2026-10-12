@@ -311,10 +311,10 @@ button{border-radius:12px;}
 
 <!-- 回到顶部 -->
 <button id="backTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="回到顶部"
-  style="display:none;position:fixed;right:18px;bottom:80px;z-index:2500;width:42px;height:42px;border-radius:50%;
+  style="display:none;position:fixed;right:18px;bottom:80px;z-index:900;width:42px;height:42px;border-radius:50%;
   border:none;background:rgba(255,158,196,.95);color:#fff;font-size:18px;cursor:pointer;box-shadow:0 4px 12px rgba(255,130,160,.4);">↑</button>
 <button id="btnBottom" onclick="rewindTimeline()" title="滑到最底，再倒带回顶部"
-  style="display:none;position:fixed;right:18px;bottom:80px;z-index:2500;width:42px;height:42px;border-radius:50%;
+  style="display:none;position:fixed;right:18px;bottom:80px;z-index:900;width:42px;height:42px;border-radius:50%;
   border:none;background:rgba(120,180,220,.95);color:#fff;font-size:18px;cursor:pointer;box-shadow:0 4px 12px rgba(100,150,200,.4);">↓</button>
 
 <!-- 主题设置弹窗 -->
@@ -1244,11 +1244,19 @@ function moveMosaicImg(src, target){
     el.src = tu;
     el.dataset.src = tu;
   });
-  // 保存回写卡片
+  // 保存回写卡片（localStorage + 主页面 DOM，确保上传云端后顺序保留）
   if(!mosaicCardId) return;
   const cards = loadCards();
   const c = cards.find(x => String(x.id) === String(mosaicCardId));
-  if(c){ c.imgs = arr; saveCards(cards); }
+  if(c){
+    c.imgs = arr;
+    saveCards(cards);
+    const item = document.querySelector(`.timeline-item[data-card-id="${CSS.escape(String(mosaicCardId))}"]`);
+    if(item){
+      const imgWrap = item.querySelector(".card-imgs");
+      if(imgWrap) imgWrap.dataset.imgs = JSON.stringify(arr);
+    }
+  }
 }
 function closeMosaic(){
   document.getElementById("mosaicModal").style.display = "none";
