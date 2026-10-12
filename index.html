@@ -813,15 +813,15 @@ function escapeHtml(s){
 // 备注里的网址自动识别成可点击链接（点链接不触发编辑备注弹窗）
 function linkifyNote(text){
   let h = escapeHtml(text);
-  // 分割线 ---
-  h = h.replace(/^-{3,}\s*$/gm, '<hr style="border:none;border-top:1px dashed #ffb3c8;margin:8px 0;">');
+  // 分割线 ---（span 行内块，避免 <hr>/<div> 破坏 <p> 结构，点击仍能冒泡编辑）
+  h = h.replace(/^-{3,}\s*\n?/gm, '<span style="display:block;border-top:1px dashed #ffb3c8;margin:6px 0;height:1px;overflow:hidden;"> </span>');
   // 引用 >
-  h = h.replace(/^&gt;\s?(.*)$/gm, '<div style="border-left:3px solid #ffb3c8;padding-left:8px;color:#888;margin:4px 0;">$1</div>');
+  h = h.replace(/^&gt;\s?(.*)\n?/gm, '<span style="display:block;border-left:3px solid #ffb3c8;padding-left:8px;color:#888;margin:3px 0;">$1</span>');
   // 任务列表 - [ ] / - [x]（要在无序列表之前）
-  h = h.replace(/^- \[ \]\s?(.*)$/gm, '<div style="padding-left:6px;">☐ $1</div>');
-  h = h.replace(/^- \[x\]\s?(.*)$/gim, '<div style="padding-left:6px;">☑ $1</div>');
+  h = h.replace(/^- \[ \]\s?(.*)\n?/gm, '<span style="display:block;padding-left:4px;">☐ $1</span>');
+  h = h.replace(/^- \[x\]\s?(.*)\n?/gim, '<span style="display:block;padding-left:4px;">☑ $1</span>');
   // 无序列表 -
-  h = h.replace(/^- \s?(.*)$/gm, '<div style="padding-left:14px;">• $1</div>');
+  h = h.replace(/^- \s?(.*)\n?/gm, '<span style="display:block;padding-left:14px;">• $1</span>');
   // Markdown 链接 [文字](url)
   h = h.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
     '<a href="$2" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#ff7da9;">$1</a>');
@@ -836,7 +836,7 @@ function linkifyNote(text){
   h = h.replace(/==([^=\n]+)==/g, '<span style="background:linear-gradient(transparent 60%, #ffe58f 60%);padding:0 2px;">$1</span>');
   // 下划线 <u>xx</u>（已转义）
   h = h.replace(/&lt;u&gt;([\s\S]*?)&lt;\/u&gt;/g, '<u>$1</u>');
-  // 换行转 <br>（不再用 pre-wrap，避免块级 div 与原 \n 叠加双倍行距）
+  // 换行转 <br>（块级行已吃掉行尾换行，普通文本行之间保留换行）
   h = h.replace(/\n/g, '<br>');
   return h;
 }
