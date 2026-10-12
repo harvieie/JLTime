@@ -164,9 +164,14 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
    情侣回忆相册美化 & 惊喜彩蛋
    ============================================================ */
 body{
-  background:linear-gradient(180deg,#fffaf3 0%,#ffeef4 45%,#fdeef8 100%);
+  background:linear-gradient(180deg,var(--bg1,#fffaf3) 0%,var(--bg2,#ffeef4) 45%,var(--bg3,#fdeef8) 100%);
   background-attachment:fixed;
 }
+/* 季节皮肤：随月份自动换一点暖色调 */
+body[data-season="spring"]{--bg1:#fff4f7;--bg2:#ffe4ee;--bg3:#fff3e8;}  /* 粉樱 */
+body[data-season="summer"]{--bg1:#f3fbf4;--bg2:#e7f6ec;--bg3:#f0fbf6;}  /* 浅绿 */
+body[data-season="autumn"]{--bg1:#fffaf0;--bg2:#ffedd6;--bg3:#fdeedd;}  /* 暖橙 */
+body[data-season="winter"]{--bg1:#fffdf4;--bg2:#fbf2da;--bg3:#fdf6e0;} /* 浅金 */
 /* 大标题两侧跳动爱心 */
 .title-wrap{position:relative;display:inline-block;}
 .title-heart{
@@ -576,6 +581,21 @@ function saveCards(list){
 function getPageTitle(){ return localStorage.getItem(STORAGE.title) || "JL Time"; }
 function setPageTitle(text){ localStorage.setItem(STORAGE.title, text); }
 
+/* 图片失败占位图（灰粉底+文字） */
+const IMG_PLACEHOLDER = "data:image/svg+xml;utf8," + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="100%" height="100%" fill="#f5e9ef"/><text x="50%" y="48%" fill="#c9a0b4" font-size="20" text-anchor="middle" font-family="sans-serif">图片加载失败</text><text x="50%" y="62%" fill="#d8bccb" font-size="13" text-anchor="middle" font-family="sans-serif">点查看原图再试</text></svg>'
+);
+/* 图片加载失败：3 秒后自动重试一次（加随机参数绕缓存），再失败显示占位图 */
+function imgFallback(img){
+  if(!img.dataset.retried){
+    img.dataset.retried = "1";
+    const u = img.dataset.src || img.src.split("?")[0];
+    setTimeout(() => { img.src = u + (u.includes("?") ? "&" : "?") + "_retry=" + Date.now(); }, 3000);
+  }else{
+    img.src = IMG_PLACEHOLDER;
+  }
+}
+
 function getThumbnailUrl(url){
   if(!url) return url;
   // 仓库原图 → 同目录 .thumb/ 缩略图（几十KB，加载更快；点开灯箱“查看原图”再载原图）
@@ -717,7 +737,7 @@ function renderAllCards(){
         ${checkbox}
         <div class="date" onclick="${viewMode === "view" ? `openComboView('${card.id}')` : `openComboEdit('${card.id}')`}">${makeCardLabel(card.date, card.locs)}</div>
         <div class="card-imgs" data-imgs='${JSON.stringify(card.imgs)}'>
-          <img loading="lazy" decoding="async" src="${getThumbnailUrl(card.imgs[0])}" onclick="openGallery(this)" alt="${card.locs.join(',')}">
+          <img loading="lazy" decoding="async" src="${getThumbnailUrl(card.imgs[0])}" data-src="${getThumbnailUrl(card.imgs[0])}" onerror="imgFallback(this)" onclick="openGallery(this)" alt="${card.locs.join(',')}">
         </div>
         <p class="desc" ${viewMode === "view" ? "" : `onclick="openNote(this)"`}>${linkifyNote(card.note)}</p>
       </div>
@@ -961,8 +981,11 @@ function openMosaic(footprintEl){
   imgs.forEach((u, i) => {
     const img = document.createElement("img");
     img.loading = "lazy";
-    img.src = getThumbnailUrl(u);
+    const tu = getThumbnailUrl(u);
+    img.src = tu;
+    img.dataset.src = tu;
     img.alt = "第" + (i + 1) + "张";
+    img.onerror = () => imgFallback(img);
     img.onclick = () => openGalleryFromList(i);
     grid.appendChild(img);
   });
@@ -1095,21 +1118,26 @@ function showGalleryImage(){
   state.fullImageLoaded = false;
   const img = document.getElementById("galleryImg");
   const btn = document.getElementById("loadFullBtn");
-  img.onload = null; img.onerror = null;
+  img.onload = null;
   img.style.transform = "";   // 切图时复位捏合/双击缩放
   img.dataset.zoomed = "";
   img.dataset.s = 1; img.dataset.tx = 0; img.dataset.ty = 0;
+  img.dataset.retried = "";
   btn.textContent = "查看原图";
   btn.disabled = false;
   const cur = state.galleryImages[state.galleryIndex];
+  const thumb = getThumbnailUrl(cur);
+  img.dataset.src = thumb;
+  img.onerror = () => imgFallback(img);
   if(loadFullUrlSet().has(cur)){
     // 这张原图之前已加载过（浏览器有缓存），直接显示原图
     state.fullImageLoaded = true;
+    img.dataset.src = cur;
     img.src = cur;
     btn.style.display = "none";
   }else{
     // 先加载缩略图（几十KB，快）；点「查看原图」才按需加载原图，不影响缩略图速度
-    img.src = getThumbnailUrl(cur);
+    img.src = thumb;
     btn.style.display = "inline-block";
   }
   updateGalleryPageInfo();
@@ -2191,11 +2219,41 @@ function startSurprises(){
 }
 
 /* ---------- 初始化 ---------- */
+/* 季节皮肤：随月份自动换一点暖色调 */
+function applySeason(){
+  const m = new Date().getMonth() + 1;   // 1-12
+  const season = m >= 3 && m <= 5 ? "spring"
+               : m >= 6 && m <= 8 ? "summer"
+               : m >= 9 && m <= 11 ? "autumn" : "winter";
+  document.body.dataset.season = season;
+}
+/* 灯箱键盘：←/→ 切图，Esc 关闭（灯箱关着则关闭拼图） */
+function bindGalleryKeys(){
+  document.addEventListener("keydown", e => {
+    const lb = document.getElementById("lightbox");
+    if(lb.style.display === "flex"){
+      if(e.key === "ArrowLeft"){ e.preventDefault(); galleryPrev(); }
+      else if(e.key === "ArrowRight"){ e.preventDefault(); galleryNext(); }
+      else if(e.key === "Escape"){ closeGallery(); }
+    }else if(document.getElementById("mosaicModal").style.display === "flex"){
+      if(e.key === "Escape") closeMosaic();
+    }
+  });
+}
+/* 离线缓存：Service Worker（页面永远取最新，图片走缓存，没网也能看） */
+function registerSW(){
+  if("serviceWorker" in navigator){
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+}
 function init(){
   document.getElementById("pageTitle").textContent = getPageTitle();
   applyViewMode(sessionStorage.getItem("view_mode") === "view" ? "view" : "full");
   if(!sessionStorage.getItem("cache_prompt_shown")) openCacheConfirm();
   bindLightboxSwipe();
+  bindGalleryKeys();
+  applySeason();
+  registerSW();
   startSurprises();
 }
 if(document.readyState === "loading"){
