@@ -140,7 +140,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 .link-buttons,.note-buttons,.add-buttons,.img-edit-buttons,.export-buttons,.import-buttons,.title-buttons{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px;}
 .md-btn{
   border:1px solid #e9ecef;background:#fafbfc;color:#555;font-size:13px;
-  padding:4px 10px;border-radius:14px;cursor:pointer;line-height:1.3;
+  padding:4px 9px;border-radius:12px;cursor:pointer;line-height:1.3;flex-shrink:0;
 }
 .md-btn:hover{background:#ffe3ec;border-color:#ffb3c8;color:#c2567f;}
 
@@ -509,16 +509,16 @@ button{border-radius:12px;}
 <div class="note-modal" id="noteModal">
   <div class="note-box">
     <h3>编辑备注</h3>
-    <div id="mdToolbar" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">
+    <div id="mdToolbar" style="display:flex;flex-wrap:nowrap;overflow-x:auto;gap:5px;margin-bottom:8px;padding-bottom:2px;">
       <button type="button" class="md-btn" onclick="insertMdWrap('**')" title="粗体">B</button>
       <button type="button" class="md-btn" onclick="insertMdWrap('*')" title="斜体"><i>I</i></button>
-      <button type="button" class="md-btn" onclick="insertMdWrap('==')" title="高亮">高亮</button>
       <button type="button" class="md-btn" onclick="insertMdWrapTag('<u>','</u>')" title="下划线"><u>U</u></button>
-      <button type="button" class="md-btn" onclick="insertMdRaw('[文字](https://)')" title="链接">🔗链接</button>
-      <button type="button" class="md-btn" onclick="insertMdRaw('- [ ] ')" title="待办">☐待办</button>
-      <button type="button" class="md-btn" onclick="insertMdRaw('- ')" title="列表">•列表</button>
-      <button type="button" class="md-btn" onclick="insertMdRaw('> ')" title="引用">›引用</button>
-      <button type="button" class="md-btn" onclick="insertMdRaw('\n---\n')" title="分割线">---</button>
+      <button type="button" class="md-btn" onclick="insertMdWrap('==')" title="高亮">==</button>
+      <button type="button" class="md-btn" onclick="insertMdRaw('[文字](https://)')" title="链接">🔗</button>
+      <button type="button" class="md-btn" onclick="insertMdRaw('- [ ] ')" title="待办">☐</button>
+      <button type="button" class="md-btn" onclick="insertMdRaw('- ')" title="列表">•</button>
+      <button type="button" class="md-btn" onclick="insertMdRaw('> ')" title="引用">›</button>
+      <button type="button" class="md-btn" onclick="insertMdRaw('\n---\n')" title="分割线">─</button>
     </div>
     <textarea id="noteText"></textarea>
     <div class="note-buttons">
