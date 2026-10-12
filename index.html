@@ -184,6 +184,12 @@ body[data-season="winter"]{--bg1:#fffdf4;--bg2:#fbf2da;--bg3:#fdf6e0;} /* 浅金
   position:absolute;top:-10px;right:-14px;font-size:18px;pointer-events:none;
   filter:drop-shadow(0 1px 2px rgba(0,0,0,.15));
 }
+/* 卡片标题后的纪念图标（兜底展示） */
+.badge-inline{font-size:15px;}
+/* 纪念日列表拖拽排序 */
+.anni-item{transition:transform .18s ease,background .18s ease;}
+.anni-item.anni-dragging{opacity:.55;background:#fff0f5;transform:scale(1.01);}
+.anni-placeholder{background:#ffe3ec;border-radius:8px;margin:2px 0;}
 /* 背景音乐悬浮按钮 */
 .music-fab{
   position:fixed;right:16px;bottom:20px;z-index:1500;width:46px;height:46px;border-radius:50%;
@@ -388,7 +394,11 @@ button{border-radius:12px;}
       <input id="anniLabel" placeholder="名称，如：在一起 / 求婚" style="width:100%;padding:6px;margin-bottom:8px;box-sizing:border-box;">
       <input type="date" id="anniDate" style="width:100%;padding:6px;margin-bottom:8px;box-sizing:border-box;">
       <div style="font-size:13px;color:#888;margin-bottom:6px;">选一个小图标：</div>
-      <div id="anniIconPick" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;font-size:20px;"></div>
+      <div id="anniIconPick" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;font-size:20px;"></div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;">
+        <input id="anniIconInput" placeholder="也可以输入任意图标/文字" style="flex:1;padding:6px;box-sizing:border-box;">
+        <button onclick="pickAnniIconInput()" title="用输入的内容">✓</button>
+      </div>
       <button onclick="saveAnni()" style="width:100%;">保存</button>
     </div>
     <div class="modal-buttons">
@@ -417,6 +427,10 @@ button{border-radius:12px;}
   <div class="modal-box" style="max-width:300px;">
     <div class="modal-title">给脚印加个标记</div>
     <div id="footIconGrid" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:12px 0;font-size:26px;"></div>
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <input id="footIconInput" placeholder="也可以输入任意图标/文字" style="flex:1;padding:6px;box-sizing:border-box;">
+      <button onclick="setFootBadgeInput()" title="用输入的内容">✓</button>
+    </div>
     <div class="modal-buttons">
       <button onclick="clearFootBadge()" title="去掉标记">✕</button>
       <button onclick="closeFootIconModal()" title="完成">✓</button>
@@ -2376,13 +2390,14 @@ function renderAnniList(){
     const editBtn = viewMode === "view" ? "" :
       `<button onclick="openAnniEditor('${a.id}')" title="编辑" style="margin-left:6px;">✏️</button>
        <button onclick="delAnni('${a.id}')" title="删除" style="margin-left:4px;">🗑</button>`;
-    return `<div style="padding:8px 4px;border-bottom:1px dashed #ffe3ec;">
+    return `<div class="anni-item" data-id="${a.id}" style="padding:10px 4px;border-bottom:1px dashed #ffe3ec;cursor:grab;">
       <span style="font-size:18px;">${a.icon||"💛"}</span>
       <b>${escapeHtml(a.label||"纪念日")}</b>
       <span style="color:#888;">（${a.date}）</span>
       → <span style="color:#c2567f;font-weight:bold;">第 ${days} 天</span>${editBtn}
     </div>`;
   }).join("");
+  bindAnniDragSort();
 }
 function openAnniEditor(id){
   editingAnniId = id || null;
@@ -2392,9 +2407,14 @@ function openAnniEditor(id){
   document.getElementById("anniIconPick").innerHTML = ANNI_ICONS.map(ic =>
     `<span data-ic="${ic}" style="cursor:pointer;padding:2px;border-radius:6px;" onclick="pickAnniIcon(this)">${ic}</span>`).join("");
   window._anniIcon = a ? (a.icon || "💛") : "💛";
+  document.getElementById("anniIconInput").value = "";
   document.getElementById("anniList").style.display = "none";
   document.getElementById("anniAddBtn").style.display = "none";
   document.getElementById("anniEditBox").style.display = "block";
+}
+function pickAnniIconInput(){
+  const v = document.getElementById("anniIconInput").value.trim();
+  if(v){ window._anniIcon = v; document.querySelectorAll("#anniIconPick span").forEach(s => s.style.background = ""); }
 }
 function pickAnniIcon(el){
   window._anniIcon = el.dataset.ic;
@@ -2424,6 +2444,59 @@ function delAnni(id){
   saveAnniversaries(loadAnniversaries().filter(x => x.id !== id));
   renderAnniChips();
   renderAnniList();
+}
+/* 纪念日列表：长按 400ms 进入拖动，松手按 DOM 顺序保存 */
+function bindAnniDragSort(){
+  const list = document.getElementById("anniList");
+  if(list.dataset.dragBound) return;
+  list.dataset.dragBound = "1";
+  let dragEl = null, timer = null, active = false, startY = 0, ph = null;
+  const cancel = () => { clearTimeout(timer); };
+  list.addEventListener("pointerdown", e => {
+    const el = e.target.closest(".anni-item");
+    if(!el || e.target.closest("button")) return;
+    dragEl = el;
+    startY = e.clientY;
+    timer = setTimeout(() => {
+      active = true;
+      dragEl.classList.add("anni-dragging");
+      ph = document.createElement("div");
+      ph.className = "anni-placeholder";
+      ph.style.height = dragEl.offsetHeight + "px";
+      list.insertBefore(ph, dragEl);
+    }, 400);
+  }, { passive: true });
+  list.addEventListener("pointermove", e => {
+    if(!active || !dragEl) return;
+    const dy = e.clientY - startY;
+    dragEl.style.transform = "translateY(" + dy + "px)";
+    const cur = dragEl.getBoundingClientRect().top + dy + dragEl.offsetHeight / 2;
+    const others = [...list.querySelectorAll(".anni-item")].filter(x => x !== dragEl);
+    for(const it of others){
+      const r = it.getBoundingClientRect();
+      const mid = r.top + r.height / 2;
+      if(cur < mid && ph.nextSibling === it) list.insertBefore(ph, it);
+      else if(cur > mid && ph.previousSibling === it) list.insertBefore(ph, it.nextSibling);
+    }
+  }, { passive: true });
+  const finish = (save) => {
+    cancel();
+    if(active && dragEl && ph){
+      if(save){
+        list.insertBefore(dragEl, ph);   // 插到占位处，DOM 顺序即新顺序
+        const ids = [...list.querySelectorAll(".anni-item")].map(x => x.dataset.id);
+        const map = {}; loadAnniversaries().forEach(a => map[a.id] = a);
+        saveAnniversaries(ids.map(id => map[id]).filter(Boolean));
+        renderAnniChips();
+      }
+      dragEl.classList.remove("anni-dragging");
+      dragEl.style.transform = "";
+    }
+    if(ph && ph.parentNode) ph.parentNode.removeChild(ph);
+    dragEl = null; ph = null; active = false;
+  };
+  list.addEventListener("pointerup", () => finish(true), { passive: true });
+  list.addEventListener("pointercancel", () => finish(false), { passive: true });
 }
 /* 纪念日当天彩蛋：打开页面时若今天是某个纪念日，放烟花并提醒 */
 function checkAnniToday(){
@@ -2553,13 +2626,21 @@ function renderFootBadges(){
   const badges = loadBadges();
   document.querySelectorAll(".timeline-item").forEach(item => {
     const id = item.dataset.cardId;
+    // 脚印上的角标
     const old = item.querySelector(".foot-badge");
     if(old) old.remove();
+    // 标题后边的角标（保证一定能看见）
+    const oldT = item.querySelector(".date .badge-inline");
+    if(oldT) oldT.remove();
     if(badges[id]){
       const b = document.createElement("span");
       b.className = "foot-badge";
       b.textContent = badges[id];
       item.querySelector(".footprint")?.appendChild(b);
+      const bi = document.createElement("span");
+      bi.className = "badge-inline";
+      bi.textContent = " " + badges[id];
+      item.querySelector(".date")?.appendChild(bi);
     }
   });
 }
@@ -2570,6 +2651,7 @@ function pickFootIcon(cardId){
   const cur = loadBadges()[cardId] || "";
   document.getElementById("footIconGrid").innerHTML = FOOT_ICONS.map(ic =>
     `<span onclick="setFootBadge('${ic}')" style="cursor:pointer;padding:6px;border-radius:8px;${ic===cur?"background:#ffd6e4;":""}">${ic}</span>`).join("");
+  document.getElementById("footIconInput").value = "";
   document.getElementById("footIconModal").style.display = "flex";
 }
 function setFootBadge(icon){
@@ -2580,6 +2662,11 @@ function setFootBadge(icon){
   renderFootBadges();
   closeFootIconModal();
 }
+/* 输入自定义图标 */
+function setFootBadgeInput(){
+  const v = document.getElementById("footIconInput").value.trim();
+  if(v) setFootBadge(v);
+}
 function clearFootBadge(){
   if(footIconCardId) delete loadBadges()[footIconCardId];
   localStorage.setItem("card_badges", JSON.stringify(loadBadges()));
@@ -2587,20 +2674,31 @@ function clearFootBadge(){
   closeFootIconModal();
 }
 function closeFootIconModal(){ document.getElementById("footIconModal").style.display = "none"; }
-/* 给每个脚印绑定长按 */
+/* 给每个脚印绑定长按：长按 400ms 出图标窗，手指轻微移动不算取消，触发后不再打开拼图 */
 function bindFootLongPress(){
   document.querySelectorAll(".footprint").forEach(fp => {
     if(fp.dataset.longBound) return;
     fp.dataset.longBound = "1";
-    let t = null;
-    fp.addEventListener("touchstart", () => {
+    let t = null, sx = 0, sy = 0, fired = false;
+    const cancel = () => { clearTimeout(t); };
+    fp.addEventListener("touchstart", e => {
+      const p = e.touches[0];
+      sx = p.clientX; sy = p.clientY; fired = false;
       t = setTimeout(() => {
+        fired = true;
         const item = fp.closest(".timeline-item");
         if(item) pickFootIcon(item.dataset.cardId);
-      }, 600);
+      }, 400);
     }, { passive: true });
-    fp.addEventListener("touchend", () => clearTimeout(t), { passive: true });
-    fp.addEventListener("touchmove", () => clearTimeout(t), { passive: true });
+    fp.addEventListener("touchmove", e => {
+      const p = e.touches[0];
+      if(Math.abs(p.clientX - sx) > 12 || Math.abs(p.clientY - sy) > 12) cancel();  // 明显移动才取消
+    }, { passive: true });
+    fp.addEventListener("touchend", e => {
+      if(fired){ e.preventDefault(); e.stopPropagation(); return; }  // 长按已触发：不打开拼图
+      cancel();
+    }, { passive: true });
+    fp.addEventListener("touchcancel", cancel, { passive: true });
   });
 }
 
