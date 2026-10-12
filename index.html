@@ -370,7 +370,7 @@ button{border-radius:12px;}
   </span>
 </div>
 
-<div style="text-align:center;margin:2px 0 14px;" id="rewindRow">
+<div style="text-align:center;margin:0 0 8px;" id="rewindRow">
   <button class="rewind-btn" onclick="rewindTimeline()" id="rewindBtn" title="倒带看我们的故事">⏪</button>
 </div>
 
@@ -930,6 +930,19 @@ function renderAllCards(){
   updateCountTip();
   renderFootBadges();
   bindFootLongPress();
+  // 倒带按钮悬浮在第一个脚印（最新卡片）上方
+  const rw = document.getElementById("rewindRow");
+  const fp = wrap.querySelector(".footprint");
+  if(rw){
+    if(fp){
+      const item = fp.closest(".timeline-item");
+      if(item && item.parentNode === wrap){ wrap.insertBefore(rw, item); }
+      else{ wrap.insertBefore(rw, fp); }
+    }else{
+      // 无卡片时保持原位（wrap 外顶部）
+      if(rw.parentNode !== wrap.parentNode){ document.body.insertBefore(rw, wrap); }
+    }
+  }
 }
 
 function updateCountTip(){
