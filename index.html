@@ -362,7 +362,9 @@ button{border-radius:12px;}
 </div>
 
 <div class="timeline" id="timelineWrap">
-  <div class="rewind-hit" onclick="rewindTimeline()" title="点这里，倒带看我们的故事">⏪</div>
+  <div style="text-align:center;margin:0 0 14px;">
+    <button class="btn-sec" onclick="rewindTimeline()" style="font-size:13px;padding:6px 16px;">⏪ 倒带看我们的故事</button>
+  </div>
   <div class="timeline-path" id="timelinePath">
     <svg viewBox="0 0 52 1400" preserveAspectRatio="none">
       <defs>
@@ -1329,8 +1331,8 @@ function loadFullRes(){
   };
   img.src = state.galleryImages[state.galleryIndex];   // 原图较大，按需加载
 }
-// 刷新当前图片：强制绕过缓存重新加载；缩略图缺失/404 时直接显示原图
-function refreshGalleryImage(){
+// 刷新当前图片：真正去仓库检查 .thumb/ 缩略图是否存在；不存在就从原图重新生成并上传，再显示
+async function refreshGalleryImage(){
   const img = document.getElementById("galleryImg");
   const btn = document.getElementById("loadFullBtn");
   const cur = state.galleryImages[state.galleryIndex];
@@ -1340,14 +1342,66 @@ function refreshGalleryImage(){
   btn.style.display = "inline-block";
   img.dataset.s = 1; img.dataset.tx = 0; img.dataset.ty = 0; img.dataset.zoomed = "";
   img.style.transform = "";
-  // 先 head 检查缩略图是否存在，存在就刷缩略图，不存在直接加载原图
-  const thumb = getThumbnailUrl(cur);
-  img.dataset.retried = "";
-  img.dataset.fellBack = "";
-  img.dataset.full = cur;
-  img.dataset.src = thumb;
-  img.onerror = () => imgFallback(img);
-  img.src = thumb + (thumb.includes("?") ? "&" : "?") + "_r=" + Date.now();
+
+  const thumbCdn = getThumbnailUrl(cur);
+  const m = cur.match(/^https:\/\/[\w.-]+\.github\.io\/[\w.-]+\/images\/([^/]+)\/([^/?#]+)$/);
+  let thumbToShow = thumbCdn + (thumbCdn.includes("?") ? "&" : "?") + "_r=" + Date.now();
+
+  try{
+    // 1) 先 HEAD/GET 检查仓库里 .thumb/ 是否已存在
+    const r = await fetch(thumbCdn + "?check=" + Date.now(), { method: "GET", cache: "no-store" });
+    if(r.ok){
+      // 已存在，直接刷
+      img.dataset.retried = ""; img.dataset.fellBack = "";
+      img.dataset.src = thumbCdn; img.dataset.full = cur;
+      img.onerror = () => imgFallback(img);
+      img.src = thumbToShow;
+      return;
+    }
+    // 2) 不存在：从原图 canvas 重新生成缩略图并上传
+    if(!m) throw new Error("非仓库图片，无法重建");
+    const dateDir = m[1], file = m[2];
+    const dot = file.lastIndexOf(".");
+    const base = dot > 0 ? file.slice(0, dot) : file;
+    const thumbPath = "images/" + dateDir + "/.thumb/" + base + ".jpg";
+    const srcImg = new Image();
+    srcImg.crossOrigin = "anonymous";
+    srcImg.src = cur + (cur.includes("?") ? "&" : "?") + "_rebuild=" + Date.now();
+    await new Promise((res, rej) => { srcImg.onload = res; srcImg.onerror = () => rej(new Error("原图加载失败")); });
+    const maxW = 400;
+    const scale = Math.min(1, maxW / srcImg.width);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(srcImg.width * scale);
+    canvas.height = Math.round(srcImg.height * scale);
+    canvas.getContext("2d").drawImage(srcImg, 0, 0, canvas.width, canvas.height);
+    const thumbB64 = canvas.toDataURL("image/jpeg", 0.72).split(",")[1];
+    // PUT 到仓库（先取 sha，已存在的话）
+    let putUrl = ghApi() + thumbPath;
+    try{
+      const exist = await fetch(putUrl, { headers: ghHeaders() });
+      if(exist.ok){
+        const j = await exist.json();
+        putUrl += (putUrl.includes("?") ? "&" : "?") + "sha=" + j.sha;
+      }
+    }catch(e){}
+    await fetch(putUrl, {
+      method: "PUT",
+      headers: Object.assign({ "Content-Type": "application/json" }, ghHeaders()),
+      body: JSON.stringify({ message: "重建缩略图: " + thumbPath, content: thumbB64, branch: GH.branch })
+    });
+    // 3) 成功，显示新缩略图
+    img.dataset.retried = ""; img.dataset.fellBack = "";
+    img.dataset.src = thumbCdn; img.dataset.full = cur;
+    img.onerror = () => imgFallback(img);
+    img.src = thumbCdn + "?v=" + Date.now();
+  }catch(e){
+    // 失败：回退原图
+    img.dataset.retried = ""; img.dataset.fellBack = "1";
+    img.dataset.src = thumbCdn; img.dataset.full = cur;
+    img.onerror = () => { img.onerror = null; img.src = IMG_PLACEHOLDER; };
+    img.src = cur;
+    setTimeout(() => alert("缩略图重建失败：" + e.message + "，已直接显示原图"), 300);
+  }
 }
 function galleryFirst(){ state.galleryIndex = 0; showGalleryImage(); }
 function galleryLast(){ state.galleryIndex = state.galleryImages.length - 1; showGalleryImage(); }
