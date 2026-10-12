@@ -973,6 +973,15 @@ function closeMosaic(){
   document.getElementById("mosaicModal").style.display = "none";
   document.body.style.overflow = "";
 }
+// 点击拼图空白处（网格空白/背景）返回主界面
+(function(){
+  const mz = document.getElementById("mosaicModal");
+  if(mz){
+    mz.addEventListener("click", e => {
+      if(e.target === mz || e.target === document.getElementById("mosaicGrid")) closeMosaic();
+    });
+  }
+})();
 function openGalleryFromList(idx){
   const grid = document.getElementById("mosaicGrid");
   state.galleryImages = JSON.parse(grid.dataset.imgs);
@@ -984,35 +993,90 @@ function openGalleryFromList(idx){
   // 保持 body overflow hidden（mosaic/灯箱都开着，关闭灯箱后回到 mosaic）
 }
 
-/* 灯箱左右滑动切图（触屏手势：左滑下一张 / 右滑上一张） */
-let lbTouchX = 0, lbTouchY = 0, lbTouchMoved = false;
+/* 灯箱手势：单指左右滑动切图；双指捏合缩放（1~4倍）；放大时可单指拖动查看，禁止切图 */
+let lbTouchX = 0, lbTouchY = 0, lbTouchMoved = false, lbPanTX = 0, lbPanTY = 0;
+let pinchStartDist = 0, pinchStartS = 1, pinchActive = false;
+function applyImgTransform(img){
+  const s = parseFloat(img.dataset.s) || 1;
+  const tx = parseFloat(img.dataset.tx) || 0;
+  const ty = parseFloat(img.dataset.ty) || 0;
+  img.style.transform = "scale(" + s + ") translate(" + tx + "px," + ty + "px)";
+}
 function bindLightboxSwipe(){
   const img = document.getElementById("galleryImg");
   if(!img || img.dataset.swipeBound) return;
   img.dataset.swipeBound = "1";
-  // 左右滑动只在图片区域生效（按钮/关闭区不触发切图）
+  // 左右滑动/捏合缩放只在图片区域生效（按钮/关闭区不触发）
   img.addEventListener("touchstart", e => {
+    if(e.touches.length === 2){
+      pinchActive = true;
+      pinchStartDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      pinchStartS = parseFloat(img.dataset.s) || 1;
+      return;
+    }
     lbTouchX = e.touches[0].clientX;
     lbTouchY = e.touches[0].clientY;
     lbTouchMoved = false;
+    lbPanTX = parseFloat(img.dataset.tx) || 0;
+    lbPanTY = parseFloat(img.dataset.ty) || 0;
   }, { passive: true });
   img.addEventListener("touchmove", e => {
+    // 双指捏合：缩放
+    if(e.touches.length === 2 && pinchActive){
+      const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      if(pinchStartDist > 0){
+        let s = Math.min(Math.max(pinchStartS * dist / pinchStartDist, 1), 4);
+        img.dataset.s = s;
+        if(s > 1.05) img.dataset.zoomed = "1";   // 放大后禁止滑动切图
+        applyImgTransform(img);
+      }
+      return;
+    }
     const dx = e.touches[0].clientX - lbTouchX;
     const dy = e.touches[0].clientY - lbTouchY;
+    if(img.dataset.zoomed === "1"){
+      // 放大状态：单指拖动查看图片细节
+      img.dataset.tx = lbPanTX + dx;
+      img.dataset.ty = lbPanTY + dy;
+      applyImgTransform(img);
+      return;
+    }
     if(Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy)) lbTouchMoved = true;
   }, { passive: true });
   img.addEventListener("touchend", e => {
+    if(pinchActive){
+      pinchActive = false;
+      pinchStartDist = 0;
+      const s = parseFloat(img.dataset.s) || 1;
+      if(s <= 1.05){   // 捏回 1 倍：复位
+        img.dataset.s = 1; img.dataset.tx = 0; img.dataset.ty = 0; img.dataset.zoomed = "";
+        img.style.transform = "";
+      }
+      if(e.touches.length === 1){   // 还剩一根手指：重设滑动起点（双指结束不切图）
+        lbTouchX = e.touches[0].clientX;
+        lbTouchY = e.touches[0].clientY;
+        lbTouchMoved = false;
+        lbPanTX = parseFloat(img.dataset.tx) || 0;
+        lbPanTY = parseFloat(img.dataset.ty) || 0;
+      }
+      return;
+    }
     if(!lbTouchMoved) return;
     if(img.dataset.zoomed === "1") return;   // 放大状态下不切图，避免误触
     const dx = e.changedTouches[0].clientX - lbTouchX;
     if(dx < -45){ galleryNext(); }
     else if(dx > 45){ galleryPrev(); }
   }, { passive: true });
-  // 双击图片放大 / 还原（放大后禁止左右滑动切图）
+  // 双击图片放大 / 还原
   img.addEventListener("dblclick", () => {
-    const zoomed = (img.style.transform === "scale(1.8)");
-    img.style.transform = zoomed ? "" : "scale(1.8)";
-    img.dataset.zoomed = zoomed ? "" : "1";
+    const s = parseFloat(img.dataset.s) || 1;
+    if(s > 1.05){
+      img.dataset.s = 1; img.dataset.tx = 0; img.dataset.ty = 0; img.dataset.zoomed = "";
+      img.style.transform = "";
+    }else{
+      img.dataset.s = 1.8; img.dataset.zoomed = "1";
+      applyImgTransform(img);
+    }
   });
 }
 
@@ -1032,8 +1096,9 @@ function showGalleryImage(){
   const img = document.getElementById("galleryImg");
   const btn = document.getElementById("loadFullBtn");
   img.onload = null; img.onerror = null;
-  img.style.transform = "";   // 切图时复位双击缩放
+  img.style.transform = "";   // 切图时复位捏合/双击缩放
   img.dataset.zoomed = "";
+  img.dataset.s = 1; img.dataset.tx = 0; img.dataset.ty = 0;
   btn.textContent = "查看原图";
   btn.disabled = false;
   const cur = state.galleryImages[state.galleryIndex];
@@ -1077,6 +1142,8 @@ function refreshGalleryImage(){
   btn.disabled = false;
   btn.style.display = "inline-block";
   const thumb = getThumbnailUrl(state.galleryImages[state.galleryIndex]);
+  img.dataset.s = 1; img.dataset.tx = 0; img.dataset.ty = 0; img.dataset.zoomed = "";
+  img.style.transform = "";
   img.src = thumb + (thumb.includes("?") ? "&" : "?") + "_r=" + Date.now();
 }
 function galleryFirst(){ state.galleryIndex = 0; showGalleryImage(); }
