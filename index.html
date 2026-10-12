@@ -192,6 +192,9 @@ body[data-season="winter"]{--bg1:#fffdf4;--bg2:#fbf2da;--bg3:#fdf6e0;} /* 浅金
 }
 /* 卡片标题后的纪念图标（兜底展示） */
 .badge-inline{font-size:15px;}
+/* 地点分组字母小标题小一点 */
+select optgroup{font-size:11px;color:#aaa;font-style:normal;padding:2px 0;}
+select optgroup option{font-size:14px;color:#333;}
 /* 统一按钮样式 */
 .btn-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px;}
 .btn-pri{background:var(--primary);color:#fff;border:none;padding:8px 20px;border-radius:20px;cursor:pointer;font-size:14px;}
@@ -318,8 +321,6 @@ button{border-radius:12px;}
     <div class="btn-row" style="justify-content:flex-start;">
       <button class="btn-sec" onclick="pickBgImage()">⬆ 上传背景</button>
       <button class="btn-danger" onclick="clearBgImage()">清除背景</button>
-    </div>
-    <div class="btn-row">
       <button class="btn-sec" onclick="closeThemeModal()">✕ 关闭</button>
     </div>
   </div>
@@ -829,7 +830,7 @@ function refreshFilterOptions(){
     "登封":"D","南京":"N","杭州":"H","西安":"X","北京":"B","重庆":"C","武汉":"W",
     "长沙":"C","天津":"T","青岛":"Q","厦门":"X","昆明":"K","大理":"D","广州":"G",
     "深圳":"S","宁波":"N","无锡":"W","常州":"C","徐州":"X","扬州":"Y","绍兴":"S",
-    "上海":"S","苏州":"S","郑州":"Z","洛阳":"L","合肥":"H","嘉兴":"J","成都":"C"
+    "新乡":"X","新乡市":"X"
   };
   const initialOf = loc => CITY_INITIAL[loc] || CITY_INITIAL[loc[0]] || "#";
   const groups = {};
@@ -2773,7 +2774,9 @@ const SOLID_THEMES = [
   { name:"樱花粉", color:"#ff7da9" }, { name:"天空蓝", color:"#5aa9e6" },
   { name:"薰衣草紫", color:"#a78bfa" }, { name:"抹茶绿", color:"#6fbf8f" },
   { name:"暖阳橙", color:"#ffa94d" }, { name:"玫瑰红", color:"#f06272" },
-  { name:"奶咖棕", color:"#b08968" }, { name:"星空灰", color:"#6b7280" }
+  { name:"奶咖棕", color:"#b08968" }, { name:"星空灰", color:"#6b7280" },
+  { name:"樱桃红", color:"#e03131" }, { name:"薄荷青", color:"#20c997" },
+  { name:"柠檬黄", color:"#fcc419" }, { name:"蜜桃橘", color:"#ff922b" }
 ];
 const GRAD_THEMES = [
   { name:"粉橙日落", bg:"linear-gradient(135deg,#ffdde1 0%,#ffb6a3 50%,#ff9a8b 100%)" },
