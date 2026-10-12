@@ -360,6 +360,9 @@ button{border-radius:12px;}
 </div>
 
 <div class="timeline" id="timelineWrap">
+  <div style="text-align:center;margin:0 0 10px;">
+    <button class="btn-sec" onclick="rewindTimeline()" title="从最早的故事一路回到现在">⏪ 倒带看我们的故事</button>
+  </div>
   <div class="timeline-path" id="timelinePath">
     <svg viewBox="0 0 52 1400" preserveAspectRatio="none">
       <defs>
@@ -1676,37 +1679,40 @@ function b64decode(b64){
 }
 
 /* ---------- 本地图片上传至仓库图库（images/日期/，生成 CDN 链接） ---------- */
-// 弹窗里点击「上传图片」：选本地图片后上传
+// 弹窗里点击「上传图片」：支持一次多选，逐张上传
 function pickUploadImg(targetId, getDate, cb){
   const fi = document.createElement("input");
   fi.type = "file";
   fi.accept = "image/*";
-  fi.onchange = () => {
-    const file = fi.files[0];
-    if(!file) return;
+  fi.multiple = true;
+  fi.onchange = async () => {
+    const files = [...fi.files];
+    if(!files.length) return;
     const dateStr = getDate();
     if(!/^\d{4}-\d{2}-\d{2}$/.test(dateStr || "")){
       alert("请先填写正确的日期（YYYY-MM-DD），图片将上传到该日期的图库文件夹");
       return;
     }
-    const m = file.name.toLowerCase().match(/\.(jpe?g|png|gif|webp|bmp)$/);
-    const ext = m ? (m[1] === "jpeg" ? "jpg" : m[1]) : "jpg";
-    const d = new Date();
     const p = n => String(n).padStart(2, "0");
-    const name = `img_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.${ext}`;
-    const link = `https://${ghOwner()}.github.io/${ghRepo()}/images/${dateStr}/${name}`;
-    // 上传前确认：简要列出即将执行的内容
-    const msg = [
-      "确认上传图片：",
-      "· 文件：" + file.name,
-      "· 上传到：images/" + dateStr + "/" + name,
-      "· 同时生成缩略图（.thumb）",
-      "· 生成链接：" + link,
-      "",
-      "点「确定」开始上传"
-    ].join("\n");
+    const d = new Date();
+    const stamp = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+    const msg = files.length === 1
+      ? `确认上传图片：\n· 文件：${files[0].name}\n· 上传到：images/${dateStr}/\n· 同时生成缩略图\n\n点「确定」开始上传`
+      : `确认一次上传 ${files.length} 张图片：\n· 上传到：images/${dateStr}/\n· 逐张上传，带进度条\n\n点「确定」开始`;
     if(!confirm(msg)) return;
-    uploadImageToRepo(file, dateStr, name, cdn => cb(cdn));
+    for(let i = 0; i < files.length; i++){
+      const file = files[i];
+      const m = file.name.toLowerCase().match(/\.(jpe?g|png|gif|webp|bmp)$/);
+      const ext = m ? (m[1] === "jpeg" ? "jpg" : m[1]) : "jpg";
+      const suffix = files.length > 1 ? "_" + String(i + 1).padStart(2, "0") : "";
+      const name = `img_${stamp}${suffix}.${ext}`;
+      setUploadTip(`正在上传第 ${i+1}/${files.length} 张…`, Math.round(i / files.length * 100));
+      await new Promise(resolve => {
+        uploadImageToRepo(file, dateStr, name, cdn => { cb(cdn); resolve(); });
+      });
+    }
+    setUploadTip(`全部完成 ✓`, 100);
+    setTimeout(hideUploadTip, 900);
   };
   fi.click();
 }
@@ -2070,7 +2076,10 @@ function openCacheConfirm(){
   document.getElementById("cachePwd").value = "";
   document.getElementById("cacheConfirmModal").style.display = "flex";
   // 弹窗出现同时聚焦密码框（手机端自动弹出键盘）
-  setTimeout(() => { const p = document.getElementById("cachePwd"); if(p) p.focus(); }, 350);
+  setTimeout(() => {
+    const p = document.getElementById("cachePwd");
+    if(p){ p.focus({preventScroll:false}); p.select(); }
+  }, 60);
 }
 function closeCacheConfirm(){ document.getElementById("cacheConfirmModal").style.display = "none"; }
 
@@ -2760,6 +2769,28 @@ function bindFootLongPress(){
 function markDirty(){}
 function clearDirty(){}
 function updateDirtyDot(){}
+
+/* ---------- 倒带模式：从最早卡片一路平滑滚到最新 ---------- */
+let rewinding = false;
+async function rewindTimeline(){
+  if(rewinding) return;
+  rewinding = true;
+  const btn = event && event.currentTarget;
+  if(btn){ btn.disabled = true; btn.textContent = "⏪ 播放中…"; }
+  const items = [...document.querySelectorAll(".timeline-item")].filter(el => el.style.display !== "none");
+  if(items.length){
+    // 先滚到最早（列表最后一个），再一张张回到最新
+    items[items.length - 1].scrollIntoView({behavior: "smooth", block: "center"});
+    await new Promise(r => setTimeout(r, 1800));
+    for(let i = items.length - 1; i >= 0; i--){
+      if(items[i].style.display === "none") continue;
+      items[i].scrollIntoView({behavior: "smooth", block: "center"});
+      await new Promise(r => setTimeout(r, 1100));
+    }
+  }
+  if(btn){ btn.disabled = false; btn.textContent = "⏪ 倒带看我们的故事"; }
+  rewinding = false;
+}
 
 /* ---------- 回到顶部 ---------- */
 function bindBackTop(){
