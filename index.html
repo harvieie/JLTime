@@ -224,6 +224,10 @@ select optgroup option{font-size:14px;color:#333;}
   cursor:pointer;box-shadow:0 4px 14px rgba(255,130,160,.4);display:flex;align-items:center;justify-content:center;
 }
 .music-fab.playing{animation:musicSpin 3s linear infinite;}
+/* 打开灯箱/拼图/弹窗时，音乐按钮淡化 */
+body:has(.modal-overlay[style*="flex"]) .music-fab,
+body:has(#lightbox[style*="flex"]) .music-fab,
+body:has(#mosaicModal[style*="flex"]) .music-fab{opacity:.35;}
 @keyframes musicSpin{to{transform:rotate(360deg);}}
 /* 大标题两侧跳动爱心 */
 .title-wrap{position:relative;display:inline-block;}
