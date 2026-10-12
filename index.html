@@ -1116,7 +1116,7 @@ function closeNote(){ document.getElementById("noteModal").style.display = "none
 
 /* Markdown 快捷插入 */
 function insertAtCursor(before, after){
-  after = after || before;
+  if(after === undefined) after = before;
   const ta = document.getElementById("noteText");
   const s = ta.selectionStart, e = ta.selectionEnd;
   const sel = ta.value.slice(s, e);
@@ -1141,7 +1141,7 @@ function saveNote(){
   if(!card) return alert("未找到该卡片");
   card.note = newVal;
   saveCards(cards);
-  state.activeDescEl.textContent = newVal;
+  state.activeDescEl.innerHTML = linkifyNote(newVal);
   closeNote();
 }
 
