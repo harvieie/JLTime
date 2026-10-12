@@ -392,8 +392,8 @@ button{border-radius:12px;}
       <button onclick="saveAnni()" style="width:100%;">保存</button>
     </div>
     <div class="modal-buttons">
-      <button id="anniAddBtn" onclick="openAnniEditor()">＋ 添加纪念日</button>
-      <button onclick="closeAnniModal()">关闭</button>
+      <button id="anniAddBtn" onclick="openAnniEditor()" title="添加">＋</button>
+      <button onclick="closeAnniModal()" title="关闭">✕</button>
     </div>
   </div>
 </div>
@@ -404,10 +404,22 @@ button{border-radius:12px;}
     <div class="modal-title">背景音乐</div>
     <div id="musicList" style="max-height:40vh;overflow:auto;text-align:left;margin:10px 0;"></div>
     <div class="modal-buttons">
-      <button onclick="musicPrev()">⏮ 上一首</button>
-      <button onclick="musicNext()">下一首 ⏭</button>
-      <button onclick="pickMusicFile()">⬆ 上传音乐</button>
-      <button onclick="closeMusicModal()">关闭</button>
+      <button onclick="musicPrev()" title="上一首">◀</button>
+      <button onclick="musicNext()" title="下一首">▶</button>
+      <button onclick="pickMusicFile()" title="上传音乐">⬆</button>
+      <button onclick="closeMusicModal()" title="关闭">✕</button>
+    </div>
+  </div>
+</div>
+
+<!-- 脚印图标点选 -->
+<div class="modal-overlay" id="footIconModal">
+  <div class="modal-box" style="max-width:300px;">
+    <div class="modal-title">给脚印加个标记</div>
+    <div id="footIconGrid" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:12px 0;font-size:26px;"></div>
+    <div class="modal-buttons">
+      <button onclick="clearFootBadge()" title="去掉标记">✕</button>
+      <button onclick="closeFootIconModal()" title="完成">✓</button>
     </div>
   </div>
 </div>
@@ -2331,10 +2343,19 @@ function daysBetween(dateStr){
 function renderAnniChips(){
   const box = document.getElementById("anniChips");
   if(!box) return;
-  box.innerHTML = loadAnniversaries().map(a => {
+  const arr = loadAnniversaries();
+  box.innerHTML = arr.length ? arr.map(a => {
     const days = daysBetween(a.date);
     return `<span class="anni-chip">${a.icon || "💛"}${days}天</span>`;
-  }).join("");
+  }).join("") : '<span class="anni-chip" style="opacity:.6">＋ 纪念日</span>';
+}
+/* 首次打开预置两个默认纪念日（告白/求婚），之后用户可自由增改 */
+function seedAnniversaries(){
+  if(localStorage.getItem("anniversaries")) return;
+  saveAnniversaries([
+    { id: "a_seed1", label: "告白", date: "2026-05-02", icon: "💌" },
+    { id: "a_seed2", label: "求婚", date: "2026-08-28", icon: "💍" }
+  ]);
 }
 const ANNI_ICONS = ["💛","❤️","💌","💍","🌸","⭐","🎂","🌙","☕","🐾"];
 let editingAnniId = null;
@@ -2353,8 +2374,8 @@ function renderAnniList(){
   list.innerHTML = arr.map(a => {
     const days = daysBetween(a.date);
     const editBtn = viewMode === "view" ? "" :
-      `<button onclick="openAnniEditor('${a.id}')" style="margin-left:6px;">改</button>
-       <button onclick="delAnni('${a.id}')" style="margin-left:4px;">删</button>`;
+      `<button onclick="openAnniEditor('${a.id}')" title="编辑" style="margin-left:6px;">✏️</button>
+       <button onclick="delAnni('${a.id}')" title="删除" style="margin-left:4px;">🗑</button>`;
     return `<div style="padding:8px 4px;border-bottom:1px dashed #ffe3ec;">
       <span style="font-size:18px;">${a.icon||"💛"}</span>
       <b>${escapeHtml(a.label||"纪念日")}</b>
@@ -2494,8 +2515,8 @@ function renderMusicList(){
     const cur = localStorage.getItem("last_music");
     box.innerHTML = list.map(n =>
       `<div style="padding:6px 4px;${n===cur?"color:#c2567f;font-weight:bold;":""}">🎵 ${escapeHtml(n)}
-        <button onclick="playMusic('${n}')" style="margin-left:6px;">播放</button>
-        <button onclick="delMusic('${n}')" style="margin-left:4px;">删除</button>
+        <button onclick="playMusic('${n}')" title="播放" style="margin-left:6px;">▶</button>
+        <button onclick="delMusic('${n}')" title="删除" style="margin-left:4px;">🗑</button>
       </div>`).join("");
   });
 }
@@ -2542,17 +2563,30 @@ function renderFootBadges(){
     }
   });
 }
-const FOOT_ICONS = ["👑","💍","❤️","💌","🌸","⭐","🎂","🌙","☕","🐾","✨",""];
+const FOOT_ICONS = ["👑","💍","❤️","💌","🌸","⭐","🎂","🌙","☕","🐾","✨","💫","🌷","🦋","🍀","🎀"];
+let footIconCardId = null;
 function pickFootIcon(cardId){
-  const cur = (loadBadges()[cardId]) || "";
-  const pick = prompt("选择一个图标（直接点选或输入，留空=取消标记）：\n" + FOOT_ICONS.filter(Boolean).join(" "), cur);
-  if(pick === null) return;
+  footIconCardId = cardId;
+  const cur = loadBadges()[cardId] || "";
+  document.getElementById("footIconGrid").innerHTML = FOOT_ICONS.map(ic =>
+    `<span onclick="setFootBadge('${ic}')" style="cursor:pointer;padding:6px;border-radius:8px;${ic===cur?"background:#ffd6e4;":""}">${ic}</span>`).join("");
+  document.getElementById("footIconModal").style.display = "flex";
+}
+function setFootBadge(icon){
+  if(!footIconCardId) return;
   const badges = loadBadges();
-  const v = pick.trim();
-  if(v) badges[cardId] = v; else delete badges[cardId];
+  if(badges[footIconCardId] === icon) delete badges[footIconCardId]; else badges[footIconCardId] = icon;
   localStorage.setItem("card_badges", JSON.stringify(badges));
   renderFootBadges();
+  closeFootIconModal();
 }
+function clearFootBadge(){
+  if(footIconCardId) delete loadBadges()[footIconCardId];
+  localStorage.setItem("card_badges", JSON.stringify(loadBadges()));
+  renderFootBadges();
+  closeFootIconModal();
+}
+function closeFootIconModal(){ document.getElementById("footIconModal").style.display = "none"; }
 /* 给每个脚印绑定长按 */
 function bindFootLongPress(){
   document.querySelectorAll(".footprint").forEach(fp => {
@@ -2606,6 +2640,8 @@ function init(){
   bindGalleryKeys();
   applySeason();
   registerSW();
+  renderAnniChips();
+  seedAnniversaries();
   renderAnniChips();
   startSurprises();
   checkAnniToday();
