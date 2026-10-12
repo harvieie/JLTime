@@ -72,7 +72,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 #cloudUploadBtn{background:var(--primary);}
 #cloudUploadBtn:hover{filter:brightness(.92);}
 .card .date:hover{text-decoration:underline;}
-.card .desc{color:#555;line-height:1.65;cursor:pointer;white-space:pre-wrap;word-break:break-word;}
+.card .desc{color:#555;line-height:1.65;cursor:pointer;word-break:break-word;}
 .card .desc b{color:#333;}
 .card .desc a{color:#ff7da9;text-decoration:underline;cursor:pointer;}
 .card .desc:hover{color:#3b82f6;}
@@ -836,6 +836,8 @@ function linkifyNote(text){
   h = h.replace(/==([^=\n]+)==/g, '<span style="background:linear-gradient(transparent 60%, #ffe58f 60%);padding:0 2px;">$1</span>');
   // 下划线 <u>xx</u>（已转义）
   h = h.replace(/&lt;u&gt;([\s\S]*?)&lt;\/u&gt;/g, '<u>$1</u>');
+  // 换行转 <br>（不再用 pre-wrap，避免块级 div 与原 \n 叠加双倍行距）
+  h = h.replace(/\n/g, '<br>');
   return h;
 }
 
