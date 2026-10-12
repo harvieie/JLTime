@@ -167,7 +167,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 
 /* ===== 移动端 ===== */
 @media (max-width:640px){
-  #rewindRow{text-align:left;margin-left:8px;}
+  #rewindRow{text-align:left;margin-left:6px;}
   .filter-box{justify-content:flex-start;}
   .filter-box label{text-align:left;}
   .timeline-path{left:22px;transform:none;width:32px;}
@@ -930,16 +930,15 @@ function renderAllCards(){
   updateCountTip();
   renderFootBadges();
   bindFootLongPress();
-  // 倒带按钮悬浮在第一个脚印（最新卡片）上方
+  // 倒带按钮悬浮在第一个和第二个脚印之间
   const rw = document.getElementById("rewindRow");
-  const fp = wrap.querySelector(".footprint");
+  const fps = wrap.querySelectorAll(".footprint");
   if(rw){
-    if(fp){
-      const item = fp.closest(".timeline-item");
-      if(item && item.parentNode === wrap){ wrap.insertBefore(rw, item); }
-      else{ wrap.insertBefore(rw, fp); }
+    if(fps.length){
+      const anchor = fps.length > 1 ? fps[1].closest(".timeline-item") : fps[0].closest(".timeline-item");
+      if(anchor && anchor.parentNode === wrap){ wrap.insertBefore(rw, anchor); }
+      else{ wrap.appendChild(rw); }
     }else{
-      // 无卡片时保持原位（wrap 外顶部）
       if(rw.parentNode !== wrap.parentNode){ document.body.insertBefore(rw, wrap); }
     }
   }
