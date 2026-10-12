@@ -1,5 +1,5 @@
 /* JL Time 离线缓存：页面永远取最新，图片/静态走缓存（没网也能看） */
-const CACHE = 'jltime-v3';
+const CACHE = 'jltime-v4';
 
 self.addEventListener('install', e => {
   self.skipWaiting();
