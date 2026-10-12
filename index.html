@@ -72,7 +72,8 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 #cloudUploadBtn{background:var(--primary);}
 #cloudUploadBtn:hover{filter:brightness(.92);}
 .card .date:hover{text-decoration:underline;}
-.card .desc{color:#555;line-height:1.65;cursor:pointer;text-indent:2em;white-space:pre-wrap;word-break:break-word;}
+.card .desc{color:#555;line-height:1.65;cursor:pointer;white-space:pre-wrap;word-break:break-word;}
+.card .desc b{color:#333;}
 .card .desc a{color:#ff7da9;text-decoration:underline;cursor:pointer;}
 .card .desc:hover{color:#3b82f6;}
 .card-checkbox{position:absolute;top:12px;left:12px;width:20px;height:20px;cursor:pointer;z-index:5;}
@@ -795,10 +796,17 @@ function escapeHtml(s){
 }
 // 备注里的网址自动识别成可点击链接（点链接不触发编辑备注弹窗）
 function linkifyNote(text){
-  return escapeHtml(text).replace(
-    /(https?:\/\/[^\s<]+)/g,
-    '<a href="$1" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="$1" style="display:inline-block;margin:0 2px;text-decoration:none;">🔗</a>'
-  );
+  let h = escapeHtml(text);
+  // 链接转 🔗 图标
+  h = h.replace(/(https?:\/\/[^\s<]+)/g,
+    '<a href="$1" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="$1" style="display:inline-block;margin:0 2px;text-decoration:none;">🔗</a>');
+  // 粗体 **xx**
+  h = h.replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>');
+  // 斜体 *xx*
+  h = h.replace(/(^|[\s(\[])\*([^*\n]+)\*/g, '$1<i>$2</i>');
+  // 行内代码 `xx`
+  h = h.replace(/`([^`]+)`/g, '<code style="background:#f3f4f6;padding:1px 5px;border-radius:4px;font-size:.9em;color:#d63384;">$1</code>');
+  return h;
 }
 
 function footprintSvg(side){
@@ -2403,7 +2411,7 @@ function bindNoteIndent(taId){
     }
   });
 }
-bindNoteIndent("noteText");
+// 备注编辑框不再自动缩进
 bindNoteIndent("newCardDesc");
 
 /* ---------- 排序按钮 ---------- */
