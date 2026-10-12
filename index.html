@@ -109,6 +109,14 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
   border:2px solid rgba(255,255,255,.15);transition:transform .15s ease,border-color .15s ease;
 }
 .mosaic-grid img:hover{transform:scale(1.04);border-color:#ff9ec4;}
+.mosaic-grid img{position:relative;}
+.sort-bar{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;
+  background:rgba(0,0,0,.45);border-radius:0 0 10px 10px;padding:4px;}
+.sort-bar span{
+  color:#fff;font-size:14px;cursor:pointer;padding:2px 8px;border-radius:6px;
+  background:rgba(255,255,255,.2);line-height:1.4;
+}
+.sort-bar span:active{background:rgba(255,255,255,.45);}
 
 /* ===== 通用弹窗 ===== */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;padding:20px;display:none;align-items:center;justify-content:center;}
@@ -312,7 +320,7 @@ button{border-radius:12px;}
   border:none;background:rgba(255,158,196,.95);color:#fff;font-size:18px;cursor:pointer;box-shadow:0 4px 12px rgba(255,130,160,.4);">↑</button>
 <button id="btnBottom" onclick="rewindTimeline()" title="滑到最底，再倒带回顶部"
   style="display:none;position:fixed;right:18px;bottom:80px;z-index:1400;width:42px;height:42px;border-radius:50%;
-  border:none;background:rgba(120,180,220,.95);color:#fff;font-size:16px;cursor:pointer;box-shadow:0 4px 12px rgba(100,150,200,.4);">⏬</button>
+  border:none;background:rgba(120,180,220,.95);color:#fff;font-size:18px;cursor:pointer;box-shadow:0 4px 12px rgba(100,150,200,.4);">↓</button>
 
 <!-- 主题设置弹窗 -->
 <div class="modal-overlay" id="themeModal">
@@ -430,7 +438,11 @@ button{border-radius:12px;}
 <div class="mosaic" id="mosaicModal">
   <div class="mosaic-bar">
     <span id="mosaicTitle" style="color:#fff;font-size:15px;"></span>
-    <span class="mosaic-close" onclick="closeMosaic()" title="关闭">✕</span>
+    <span style="display:flex;gap:8px;align-items:center;">
+      <span id="mosaicSortBtn" onclick="toggleMosaicSort()" title="排序"
+        style="color:#fff;font-size:13px;cursor:pointer;padding:4px 10px;border:1px solid rgba(255,255,255,.5);border-radius:12px;">排序</span>
+      <span class="mosaic-close" onclick="closeMosaic()" title="关闭">✕</span>
+    </span>
   </div>
   <div class="mosaic-grid" id="mosaicGrid"></div>
 </div>
@@ -1136,10 +1148,15 @@ function closeGallery(){
   document.body.style.overflow = mosaicOpen ? "hidden" : "";
 }
 
-/* ---------- 脚印拼图：铺出该卡片所有缩略图 ---------- */
+/* ---------- 脚印拼图：铺出该卡片所有缩略图，支持排序 ---------- */
+let mosaicSorting = false;
+let mosaicCardId = null;
 function openMosaic(footprintEl){
   const item = footprintEl.closest(".timeline-item");
   if(!item) return;
+  mosaicCardId = item.dataset.cardId;
+  mosaicSorting = false;
+  document.getElementById("mosaicSortBtn").textContent = "排序";
   const imgWrap = item.querySelector(".card-imgs");
   const imgs = JSON.parse(imgWrap.dataset.imgs);
   const locs = JSON.parse(item.dataset.locs || "[]");
@@ -1156,11 +1173,65 @@ function openMosaic(footprintEl){
     img.dataset.src = tu;
     img.alt = "第" + (i + 1) + "张";
     img.onerror = () => imgFallback(img);
-    img.onclick = () => openGalleryFromList(i);
+    img.onclick = () => { if(!mosaicSorting) openGalleryFromList(i); };
     grid.appendChild(img);
   });
   document.getElementById("mosaicModal").style.display = "flex";
   document.body.style.overflow = "hidden";
+}
+function toggleMosaicSort(){
+  mosaicSorting = !mosaicSorting;
+  document.getElementById("mosaicSortBtn").textContent = mosaicSorting ? "完成" : "排序";
+  const grid = document.getElementById("mosaicGrid");
+  [...grid.children].forEach((el, i) => {
+    let bar = el.querySelector(".sort-bar");
+    if(mosaicSorting){
+      if(!bar){
+        bar = document.createElement("div");
+        bar.className = "sort-bar";
+        el.appendChild(bar);
+      }
+      renderSortBar(bar, i);
+    }else if(bar){
+      bar.remove();
+    }
+  });
+}
+function renderSortBar(bar, i){
+  bar.innerHTML = `<span class="sort-left" data-i="${i}">◀</span><span class="sort-right" data-i="${i}">▶</span>`;
+  bar.querySelectorAll("span").forEach(s => s.onclick = e => {
+    e.stopPropagation();
+    swapMosaicImg(+s.dataset.i, s.classList.contains("sort-right") ? 1 : -1);
+  });
+}
+function swapMosaicImg(i, dir){
+  const grid = document.getElementById("mosaicGrid");
+  const arr = JSON.parse(grid.dataset.imgs);
+  const j = i + dir;
+  if(j < 0 || j >= arr.length) return;
+  [arr[i], arr[j]] = [arr[j], arr[i]];
+  grid.dataset.imgs = JSON.stringify(arr);
+  // 重画缩略图
+  [...grid.children].forEach((el, k) => {
+    const u = arr[k];
+    const tu = getThumbnailUrl(u);
+    el.src = tu;
+    el.dataset.src = tu;
+    if(k !== i && k !== j){
+      const bar = el.querySelector(".sort-bar");
+      if(bar) renderSortBar(bar, k);
+    }
+  });
+  // 更新交换两张图的按钮 index
+  [i, j].forEach(k => {
+    const bar = grid.children[k].querySelector(".sort-bar");
+    if(bar) renderSortBar(bar, k);
+  });
+  // 保存回写卡片
+  if(!mosaicCardId) return;
+  const cards = loadCards();
+  const c = cards.find(x => String(x.id) === String(mosaicCardId));
+  if(c){ c.imgs = arr; saveCards(cards); }
 }
 function closeMosaic(){
   document.getElementById("mosaicModal").style.display = "none";
