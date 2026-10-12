@@ -1761,6 +1761,16 @@ document.getElementById("importFileInput").addEventListener("change", function()
 });
 
 // 统一应用导入数据（本地导入 / 云端下载 / 云端恢复共用）
+// 清除浏览器本地缓存（Service Worker 缓存的旧页面/图片）
+async function clearLocalBrowserCache(){
+  try{
+    if(window.caches){
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+  }catch(e){}
+}
+
 function applyImportedData(imported){
   let cards, newTitle = null;
   if(Array.isArray(imported)){
@@ -2140,6 +2150,7 @@ async function wdDownload(){
     const latest = files[0];
     const imported = await wdReadFile(latest.name);
     if(!confirm(`将从云端拉取最新备份（${formatNodeTime(latest.ts)}）并覆盖本地数据，确定继续吗？`)) return;
+    await clearLocalBrowserCache();
     const count = applyImportedData(imported);
     setCloudLoaded(latest);
     if(typeof clearDirty === "function") clearDirty();
@@ -2191,6 +2202,7 @@ async function wdRestoreNode(name){
   if(!confirm(`确定恢复到 ${formatNodeTime(ts)} 这个备份点？本地当前数据将被覆盖！`)) return;
   try{
     const imported = await wdReadFile(name);
+    await clearLocalBrowserCache();
     const count = applyImportedData(imported);
     setCloudLoaded({ name, ts, label: (name.match(/^(?:jltime|xinglin)_\d{14}(?:_[^/]+)?\.json$/) && name.length > 22) ? name.replace(/^(?:jltime|xinglin)_\d{14}_/, "").slice(0, -5) : "" });
     closeRestoreModal();
