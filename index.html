@@ -2509,7 +2509,6 @@ async function wdDownload(){
     setCloudLoaded(latest);
     if(typeof clearDirty === "function") clearDirty();
     alert(`下载成功，已载入 ${count} 条记录（备份时间 ${formatNodeTime(latest.ts)}）`);
-    reloadAfterCloudLoad();
   }catch(err){
     alert("下载失败：" + err.message);
   }finally{
@@ -2563,16 +2562,9 @@ async function wdRestoreNode(name){
     closeRestoreModal();
     if(typeof clearDirty === "function") clearDirty();  // 恢复以备份为准，不视为本地改动
     alert(`已恢复到 ${formatNodeTime(ts)} 的备份，共载入 ${count} 条记录`);
-    reloadAfterCloudLoad();
   }catch(err){
     alert("恢复失败：" + err.message);
   }
-}
-
-/* 载入云端数据后自动刷新页面（不再次弹出密码框：刷新前确保提示已标记、登录状态保留） */
-function reloadAfterCloudLoad(){
-  sessionStorage.setItem("cache_prompt_shown", "1");
-  setTimeout(() => location.reload(), 300);
 }
 
 /* ---------- 大标题编辑 ---------- */
@@ -3341,7 +3333,12 @@ function showToast(msg, seconds){
 
 document.getElementById("cacheOkBtn").addEventListener("click", confirmClearCache);
 document.getElementById("cacheCancelBtn").addEventListener("click", function(){
-  // 取消：不做任何处理——原本是访客模式就还是访客模式，是编辑模式就还是编辑模式，仅关闭弹窗
+  // 取消：回到原本缓存的本地模式——可浏览本地缓存数据，云端连接保持断开（下载/上传/恢复不可用）
+  sessionStorage.setItem("auth_granted", "1");
+  sessionStorage.setItem("cloud_locked", "1");
+  sessionStorage.setItem("view_mode", "view");
+  viewMode = "view";
+  applyViewMode("view");  // 访客：可看筛选/拾趣，标题、纪念日、编辑不可操作
   closeCacheConfirm();
 });
 document.getElementById("cacheEnterBtn").addEventListener("click", enterWithPwd);
