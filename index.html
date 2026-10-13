@@ -3197,11 +3197,14 @@ function clearLocalCache(){
   renderAllCards();
 }
 
-// 确定：无需密码，直接清除本地缓存并断开云端连接（仍属未授权）
+// 确定：无需密码，直接清除本地缓存并断开云端连接（仍属未授权，进入访客限制）
 function confirmClearCache(){
   sessionStorage.setItem("auth_granted", "0");
+  sessionStorage.setItem("view_mode", "view");
+  viewMode = "view";
   clearLocalCache();
   sessionStorage.setItem("cloud_locked", "1");
+  applyViewMode("view");  // 访客：隐藏拾趣/编辑选项卡，标题、纪念日等不可点开
   closeCacheConfirm();
   showToast("本地缓存已清除，云端连接已断开", 3);
 }
@@ -3273,11 +3276,13 @@ function showToast(msg, seconds){
 
 document.getElementById("cacheOkBtn").addEventListener("click", confirmClearCache);
 document.getElementById("cacheCancelBtn").addEventListener("click", function(){
-  // 取消：不清除本地缓存，直接浏览本地数据；云端连接保持断开（下载/上传/恢复不可用）
+  // 取消：不清除本地缓存，进入访客模式浏览本地数据；云端连接保持断开（下载/上传/恢复不可用）
   sessionStorage.setItem("auth_granted", "1");
   sessionStorage.setItem("cloud_locked", "1");
+  sessionStorage.setItem("view_mode", "view");
+  viewMode = "view";
+  applyViewMode("view");  // 访客：隐藏拾趣/编辑选项卡，标题、纪念日等不可点开
   closeCacheConfirm();
-  renderAllCards();
 });
 document.getElementById("cacheEnterBtn").addEventListener("click", enterWithPwd);
 
