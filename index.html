@@ -2625,6 +2625,9 @@ function applyViewMode(mode){
   // 编辑选项卡：仅编辑模式可见
   const tabEdit = document.getElementById("tabEdit");
   if(tabEdit) tabEdit.style.display = isEdit ? "" : "none";
+  // 拾趣选项卡：仅编辑模式可见（访客无法进入拾趣）
+  const tabFun = document.getElementById("tabFun");
+  if(tabFun) tabFun.style.display = isEdit ? "" : "none";
   const lbBtn = document.getElementById("lightboxEditLinkBtn");
   if(lbBtn) lbBtn.style.display = mode === "view" ? "none" : "";
   // 访客模式：主题弹窗里只看不能改（隐藏上传/清除/昼夜）；背景音乐不能上传
@@ -2637,8 +2640,8 @@ function applyViewMode(mode){
   updateDirtyDot();  // 红点只在编辑模式且有改动时显示
   if(!isEdit) funEditActive = false;
   renderFun();
-  // 当前若停在编辑选项卡则回到筛选
-  if(!isEdit && isTabActive("edit")) switchTab("filter");
+  // 非编辑模式若停在编辑/拾趣选项卡则回到筛选
+  if(!isEdit && (isTabActive("edit") || isTabActive("fun"))) switchTab("filter");
   renderAllCards();
 }
 function isTabActive(name){
@@ -2670,8 +2673,8 @@ function switchTab(name){
   }
   function swipeTab(dir){
     const order = ["filter","edit","fun"].filter(n => {
-      if(n === "edit"){ const b = document.getElementById("tabEdit"); return b && b.style.display !== "none"; }
-      return true;
+      const b = document.getElementById(n === "filter" ? "tabFilter" : n === "edit" ? "tabEdit" : "tabFun");
+      return b && b.style.display !== "none";
     });
     const cur = order.find(n => isTabActive(n));
     const idx = Math.max(0, order.indexOf(cur));
@@ -3550,6 +3553,7 @@ function seedAnniversaries(){
 const ANNI_ICONS = ["💛","❤️","💌","💍","🌸","⭐","🎂","🌙","☕","🐾"];
 let editingAnniId = null;
 function openAnniModal(){
+  if(viewMode === "view") return;  // 访客无法点开纪念日
   renderAnniList();
   document.getElementById("anniEditBox").style.display = "none";
   document.getElementById("anniList").style.display = "";
