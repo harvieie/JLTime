@@ -115,13 +115,13 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 .th-tool{width:26px;height:26px;border-radius:50%;border:1px solid #d9a566;background:#fff;color:#8b5a2b;font-size:13px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;line-height:1;flex-shrink:0;}
 .th-tool:hover{background:#fff6ec;}
 .th-stage{
-  position:relative;z-index:999;width:100%;height:88px;overflow:hidden;border-radius:38% 38% 14px 14px;
+  position:relative;z-index:999;width:100%;height:176px;overflow:hidden;border-radius:38% 38% 14px 14px;
   background:linear-gradient(180deg,#f6e3c9,#f2d8b8);border:1px solid #d9a566;
 }
 .th-stage.paused .th-dm{animation-play-state:paused;}
 .th-dm{
   position:absolute;left:100%;top:0;display:flex;align-items:center;gap:8px;
-  white-space:nowrap;will-change:transform;cursor:pointer;max-width:96%;
+  will-change:transform;cursor:pointer;max-width:94%;
   background:rgba(255,252,246,.94);border:1px solid #e8c89a;border-radius:14px;
   padding:4px 14px 4px 4px;box-shadow:0 2px 8px rgba(150,90,40,.18);
   animation-name:thFly;animation-timing-function:linear;animation-fill-mode:forwards;
@@ -129,14 +129,13 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 .th-dm:hover{border-color:#c98a4b;}
 @keyframes thFly{from{transform:translateX(0)}to{transform:translateX(var(--thw,-1200px))}}
 .th-dm .th-avatar{width:30px;height:30px;border-radius:50%;background:#ffe9c9;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.th-dm .th-meta{display:flex;flex-direction:column;align-items:flex-start;line-height:1.3;}
-.th-dm .th-name{font-size:12px;font-weight:700;color:#8b5a2b;max-width:120px;overflow:hidden;text-overflow:ellipsis;}
-.th-dm .th-time{font-size:10px;color:#999;}
-.th-dm .th-text{font-size:14px;color:#4d3a21;line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.th-dm .th-meta{display:flex;flex-direction:column;align-items:flex-start;line-height:1.25;}
+.th-dm .th-name{font-size:12px;font-weight:700;color:#8b5a2b;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.th-dm .th-time{font-size:10px;color:#9a7a55;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.th-dm .th-text{font-size:14px;color:#4d3a21;line-height:1.4;max-width:150px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-all;}
 .th-dm .th-x{position:absolute;top:-8px;right:-8px;width:18px;height:18px;border-radius:50%;background:#ff6b81;color:#fff;font-size:12px;line-height:18px;text-align:center;cursor:pointer;display:none;box-shadow:0 1px 3px rgba(0,0,0,.25);z-index:2;}
 .th-dm.th-del-mode .th-x{display:block;}
-.th-resize{height:14px;cursor:ns-resize;background:linear-gradient(180deg,transparent,rgba(201,138,75,.35));border-radius:0 0 14px 14px;margin-top:2px;touch-action:none;position:relative;}
-.th-resize::after{content:"⋮";position:absolute;right:6px;top:2px;color:#c98a4b;font-size:11px;}
+.th-resize{height:14px;cursor:ns-resize;background:linear-gradient(180deg,transparent,rgba(201,138,75,.35));border-radius:0 0 14px 14px;margin-top:2px;touch-action:none;position:relative;}.th-resize::after{content:"⋮";position:absolute;right:6px;top:2px;color:#c98a4b;font-size:11px;}
 .th-quick{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px;}
 .th-quick span{background:#fff0f6;border:1px solid #ffd6e2;color:#c2567f;font-size:12px;padding:3px 10px;border-radius:12px;cursor:pointer;user-select:none;}
 .th-quick span:hover{background:#ffe3ec;}
@@ -1991,6 +1990,24 @@ async function pushCloudSnapshot(note){
     showToast("云端数据更新失败：" + err.message, 4);
   }
 }
+/* 访客模式添加树洞弹幕后自动上传到云端 */
+async function thAutoPush(){
+  if(isCloudLocked()){
+    showToast("云端已断开：弹幕已存本地，解锁后手动点「上传」可同步", 4);
+    return;
+  }
+  try{
+    const files = await wdList();
+    if(files.length >= GH.maxNodes){
+      for(const f of files.slice(GH.maxNodes - 1)) await wdDeleteFile(f);
+    }
+    const name = `jltime_${nowStamp()}_树洞新增.json`;
+    await wdWriteFile(name, packCloudData());
+    showToast("树洞弹幕已自动上传到云端", 2);
+  }catch(err){
+    showToast("云端同步失败：" + err.message, 4);
+  }
+}
 
 /* ============================================================
    导出 / 导入（含大标题 & JSON 文件）
@@ -2665,11 +2682,14 @@ function thPlayOne(el, items, seed){
   const pool = items.filter(it => it && it.text && it.text.trim());
   if(!pool.length){ el.style.display = "none"; return; }
   const it = pool[seed % pool.length];
-  const size = it.text.length <= 8 ? 15 : it.text.length <= 12 ? 14 : it.text.length <= 20 ? 13 : 11;
-  const shown = it.text.length > 20 ? it.text.slice(0, 20) + "…" : it.text;
+  const size = it.text.length <= 8 ? 15 : it.text.length <= 15 ? 13 : 11;
+  const shown = it.text.length > 15 ? it.text.slice(0, 15) + "…" : it.text;
   el.innerHTML = `
     <span class="th-avatar">${escapeHtml(it.avatar || "🙂")}</span>
-    <span class="th-meta"><span class="th-name">${escapeHtml(it.name || "")}</span></span>
+    <span class="th-meta">
+      <span class="th-name">${escapeHtml(it.name || "")}</span>
+      <span class="th-time">${escapeHtml(it.time || "")}</span>
+    </span>
     <span class="th-text" style="font-size:${size}px">${escapeHtml(shown)}</span>
     <span class="th-x" title="删除">×</span>`;
   el.dataset.id = it.id;
@@ -2732,8 +2752,13 @@ function bindTreehole(){
     const dm = e.target.closest(".th-dm");
     if(!dm) return;
     e.stopPropagation();
-    if(dm.classList.contains("th-del-mode")){ dm.classList.remove("th-del-mode"); return; }
-    if(e.target.closest(".th-text")){ thEditId = dm.dataset.id; openThModal(); return; }  // 点文字看详情/编辑
+    if(dm.classList.contains("th-del-mode")){
+      // 长按红叉态：点文字可编辑/查看，点其他关闭红叉态
+      if(e.target.closest(".th-text")){ thEditId = dm.dataset.id; openThModal(); }
+      dm.classList.remove("th-del-mode");
+      return;
+    }
+    // 第一下点击：固定住（暂停），再点继续飘
     thTogglePause();
   });
   bindThResize();
@@ -2745,7 +2770,7 @@ function bindThResize(){
   let dragging = false, sy = 0, sh = 0, raf = null;
   const move = e => {
     if(!dragging) return;
-    const h = Math.max(88, Math.min(400, sh + (e.clientY - sy)));
+    const h = Math.max(176, Math.min(440, sh + (e.clientY - sy)));
     if(h !== stage.clientHeight){
       stage.style.height = h + "px";
       if(raf) cancelAnimationFrame(raf);
@@ -2835,6 +2860,7 @@ function saveThModal(){
   thSaveQuick(avatar, name);
   closeThModal();
   thStart(); thSearch();
+  if(thEditId === null && viewMode === "view") thAutoPush();  // 访客添加：自动上传云端
 }
 function thOpenSearch(){
   const p = document.getElementById("thSearchPanel");
@@ -2844,15 +2870,21 @@ function thOpenSearch(){
 function thSearch(){
   const kw = document.getElementById("thSearchInput").value.trim().toLowerCase();
   const edit = isFunEditMode();
-  const list = loadTreehole().filter(it => !kw || (it.name || "").toLowerCase().includes(kw) || (it.text || "").toLowerCase().includes(kw));
+  const list = loadTreehole()
+    .filter(it => !kw || (it.name || "").toLowerCase().includes(kw) || (it.text || "").toLowerCase().includes(kw) || (it.time || "").toLowerCase().includes(kw))
+    .sort((a, b) => (b.time || "").localeCompare(a.time || ""));  // 按时间从新到旧
   document.getElementById("thSearchRes").innerHTML = list.length
     ? list.map(it => `
-      <div class="th-search-item">
+      <div class="th-search-item" onclick="thOpenFromSearch('${it.id}')" title="点按查看/编辑">
         <span class="th-avatar">${escapeHtml(it.avatar || "🙂")}</span>
         <span class="th-t">${escapeHtml(it.name || "")} · ${escapeHtml(it.text || "")} <span style="color:#bbb;font-size:11px;">${escapeHtml(it.time || "")}</span></span>
-        ${edit ? `<button onclick="thEdit('${it.id}')">编辑</button><button class="th-del" onclick="thDel('${it.id}')">删除</button>` : ""}
+        ${edit ? `<button onclick="event.stopPropagation();thEdit('${it.id}')">编辑</button><button class="th-del" onclick="event.stopPropagation();thDel('${it.id}')">删除</button>` : ""}
       </div>`).join("")
     : `<div style="font-size:12px;color:#bbb;padding:6px 0;">没有找到相关弹幕</div>`;
+}
+function thOpenFromSearch(id){
+  thEditId = id;
+  openThModal();  // 访客只读查看，编辑模式可编辑
 }
 const DEFAULT_FUN = [
   { name: "4399双人游戏", url: "https://www.4399.com/theme/81.htm" },
