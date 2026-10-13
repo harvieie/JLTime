@@ -2436,9 +2436,23 @@ function saveFunItems(list){
   localStorage.setItem("jlt_fun", JSON.stringify(list));
   renderFun();
 }
+const DEFAULT_FUN = [
+  { name: "情侣问答", url: "https://www.trylovely.app/" },
+  { name: "你画我猜", url: "https://skribbl.io/" },
+  { name: "传话画画", url: "https://garticphone.com/" },
+  { name: "国际象棋", url: "https://lichess.org/" },
+  { name: "双人桌游", url: "https://boardgamearena.com/" },
+  { name: "双人小游戏", url: "https://www.twoplayergames.org/" },
+  { name: "双人Poki", url: "https://poki.com/en/2-players" },
+  { name: "情侣房猜答", url: "https://curioroom.net/" },
+  { name: "双人中文", url: "https://v.7k7k.com/" },
+  { name: "猜词游戏", url: "https://codenames.game/" }
+];
 function seedFun(){
-  if(!localStorage.getItem("jlt_fun")){
-    localStorage.setItem("jlt_fun", JSON.stringify([{ name: "树洞", url: "" }, { name: "小事", url: "" }, { name: "喜好", url: "" }]));
+  let items = [];
+  try{ items = JSON.parse(localStorage.getItem("jlt_fun")) || []; }catch(e){ items = []; }
+  if(!items.length){
+    localStorage.setItem("jlt_fun", JSON.stringify(DEFAULT_FUN));
     renderFun();
   }
 }
