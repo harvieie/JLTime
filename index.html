@@ -2625,9 +2625,9 @@ function applyViewMode(mode){
   // 编辑选项卡：仅编辑模式可见
   const tabEdit = document.getElementById("tabEdit");
   if(tabEdit) tabEdit.style.display = isEdit ? "" : "none";
-  // 拾趣选项卡：仅编辑模式可见（访客无法进入拾趣）
+  // 拾趣选项卡：授权即可见（访客/编辑都能进入，仅未授权时隐藏）
   const tabFun = document.getElementById("tabFun");
-  if(tabFun) tabFun.style.display = isEdit ? "" : "none";
+  if(tabFun) tabFun.style.display = isAuthGranted() ? "" : "none";
   const lbBtn = document.getElementById("lightboxEditLinkBtn");
   if(lbBtn) lbBtn.style.display = mode === "view" ? "none" : "";
   // 访客模式：主题弹窗里只看不能改（隐藏上传/清除/昼夜）；背景音乐不能上传
@@ -2640,8 +2640,8 @@ function applyViewMode(mode){
   updateDirtyDot();  // 红点只在编辑模式且有改动时显示
   if(!isEdit) funEditActive = false;
   renderFun();
-  // 非编辑模式若停在编辑/拾趣选项卡则回到筛选
-  if(!isEdit && (isTabActive("edit") || isTabActive("fun"))) switchTab("filter");
+  // 非编辑模式若停在编辑选项卡则回到筛选（访客可停留在拾趣）
+  if(!isEdit && isTabActive("edit")) switchTab("filter");
   renderAllCards();
 }
 function isTabActive(name){
@@ -3276,12 +3276,7 @@ function showToast(msg, seconds){
 
 document.getElementById("cacheOkBtn").addEventListener("click", confirmClearCache);
 document.getElementById("cacheCancelBtn").addEventListener("click", function(){
-  // 取消：不清除本地缓存，进入访客模式浏览本地数据；云端连接保持断开（下载/上传/恢复不可用）
-  sessionStorage.setItem("auth_granted", "1");
-  sessionStorage.setItem("cloud_locked", "1");
-  sessionStorage.setItem("view_mode", "view");
-  viewMode = "view";
-  applyViewMode("view");  // 访客：隐藏拾趣/编辑选项卡，标题、纪念日等不可点开
+  // 取消：不做任何处理——原本是访客模式就还是访客模式，是编辑模式就还是编辑模式，仅关闭弹窗
   closeCacheConfirm();
 });
 document.getElementById("cacheEnterBtn").addEventListener("click", enterWithPwd);
@@ -4096,7 +4091,9 @@ function registerSW(){
 }
 function init(){
   document.getElementById("pageTitle").textContent = getPageTitle();
-  applyViewMode(sessionStorage.getItem("view_mode") === "view" ? "view" : "full");
+  // 全新打开默认访客（view）；有编辑状态（full）则按状态恢复
+  const savedMode = sessionStorage.getItem("view_mode");
+  applyViewMode(savedMode === "full" ? "full" : "view");
   if(!sessionStorage.getItem("cache_prompt_shown")) openCacheConfirm();
   bindLightboxSwipe();
   bindGalleryKeys();
