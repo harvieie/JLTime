@@ -329,12 +329,14 @@ select optgroup option{font-size:14px;color:#333;}
   cursor:pointer;box-shadow:0 4px 14px rgba(255,130,160,.4);display:flex;align-items:center;justify-content:center;
 }
 .music-fab.playing{animation:musicSpin 3s linear infinite;}
-/* 主页左上角月亮按钮（昼夜快速切换） */
+/* 主页左上角月亮按钮（昼夜快速切换，5 秒无操作自动隐藏） */
 .theme-fab{
-  position:fixed;top:16px;left:16px;z-index:1400;width:40px;height:40px;border-radius:50%;
-  border:1px solid #d9a566;background:#fff;color:#8b5a2b;font-size:18px;
+  position:fixed;top:16px;left:16px;z-index:1400;width:34px;height:34px;border-radius:50%;
+  border:1px solid #d9a566;background:#fff;color:#8b5a2b;font-size:16px;
   cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;
+  transition:opacity .35s ease;
 }
+.theme-fab.theme-fab-hidden{opacity:0;pointer-events:none;}
 body.dark .theme-fab{background:#2a2d34;border-color:#5a5f6b;color:#cfd3da;}
 /* 打开灯箱/拼图/弹窗时，音乐按钮淡化 */
 body:has(.modal-overlay[style*="flex"]) .music-fab,
@@ -3886,7 +3888,7 @@ const DAYNIGHT_KEY = "jlt_daynight";
 const DAYNIGHT_STEPS = ["dark", "light", "auto"];
 const DAYNIGHT_LABEL = { dark: "黑夜", light: "白昼", auto: "自动" };
 function getDayNight(){ return localStorage.getItem(DAYNIGHT_KEY) || "auto"; }
-function setDayNight(m){ localStorage.setItem(DAYNIGHT_KEY, m); applyDayNight(); updateDayNightBtn(); }
+function setDayNight(m){ localStorage.setItem(DAYNIGHT_KEY, m); applyDayNight(); updateDayNightBtn(); updateThemeFab(); }
 function shouldDark(){
   const m = getDayNight();
   if(m === "dark") return true;
@@ -3895,6 +3897,25 @@ function shouldDark(){
   return h < 6 || h >= 18;   // 自动：夜间(18点后至凌晨6点)深色
 }
 function applyDayNight(){ document.body.classList.toggle("dark", shouldDark()); }
+/* 左上角按钮图标随模式切换：黑夜🌙 / 白昼☀️ / 自动🌗 */
+function updateThemeFab(){
+  const b = document.getElementById("themeFab");
+  if(!b) return;
+  const m = getDayNight();
+  b.textContent = m === "dark" ? "🌙" : m === "light" ? "☀️" : "🌗";
+}
+/* 进入页面或任意交互后显示按钮，5 秒无操作自动隐藏 */
+let themeFabTimer = null;
+function themeFabShowTemporarily(){
+  const b = document.getElementById("themeFab");
+  if(!b) return;
+  b.classList.remove("theme-fab-hidden");
+  clearTimeout(themeFabTimer);
+  themeFabTimer = setTimeout(() => b.classList.add("theme-fab-hidden"), 5000);
+}
+document.addEventListener("pointerdown", themeFabShowTemporarily, true);
+document.addEventListener("scroll", themeFabShowTemporarily, true);
+document.addEventListener("touchstart", themeFabShowTemporarily, true);
 function cycleDayNight(){
   const cur = getDayNight();
   const next = DAYNIGHT_STEPS[(DAYNIGHT_STEPS.indexOf(cur) + 1) % DAYNIGHT_STEPS.length];
@@ -4025,7 +4046,8 @@ function init(){
   applyTheme();
   bindBackTop();
   updateDirtyDot();
-  applyDayNight(); updateDayNightBtn();
+  applyDayNight(); updateDayNightBtn(); updateThemeFab();
+  themeFabShowTemporarily();  // 进入页面先显示 5 秒，之后无操作自动隐藏
   setInterval(() => { if(getDayNight() === "auto") applyDayNight(); }, 60000);  // 自动模式按时段刷新深浅
   registerSW();
   renderAnniChips();
