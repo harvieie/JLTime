@@ -3920,22 +3920,15 @@ function updateThemeFab(){
   const m = getDayNight();
   b.textContent = m === "dark" ? "🌙" : m === "light" ? "☀️" : "🌗";
 }
-/* 进入页面或任意交互后显示按钮，5 秒无操作自动隐藏（轮询机制，滚动/触摸/按键都可靠触发） */
-let themeFabLastInteract = 0;
-function themeFabMarkInteract(){ themeFabLastInteract = Date.now(); }
-function themeFabTick(){
+/* 进入页面时显示按钮 5 秒，之后自动隐藏且不再出现（仅刷新重进入才会再次显示） */
+let themeFabHideTimer = null;
+function themeFabShowOnce(){
   const b = document.getElementById("themeFab");
   if(!b) return;
-  if(Date.now() - themeFabLastInteract < 5000) b.classList.remove("theme-fab-hidden");
-  else b.classList.add("theme-fab-hidden");
+  b.classList.remove("theme-fab-hidden");
+  clearTimeout(themeFabHideTimer);
+  themeFabHideTimer = setTimeout(() => b.classList.add("theme-fab-hidden"), 5000);
 }
-function themeFabShowTemporarily(){
-  themeFabMarkInteract();
-  themeFabTick();
-}
-["pointerdown", "scroll", "touchstart", "touchmove", "wheel", "keydown"].forEach(ev =>
-  document.addEventListener(ev, themeFabShowTemporarily, true));
-setInterval(themeFabTick, 500);
 function cycleDayNight(){
   const cur = getDayNight();
   const next = DAYNIGHT_STEPS[(DAYNIGHT_STEPS.indexOf(cur) + 1) % DAYNIGHT_STEPS.length];
@@ -4067,7 +4060,7 @@ function init(){
   bindBackTop();
   updateDirtyDot();
   applyDayNight(); updateDayNightBtn(); updateThemeFab();
-  themeFabShowTemporarily();  // 进入页面先显示 5 秒，之后无操作自动隐藏
+  themeFabShowOnce();  // 进入页面显示 5 秒后隐藏，交互不再重新显示
   setInterval(() => { if(getDayNight() === "auto") applyDayNight(); }, 60000);  // 自动模式按时段刷新深浅
   registerSW();
   renderAnniChips();
