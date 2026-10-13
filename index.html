@@ -102,47 +102,55 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 .card-note .desc.collapsed{display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden;}
 .note-toggle{display:inline-block;color:var(--primary);font-size:12px;cursor:pointer;margin-top:2px;user-select:none;}
 /* ===== 树洞弹幕 ===== */
+.fun-box{width:100%;box-sizing:border-box;border:1px solid #ffe0ea;border-radius:16px;padding:12px;background:#fff;box-shadow:0 2px 10px rgba(255,150,180,.08);}
+.fun-box-title{text-align:left;font-size:12px;color:#999;margin-bottom:6px;}
+.th-box{
+  width:100%;box-sizing:border-box;margin-top:12px;padding:10px 12px 8px;
+  border-radius:44% 44% 18px 18px;border:2px solid #c98a4b;
+  background:linear-gradient(180deg,#fff6ec,#ffe9d6);
+  box-shadow:0 4px 14px rgba(150,90,40,.18), inset 0 0 22px rgba(201,138,75,.14);
+}
 .th-bar{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
-.th-title{font-size:13px;color:var(--primary);font-weight:600;}
-.th-tool{width:26px;height:26px;border-radius:50%;border:1px solid #ffd6e2;background:#fff;color:#c2567f;font-size:13px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;line-height:1;flex-shrink:0;}
-.th-tool:hover{background:#fff0f6;}
+.th-title{font-size:13px;color:#8b5a2b;font-weight:700;}
+.th-tool{width:26px;height:26px;border-radius:50%;border:1px solid #d9a566;background:#fff;color:#8b5a2b;font-size:13px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;line-height:1;flex-shrink:0;}
+.th-tool:hover{background:#fff6ec;}
 .th-stage{
-  position:relative;width:100%;height:88px;overflow:hidden;border-radius:12px;
-  background:linear-gradient(180deg,rgba(255,214,226,.28),rgba(255,240,246,.38));
-  border:1px dashed #ffd6e2;
+  position:relative;z-index:999;width:100%;height:88px;overflow:hidden;border-radius:38% 38% 14px 14px;
+  background:linear-gradient(180deg,#f6e3c9,#f2d8b8);border:1px solid #d9a566;
 }
 .th-stage.paused .th-dm{animation-play-state:paused;}
 .th-dm{
   position:absolute;left:100%;top:0;display:flex;align-items:center;gap:8px;
   white-space:nowrap;will-change:transform;cursor:pointer;max-width:96%;
-  background:rgba(255,255,255,.92);border:1px solid #ffe0ea;border-radius:14px;
-  padding:4px 14px 4px 4px;box-shadow:0 2px 8px rgba(255,150,180,.16);
+  background:rgba(255,252,246,.94);border:1px solid #e8c89a;border-radius:14px;
+  padding:4px 14px 4px 4px;box-shadow:0 2px 8px rgba(150,90,40,.18);
   animation-name:thFly;animation-timing-function:linear;animation-fill-mode:forwards;
 }
-.th-dm:hover{border-color:#ff9ec4;}
+.th-dm:hover{border-color:#c98a4b;}
 @keyframes thFly{from{transform:translateX(0)}to{transform:translateX(var(--thw,-1200px))}}
-.th-dm .th-avatar{width:30px;height:30px;border-radius:50%;background:#ffe3ec;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.th-dm .th-avatar{width:30px;height:30px;border-radius:50%;background:#ffe9c9;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .th-dm .th-meta{display:flex;flex-direction:column;align-items:flex-start;line-height:1.3;}
-.th-dm .th-name{font-size:12px;font-weight:600;color:#c2567f;max-width:120px;overflow:hidden;text-overflow:ellipsis;}
+.th-dm .th-name{font-size:12px;font-weight:700;color:#8b5a2b;max-width:120px;overflow:hidden;text-overflow:ellipsis;}
 .th-dm .th-time{font-size:10px;color:#999;}
-.th-dm .th-text{font-size:14px;color:#444;line-height:1.45;overflow:hidden;text-overflow:ellipsis;}
+.th-dm .th-text{font-size:14px;color:#4d3a21;line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .th-dm .th-x{position:absolute;top:-8px;right:-8px;width:18px;height:18px;border-radius:50%;background:#ff6b81;color:#fff;font-size:12px;line-height:18px;text-align:center;cursor:pointer;display:none;box-shadow:0 1px 3px rgba(0,0,0,.25);z-index:2;}
 .th-dm.th-del-mode .th-x{display:block;}
-.th-resize{height:10px;cursor:ns-resize;background:linear-gradient(180deg,transparent,rgba(255,150,180,.3));border-radius:0 0 12px 12px;margin-top:2px;touch-action:none;}
+.th-resize{height:14px;cursor:ns-resize;background:linear-gradient(180deg,transparent,rgba(201,138,75,.35));border-radius:0 0 14px 14px;margin-top:2px;touch-action:none;position:relative;}
+.th-resize::after{content:"⋮";position:absolute;right:6px;top:2px;color:#c98a4b;font-size:11px;}
 .th-quick{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px;}
 .th-quick span{background:#fff0f6;border:1px solid #ffd6e2;color:#c2567f;font-size:12px;padding:3px 10px;border-radius:12px;cursor:pointer;user-select:none;}
 .th-quick span:hover{background:#ffe3ec;}
 .th-quick .th-q-hint{color:#bbb;border-color:transparent;background:transparent;cursor:default;}
-.th-search-panel{width:100%;margin-top:10px;border-top:1px dashed #ffe0ea;padding-top:8px;}
+.th-search-panel{width:100%;margin-top:10px;border-top:1px dashed #e8c89a;padding-top:8px;}
 .th-search-res{max-height:180px;overflow:auto;}
-.th-search-item{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed #ffeef4;}
-.th-search-item .th-avatar{width:26px;height:26px;border-radius:50%;background:#ffe3ec;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.th-search-item{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed #f3dfc2;}
+.th-search-item .th-avatar{width:26px;height:26px;border-radius:50%;background:#ffe9c9;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .th-search-item .th-t{flex:1;min-width:0;font-size:12px;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.th-search-item button{font-size:12px;padding:2px 8px;border-radius:10px;border:1px solid #ffd6e2;background:#fff;color:#c2567f;cursor:pointer;}
+.th-search-item button{font-size:12px;padding:2px 8px;border-radius:10px;border:1px solid #d9a566;background:#fff;color:#8b5a2b;cursor:pointer;}
 .th-search-item button.th-del{color:#c92a2a;border-color:#ffc9c9;background:#ffe3e3;}
 .th-emoji-pick{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px;}
 .th-emoji-pick span{font-size:20px;cursor:pointer;padding:2px;border-radius:8px;}
-.th-emoji-pick span:hover{background:#fff0f6;}
+.th-emoji-pick span:hover{background:#fff6ec;}
 
 /* ===== 大图灯箱（居中查看） ===== */
 .lightbox{
@@ -491,12 +499,13 @@ button{border-radius:12px;}
     <button onclick="openThemeModal()" title="主题色/背景">主题</button>
   </div>
 
-  <!-- 拾趣面板：网页（点击跳转；编辑模式长按进入编辑态）+ 树洞（弹幕） -->
+  <!-- 拾趣面板：网页框 + 树洞框 -->
   <div class="tab-panel" id="panelFun">
-    <div style="width:100%;text-align:left;font-size:12px;color:#999;margin:2px 0 6px;">网页</div>
-    <div id="funList" style="display:flex;flex-wrap:wrap;gap:10px;width:100%;"></div>
-    <div style="width:100%;text-align:left;font-size:12px;color:#999;margin:12px 0 6px;">树洞</div>
-    <div style="width:100%;">
+    <div class="fun-box">
+      <div class="fun-box-title">网页</div>
+      <div id="funList" style="display:flex;flex-wrap:wrap;gap:10px;width:100%;"></div>
+    </div>
+    <div class="th-box" id="treeholeBox">
       <div class="th-bar">
         <span class="th-title">树洞</span>
         <span style="flex:1;"></span>
@@ -513,22 +522,24 @@ button{border-radius:12px;}
   </div>
 </div>
 
-<!-- 树洞编辑/添加弹幕 -->
+<!-- 树洞：查看详情 / 编辑 / 添加弹幕（文本不限字数，弹幕条最多显示 20 字） -->
 <div class="modal-overlay" id="thModal">
-  <div class="modal-box" style="max-width:380px;">
+  <div class="modal-box" style="max-width:420px;">
     <div class="modal-title" id="thModalTitle">添加弹幕</div>
     <div style="text-align:left;font-size:12px;color:#888;margin:4px 0;">头像：</div>
     <div class="th-emoji-pick" id="thAvatarQuick"></div>
     <input type="text" id="thAvatarInput" placeholder="或输入一个 emoji / 表情" maxlength="8" style="width:100%;">
     <div style="text-align:left;font-size:12px;color:#888;margin:10px 0 4px;">名字：</div>
     <input type="text" id="thNameInput" placeholder="输入名字" maxlength="12" style="width:100%;">
-    <div style="text-align:left;font-size:12px;color:#888;margin:10px 0 4px;">内容（最多 20 字）：</div>
-    <textarea id="thTextInput" maxlength="20" style="width:100%;min-height:60px;resize:vertical;" placeholder="想说的…"></textarea>
+    <div style="text-align:left;font-size:12px;color:#888;margin:10px 0 4px;">日期时间：</div>
+    <input type="text" id="thTimeInput" placeholder="YYYY-MM-DD HH:mm（留空=当前时间）" style="width:100%;">
+    <div style="text-align:left;font-size:12px;color:#888;margin:10px 0 4px;">内容（不限字数，弹幕条最多显示 20 字）：</div>
+    <textarea id="thTextInput" style="width:100%;min-height:90px;resize:vertical;" placeholder="想说的…"></textarea>
     <div style="text-align:left;font-size:12px;color:#888;margin:10px 0 4px;">用过的人（点按填入，长按删除）：</div>
     <div class="th-quick" id="thQuickNames"></div>
     <div class="btn-row" style="justify-content:flex-end;margin-top:12px;">
-      <button class="btn-sec" onclick="closeThModal()">取消</button>
-      <button class="btn-pri" onclick="saveThModal()">保存</button>
+      <button class="btn-sec" onclick="closeThModal()">关闭</button>
+      <button class="btn-pri" id="thSaveBtn" onclick="saveThModal()">保存</button>
     </div>
   </div>
 </div>
@@ -2588,6 +2599,7 @@ function switchTab(name){
     const b = document.getElementById(btns[k]);
     if(b) b.classList.toggle("active", k === name);
   });
+  if(name === "fun" && typeof thStart === "function") thStart();  // 切回拾趣时确保弹幕在飘
 }
 
 /* ============ 拾趣（树洞/小事/喜好等外部链接按钮）============ */
@@ -2653,14 +2665,12 @@ function thPlayOne(el, items, seed){
   const pool = items.filter(it => it && it.text && it.text.trim());
   if(!pool.length){ el.style.display = "none"; return; }
   const it = pool[seed % pool.length];
-  const size = it.text.length <= 8 ? 15 : it.text.length <= 12 ? 14 : it.text.length <= 16 ? 13 : 12;
+  const size = it.text.length <= 8 ? 15 : it.text.length <= 12 ? 14 : it.text.length <= 20 ? 13 : 11;
+  const shown = it.text.length > 20 ? it.text.slice(0, 20) + "…" : it.text;
   el.innerHTML = `
     <span class="th-avatar">${escapeHtml(it.avatar || "🙂")}</span>
-    <span class="th-meta">
-      <span class="th-name">${escapeHtml(it.name || "")}</span>
-      <span class="th-time">${escapeHtml(it.time || "")}</span>
-    </span>
-    <span class="th-text" style="font-size:${size}px">${escapeHtml(it.text)}</span>
+    <span class="th-meta"><span class="th-name">${escapeHtml(it.name || "")}</span></span>
+    <span class="th-text" style="font-size:${size}px">${escapeHtml(shown)}</span>
     <span class="th-x" title="删除">×</span>`;
   el.dataset.id = it.id;
   const st = el.closest(".th-stage");
@@ -2677,18 +2687,37 @@ function thTogglePause(){
   const st = document.getElementById("thStage");
   if(st) st.classList.toggle("paused");
 }
+function thSwipeTab(dx){
+  const order = isFunEditMode() ? ["filter", "edit", "fun"] : ["filter", "fun"];
+  const curBtn = document.querySelector(".tab-btn.active");
+  if(!curBtn) return;
+  const cur = curBtn.id.replace("tab", "").toLowerCase();
+  let i = order.indexOf(cur);
+  if(dx < -60) i = Math.min(order.length - 1, i + 1);
+  else if(dx > 60) i = Math.max(0, i - 1);
+  if(i >= 0 && order[i] !== cur) switchTab(order[i]);
+}
 function bindTreehole(){
   const st = document.getElementById("thStage");
   if(!st) return;
+  let sx = 0, sy = 0, swiping = false;
   st.addEventListener("pointerdown", e => {
     const dm = e.target.closest(".th-dm");
+    sx = e.clientX; sy = e.clientY; swiping = false;
     if(!dm || !isFunEditMode()) return;
     if(e.target.closest(".th-x")) return;
     thLongTimer = setTimeout(() => dm.classList.add("th-del-mode"), 550);
   });
   const clearT = () => { if(thLongTimer){ clearTimeout(thLongTimer); thLongTimer = null; } };
-  st.addEventListener("pointerup", clearT);
-  st.addEventListener("pointercancel", clearT);
+  st.addEventListener("pointermove", e => {
+    if(!sx && !sy) return;
+    if(Math.abs(e.clientX - sx) > 14 && Math.abs(e.clientY - sy) < 60) swiping = true;
+  });
+  st.addEventListener("pointerup", e => {
+    if(swiping){ thSwipeTab(e.clientX - sx); }
+    sx = 0; sy = 0; swiping = false; clearT();
+  });
+  st.addEventListener("pointercancel", () => { sx = 0; sy = 0; swiping = false; clearT(); });
   st.addEventListener("click", e => {
     const x = e.target.closest(".th-x");
     if(x){
@@ -2704,7 +2733,7 @@ function bindTreehole(){
     if(!dm) return;
     e.stopPropagation();
     if(dm.classList.contains("th-del-mode")){ dm.classList.remove("th-del-mode"); return; }
-    if(e.target.closest(".th-text") && isFunEditMode()){ thEditId = dm.dataset.id; openThModal(); return; }
+    if(e.target.closest(".th-text")){ thEditId = dm.dataset.id; openThModal(); return; }  // 点文字看详情/编辑
     thTogglePause();
   });
   bindThResize();
@@ -2713,20 +2742,20 @@ function bindThResize(){
   const handle = document.getElementById("thResize");
   const stage = document.getElementById("thStage");
   if(!handle || !stage) return;
-  let sy = 0, sh = 0, dragging = false;
-  handle.addEventListener("pointerdown", e => {
-    dragging = true; sy = e.clientY; sh = stage.clientHeight;
-    try{ handle.setPointerCapture(e.pointerId); }catch(err){}
-    e.preventDefault();
-  });
-  handle.addEventListener("pointermove", e => {
+  let dragging = false, sy = 0, sh = 0, raf = null;
+  const move = e => {
     if(!dragging) return;
     const h = Math.max(88, Math.min(400, sh + (e.clientY - sy)));
-    stage.style.height = h + "px";
-    thStart();
-  });
-  handle.addEventListener("pointerup", () => { dragging = false; });
-  handle.addEventListener("pointercancel", () => { dragging = false; });
+    if(h !== stage.clientHeight){
+      stage.style.height = h + "px";
+      if(raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => thStart());
+    }
+  };
+  handle.addEventListener("pointerdown", e => { dragging = true; sy = e.clientY; sh = stage.clientHeight; e.preventDefault(); });
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", () => { dragging = false; if(raf){ cancelAnimationFrame(raf); raf = null; } });
+  window.addEventListener("pointercancel", () => { dragging = false; if(raf){ cancelAnimationFrame(raf); raf = null; } });
 }
 function thQuickList(){
   try{ const q = JSON.parse(localStorage.getItem("jlt_th_quick")); if(Array.isArray(q)) return q; }catch(e){}
@@ -2746,11 +2775,21 @@ function thDel(id){
   thStart(); thSearch();
 }
 function openThModal(){
-  document.getElementById("thModalTitle").textContent = thEditId ? "编辑弹幕" : "添加弹幕";
+  document.getElementById("thModalTitle").textContent = thEditId ? "弹幕详情" : "添加弹幕";
   const it = thEditId ? loadTreehole().find(x => x.id === thEditId) : null;
+  const now = new Date();
+  const nowStr = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0") +
+    " " + String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
   document.getElementById("thAvatarInput").value = it ? it.avatar : "";
   document.getElementById("thNameInput").value = it ? it.name : "";
+  document.getElementById("thTimeInput").value = it ? it.time : nowStr;
   document.getElementById("thTextInput").value = it ? it.text : "";
+  // 访客查看详情：只读；访客添加：可写
+  const viewOnly = thEditId !== null && !isFunEditMode();
+  ["thTextInput", "thTimeInput", "thNameInput", "thAvatarInput"].forEach(id => {
+    document.getElementById(id).readOnly = viewOnly;
+  });
+  document.getElementById("thSaveBtn").style.display = viewOnly ? "none" : "";
   document.getElementById("thAvatarQuick").innerHTML = TH_EMOJIS.map(e =>
     `<span onclick="document.getElementById('thAvatarInput').value='${e}'">${e}</span>`).join("");
   const qbox = document.getElementById("thQuickNames");
@@ -2781,15 +2820,16 @@ function saveThModal(){
   if(!name) return alert("请填写名字");
   const text = document.getElementById("thTextInput").value.trim();
   if(!text) return alert("请填写内容");
+  const timeVal = document.getElementById("thTimeInput").value.trim();
   const now = new Date();
-  const time = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0") +
+  const nowTime = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0") +
     " " + String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
   const list = loadTreehole();
   if(thEditId){
     const it = list.find(x => x.id === thEditId);
-    if(it){ it.avatar = avatar; it.name = name; it.text = text; }
+    if(it){ it.avatar = avatar; it.name = name; it.text = text; if(timeVal) it.time = timeVal; }
   }else{
-    list.push({ id: uid(), avatar: avatar, name: name, text: text, time: time });
+    list.push({ id: uid(), avatar: avatar, name: name, text: text, time: timeVal || nowTime });
   }
   saveTreehole(list);
   thSaveQuick(avatar, name);
