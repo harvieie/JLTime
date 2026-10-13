@@ -114,6 +114,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 }
 .th-bar{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px;min-height:26px;position:relative;}
 .th-title{position:absolute;left:-1px;top:10px;font-size:13px;color:#8b5a2b;font-weight:700;cursor:pointer;}
+.th-x-title{left:auto;right:-1px;}
 .th-tools{display:flex;gap:22px;position:relative;}
 /* 每个圆圈上方一根弯着的眉毛 */
 .th-tool{position:relative;}
@@ -543,6 +544,7 @@ button{border-radius:12px;}
           <span class="th-tool" onclick="thOpenSearch()" title="搜索弹幕">🔍<i class="th-brow"></i></span>
           <span class="th-tool" onclick="thAdd()" title="添加弹幕">＋<i class="th-brow"></i></span>
         </span>
+        <span class="th-title th-x-title" onclick="thShuffle()" title="随机刷出不同的弹幕">喜忧</span>
       </div>
       <div class="th-stage" id="thStage"></div>
       <div class="th-resize" id="thResize" title="拖动调整高度"></div>
@@ -2455,6 +2457,7 @@ async function wdUpload(){
     "· 卡片：" + cards.length + " 张",
     "· 图片：" + imgCount + " 张",
     "· 拾趣：" + loadFunItems().length + " 个",
+    "· 树洞：" + loadTreehole().length + " 条",
     pendings.length ? "· 待同步删除云端图：" + pendings.length + " 张（移入回收站）" : "",
     "· 云端现有节点：" + files.length + " 个" + (files.length >= GH.maxNodes ? "（将删除最旧1个）" : ""),
     "· 将保存为新节点：" + formatNodeTime(name.slice(8, 22)),
@@ -2610,10 +2613,15 @@ function openCacheConfirm(){
   document.getElementById("cachePwd").value = "";
   document.getElementById("cacheConfirmModal").style.display = "flex";
   // 弹窗出现同时聚焦密码框（手机端自动弹出键盘）
-  setTimeout(() => {
+  const tryFocus = () => {
     const p = document.getElementById("cachePwd");
-    if(p){ p.focus({preventScroll:false}); p.select(); }
-  }, 60);
+    if(p){ p.focus({preventScroll:false}); }
+  };
+  setTimeout(tryFocus, 60);
+  // 首次触摸弹窗任意处也强制聚焦（绕过移动端非手势 focus 限制，确保弹出键盘）
+  const ov = document.getElementById("cacheConfirmModal");
+  ov.addEventListener("pointerdown", tryFocus, { once: true });
+  ov.addEventListener("touchstart", tryFocus, { once: true, passive: true });
 }
 function closeCacheConfirm(){ document.getElementById("cacheConfirmModal").style.display = "none"; }
 
@@ -2757,7 +2765,27 @@ function thStart(){
     thPlayOne(dm, items, i);
   }
 }
-function thPlayOne(el, items, seed){
+/* 喜忧：点按随机刷出不同的弹幕（每次行种子随机、循环也随机不固定） */
+function thShuffle(){
+  const st = document.getElementById("thStage");
+  if(!st) return;
+  st.innerHTML = "";
+  const items = thTodayPriority(loadTreehole());
+  const n = thLaneCount();
+  for(let i = 0; i < n; i++){
+    const dm = document.createElement("div");
+    dm.className = "th-dm";
+    dm.style.animationDelay = (i * 0.7) + "s";
+    st.appendChild(dm);
+    thPlayOne(dm, items, Math.floor(Math.random() * 1e9), true);
+  }
+}
+/* 树洞当前是否还有弹幕在飘（没有 → 点空白随机继续弹） */
+function thStageHasDm(){
+  const st = document.getElementById("thStage");
+  return st ? [...st.querySelectorAll(".th-dm")].some(el => el.style.display !== "none") : false;
+}
+function thPlayOne(el, items, seed, rand){
   const pool = items.filter(it => it && it.text && it.text.trim());
   if(!pool.length){ el.style.display = "none"; return; }
   const it = pool[seed % pool.length];
@@ -2782,7 +2810,9 @@ function thPlayOne(el, items, seed){
   el.classList.add("fly");
   el.onanimationend = () => {
     el.style.animationDelay = "0s";  // 仅首轮错峰，循环后连续弹，树洞不空
-    thPlayOne(el, items, seed + pool.length);
+    // 随机模式：下一条随机挑（避免固定重复同一条）；固定模式保持原循环
+    const nextSeed = rand ? seed + 1 + Math.floor(Math.random() * Math.max(1, pool.length - 1)) : seed + pool.length;
+    thPlayOne(el, items, nextSeed, rand);
   };
 }
 function thTogglePause(){
@@ -2823,7 +2853,8 @@ function bindTreehole(){
     }else if(moved < 12 && dm){
       handleThTap(e, dm);
     }else if(moved < 12 && !dm){
-      thResume();  // 点空白处 → 继续滚动
+      // 树洞没有弹幕在飘 → 随机继续弹出；有弹幕 → 继续滚动
+      if(!thStageHasDm()) thShuffle(); else thResume();
     }
     sx = 0; sy = 0; swiping = false;
   });
@@ -2881,16 +2912,16 @@ function thSaveQuick(avatar, name){
 }
 function thAdd(){ thEditId = null; openThModal(); }
 function thEdit(id){ thEditId = id; openThModal(); }
-/* 最近用的头像（末尾3个） */
+/* 最近用的头像（按使用先后顺序，整排参与排序） */
 function thRecentAvatars(){
-  try{ const a = JSON.parse(localStorage.getItem("jlt_th_recent_avatars")); if(Array.isArray(a)) return a.slice(-3); }catch(e){}
+  try{ const a = JSON.parse(localStorage.getItem("jlt_th_recent_avatars")); if(Array.isArray(a)) return a; }catch(e){}
   return [];
 }
 function thSaveRecentAvatar(avatar){
   if(!avatar) return;
   const a = thRecentAvatars().filter(x => x !== avatar);
   a.push(avatar);
-  localStorage.setItem("jlt_th_recent_avatars", JSON.stringify(a.slice(-3)));
+  localStorage.setItem("jlt_th_recent_avatars", JSON.stringify(a.slice(-15)));
 }
 function thDel(id){
   if(!confirm("确定删除这条弹幕吗？")) return;
@@ -2915,11 +2946,11 @@ function openThModal(){
   document.getElementById("thSaveBtn").style.display = viewOnly ? "none" : "";
   // 删除按钮：仅编辑模式编辑已有弹幕时显示
   document.getElementById("thDelBtn").style.display = (thEditId !== null && !viewOnly) ? "" : "none";
-  // 头像快捷：一排，末尾三个为最近用过的头像
+  // 头像快捷：整排按使用先后从左到右（用过的排前面，未用过的排后面）
   const recent = thRecentAvatars();
   document.getElementById("thAvatarQuick").innerHTML =
-    TH_EMOJIS.map(e => `<span onclick="document.getElementById('thAvatarInput').value='${e}'">${e}</span>`).join("") +
-    recent.map(e => `<span style="background:#ffe9c9;border:1px solid #d9a566;" onclick="document.getElementById('thAvatarInput').value='${e}'">${e}</span>`).join("");
+    recent.map(e => `<span style="background:#ffe9c9;border:1px solid #d9a566;" onclick="document.getElementById('thAvatarInput').value='${e}'">${e}</span>`).join("") +
+    TH_EMOJIS.filter(e => !recent.includes(e)).map(e => `<span onclick="document.getElementById('thAvatarInput').value='${e}'">${e}</span>`).join("");
   const qbox = document.getElementById("thQuickNames");
   const q = thQuickList();
   qbox.innerHTML = q.length
