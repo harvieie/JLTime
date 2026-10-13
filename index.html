@@ -128,11 +128,12 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 }
 .th-dm:hover{border-color:#c98a4b;}
 @keyframes thFly{from{transform:translateX(0)}to{transform:translateX(var(--thw,-1200px))}}
-.th-dm .th-avatar{width:30px;height:30px;border-radius:50%;background:#ffe9c9;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-/* 固定表头：第一行头像+用户名，第二行日期时间 */
-.th-dm .th-head{display:flex;flex-direction:column;align-items:flex-start;gap:1px;flex-shrink:0;}
+.th-dm .th-avatar{width:22px;height:22px;border-radius:50%;background:#ffe9c9;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+/* 固定表头：第一行头像+用户名（头像缩小），第二行日期（与头像最左侧对齐） */
+.th-dm .th-head{display:flex;flex-direction:column;align-items:flex-start;gap:2px;flex-shrink:0;}
+.th-dm .th-row1{display:flex;align-items:center;gap:6px;}
 .th-dm .th-name{font-size:12px;font-weight:700;color:#8b5a2b;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.35;}
-.th-dm .th-time{font-size:10px;color:#9a7a55;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3;}
+.th-dm .th-time{font-size:10px;color:#9a7a55;line-height:1.3;white-space:nowrap;overflow:hidden;}
 /* 表头后面接的文本框：最多显示两行 */
 .th-dm .th-text{font-size:14px;color:#4d3a21;line-height:1.4;min-width:56px;max-width:170px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-all;align-self:center;}
 .th-dm .th-x{position:absolute;top:-8px;right:-8px;width:18px;height:18px;border-radius:50%;background:#ff6b81;color:#fff;font-size:12px;line-height:18px;text-align:center;cursor:pointer;display:none;box-shadow:0 1px 3px rgba(0,0,0,.25);z-index:2;}
@@ -145,10 +146,12 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 .th-search-panel{width:100%;margin-top:10px;border-top:1px dashed #e8c89a;padding-top:8px;}
 .th-search-res{max-height:180px;overflow:auto;}
 .th-search-item{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed #f3dfc2;}
-.th-search-item .th-avatar{width:26px;height:26px;border-radius:50%;background:#ffe9c9;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.th-search-item .th-t{flex:1;min-width:0;font-size:12px;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.th-search-item button{font-size:12px;padding:2px 8px;border-radius:10px;border:1px solid #d9a566;background:#fff;color:#8b5a2b;cursor:pointer;}
-.th-search-item button.th-del{color:#c92a2a;border-color:#ffc9c9;background:#ffe3e3;}
+.th-search-item .th-avatar{width:22px;height:22px;border-radius:50%;background:#ffe9c9;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.th-search-item .th-t{flex:1;min-width:0;font-size:12px;color:#555;display:flex;align-items:center;gap:8px;}
+.th-search-item .th-t-main{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+.th-search-item .th-t-time{flex-shrink:0;color:#bbb;font-size:11px;white-space:nowrap;}
+.th-search-item .th-x-del{width:20px;height:20px;border-radius:50%;background:#ffe3e3;border:1px solid #ffc9c9;color:#c92a2a;font-size:13px;line-height:18px;text-align:center;cursor:pointer;flex-shrink:0;}
+.th-search-item .th-x-del:hover{background:#ffd6d6;}
 .th-emoji-pick{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px;}
 .th-emoji-pick span{font-size:20px;cursor:pointer;padding:2px;border-radius:8px;}
 .th-emoji-pick span:hover{background:#fff6ec;}
@@ -540,6 +543,7 @@ button{border-radius:12px;}
     <div class="th-quick" id="thQuickNames"></div>
     <div class="btn-row" style="justify-content:flex-end;margin-top:12px;">
       <button class="btn-sec" onclick="closeThModal()">关闭</button>
+      <button class="btn-danger" id="thDelBtn" onclick="thDelModal()" style="display:none;">删除</button>
       <button class="btn-pri" id="thSaveBtn" onclick="saveThModal()">保存</button>
     </div>
   </div>
@@ -2688,9 +2692,8 @@ function thPlayOne(el, items, seed){
   const size = it.text.length <= 8 ? 15 : it.text.length <= 15 ? 13 : 11;
   const shown = it.text.length > 15 ? it.text.slice(0, 15) + "…" : it.text;
   el.innerHTML = `
-    <span class="th-avatar">${escapeHtml(it.avatar || "🙂")}</span>
     <span class="th-head">
-      <span class="th-name">${escapeHtml(it.name || "")}</span>
+      <span class="th-row1"><span class="th-avatar">${escapeHtml(it.avatar || "🙂")}</span><span class="th-name">${escapeHtml(it.name || "")}</span></span>
       <span class="th-time">${escapeHtml(it.time || "")}</span>
     </span>
     <span class="th-text" style="font-size:${size}px">${escapeHtml(shown)}</span>
@@ -2826,6 +2829,8 @@ function openThModal(){
     document.getElementById(id).readOnly = viewOnly;
   });
   document.getElementById("thSaveBtn").style.display = viewOnly ? "none" : "";
+  // 删除按钮：仅编辑模式编辑已有弹幕时显示
+  document.getElementById("thDelBtn").style.display = (thEditId !== null && !viewOnly) ? "" : "none";
   document.getElementById("thAvatarQuick").innerHTML = TH_EMOJIS.map(e =>
     `<span onclick="document.getElementById('thAvatarInput').value='${e}'">${e}</span>`).join("");
   const qbox = document.getElementById("thQuickNames");
@@ -2888,14 +2893,25 @@ function thSearch(){
     ? list.map(it => `
       <div class="th-search-item" onclick="thOpenFromSearch('${it.id}')" title="点按查看/编辑">
         <span class="th-avatar">${escapeHtml(it.avatar || "🙂")}</span>
-        <span class="th-t">${escapeHtml(it.name || "")} · ${escapeHtml(it.text || "")} <span style="color:#bbb;font-size:11px;">${escapeHtml(it.time || "")}</span></span>
-        ${edit ? `<button onclick="event.stopPropagation();thEdit('${it.id}')">编辑</button><button class="th-del" onclick="event.stopPropagation();thDel('${it.id}')">删除</button>` : ""}
+        <span class="th-t">
+          <span class="th-t-main">${escapeHtml(it.name || "")} · ${escapeHtml(it.text || "")}</span>
+          <span class="th-t-time">${escapeHtml(it.time || "")}</span>
+        </span>
+        ${edit ? `<span class="th-x-del" onclick="event.stopPropagation();thDel('${it.id}')" title="删除">×</span>` : ""}
       </div>`).join("")
     : `<div style="font-size:12px;color:#bbb;padding:6px 0;">没有找到相关弹幕</div>`;
 }
 function thOpenFromSearch(id){
   thEditId = id;
   openThModal();  // 访客只读查看，编辑模式可编辑
+}
+function thDelModal(){
+  if(!thEditId) return;
+  if(confirm("确定删除这条弹幕吗？")){
+    saveTreehole(loadTreehole().filter(it => it.id !== thEditId));
+    closeThModal();
+    thStart(); thSearch();
+  }
 }
 const DEFAULT_FUN = [
   { name: "4399双人游戏", url: "https://www.4399.com/theme/81.htm" },
