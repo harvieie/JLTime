@@ -28,14 +28,14 @@ body{background:#ffffff;color:#333;padding:20px;}
 .tab-btn.active{background:var(--primary);color:#fff;}
 .tab-panel{display:none;padding:14px;background:#f7f9fc;border:1px solid #eef2f7;border-radius:14px;gap:10px;align-items:center;flex-wrap:wrap;}
 .tab-panel.active{display:flex;}
-.fun-edit-tools{display:flex;gap:8px;width:100%;}
+.fun-edit-tools{display:flex;gap:8px;width:100%;justify-content:center;flex-wrap:wrap;}
 .fun-chip{
   display:inline-flex;align-items:center;gap:4px;padding:7px 16px;border-radius:18px;
   background:#fff;border:1px solid #ffe0ea;color:#c2567f;cursor:pointer;font-size:14px;transition:.15s;
 }
 .fun-chip:hover{border-color:#ff9ec4;background:#fff0f6;}
 .fun-chip.fun-no-url{opacity:.6;}
-.fun-chip .fun-tools{display:inline-flex;gap:3px;margin-left:4px;}
+.fun-chip.fun-selected{border-color:var(--primary);background:#fff0f6;box-shadow:0 0 0 2px rgba(255,125,169,.25);}
 select,button,input,textarea{padding:8px 12px;border:1px solid #dde5ee;border-radius:10px;font-size:14px;background:#fff;color:#333;}
 input{flex:1;min-width:180px;}
 #searchInput{flex:none;width:160px;min-width:120px;}
@@ -400,18 +400,22 @@ button{border-radius:12px;}
     <button class="checked-mode" id="multiDelBtn" onclick="toggleMultiDelete()">选删</button>
     <button class="export" onclick="openExportModal()">导出</button>
     <button class="import" onclick="openImportModal()">导入</button>
-    <button onclick="wdDownload()">下载</button>
     <button class="success" id="cloudUploadBtn" onclick="wdUpload()">上传</button>
+    <button onclick="wdDownload()">下载</button>
     <button class="checked-mode" onclick="wdOpenRestore()">恢复</button>
     <button class="danger" onclick="openCacheConfirm()">清缓</button>
-    <button onclick="openThemeModal()" title="主题色/背景">🎨主题</button>
+    <button onclick="openThemeModal()" title="主题色/背景">主题</button>
   </div>
 
-  <!-- 拾趣面板：访客可跳转，编辑模式可增删改排序 -->
+  <!-- 拾趣面板：访客可跳转，编辑模式点击选中后在下方统一操作 -->
   <div class="tab-panel" id="panelFun">
     <div id="funList" style="display:flex;flex-wrap:wrap;gap:8px;width:100%;"></div>
     <div id="funEditTools" class="fun-edit-tools">
-      <button class="btn-pri" onclick="addFunItem()">＋ 新增</button>
+      <button class="btn-sec" onclick="funOp('up')">上移</button>
+      <button class="btn-sec" onclick="funOp('down')">下移</button>
+      <button class="btn-pri" onclick="funOp('edit')">编辑</button>
+      <button class="btn-danger" onclick="funOp('del')">删除</button>
+      <button class="btn-pri" onclick="funOp('add')">新增</button>
       <button class="btn-sec" onclick="switchFunSort()">排序</button>
     </div>
   </div>
@@ -2437,20 +2441,16 @@ function seedFun(){
   }
 }
 function funSortMode(){ return localStorage.getItem("fun_sort_mode") === "1"; }
+let funSelected = -1;
 function renderFun(){
   const items = loadFunItems();
   const list = document.getElementById("funList");
   const isEdit = viewMode === "full" && isAuthGranted();
   const sorting = isEdit && funSortMode();
+  if(funSelected >= items.length) funSelected = -1;
   list.innerHTML = items.map((it, i) => {
-    const badge = isEdit
-      ? `<span class="fun-tools">`
-        + (sorting
-            ? `<button class="btn-icon up" onclick="event.stopPropagation();moveFun(${i},-1)" title="上移">↑</button><button class="btn-icon down" onclick="event.stopPropagation();moveFun(${i},1)" title="下移">↓</button>`
-            : `<button class="btn-icon edit" onclick="event.stopPropagation();editFun(${i})" title="编辑">✏️</button><button class="btn-icon del" onclick="event.stopPropagation();delFun(${i})" title="删除">🗑</button>`)
-        + `</span>`
-      : "";
-    return `<span class="fun-chip${it.url ? "" : " fun-no-url"}" onclick="openFun(${i})">${escapeHtml(it.name)}${badge}</span>`;
+    const sel = isEdit && funSelected === i ? " fun-selected" : "";
+    return `<span class="fun-chip${it.url ? "" : " fun-no-url"}${sel}" onclick="onFunChip(${i})">${escapeHtml(it.name)}</span>`;
   }).join("");
   const tools = document.getElementById("funEditTools");
   if(tools){
@@ -2458,6 +2458,12 @@ function renderFun(){
     const sb = tools.querySelector("button:last-child");
     if(sb) sb.textContent = sorting ? "完成" : "排序";
   }
+}
+function onFunChip(i){
+  const isEdit = viewMode === "full" && isAuthGranted();
+  if(!isEdit){ openFun(i); return; }
+  funSelected = (funSelected === i) ? -1 : i;
+  renderFun();
 }
 function openFun(i){
   const it = loadFunItems()[i];
@@ -2468,11 +2474,22 @@ function switchFunSort(){
   localStorage.setItem("fun_sort_mode", funSortMode() ? "0" : "1");
   renderFun();
 }
+/* 统一操作区：所有按钮文字化，对选中项操作 */
+function funOp(op){
+  const items = loadFunItems();
+  if(op === "add"){ funSelected = -1; funEditingIndex = -1; openFunModal(); return; }
+  if(funSelected < 0 || funSelected >= items.length){ showToast("请先点选一个拾趣，再进行操作", 2); return; }
+  if(op === "up") moveFun(funSelected, -1);
+  if(op === "down") moveFun(funSelected, 1);
+  if(op === "edit") editFun(funSelected);
+  if(op === "del") delFun(funSelected);
+}
 function moveFun(i, d){
   const items = loadFunItems();
   const j = i + d;
   if(j < 0 || j >= items.length) return;
   [items[i], items[j]] = [items[j], items[i]];
+  funSelected = j;
   saveFunItems(items);
 }
 let funEditingIndex = -1;
@@ -2481,6 +2498,7 @@ function editFun(i){ funEditingIndex = i; openFunModal(); }
 function delFun(i){
   const items = loadFunItems();
   items.splice(i, 1);
+  funSelected = -1;
   saveFunItems(items);
 }
 function openFunModal(){
