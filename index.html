@@ -2435,8 +2435,6 @@ function loadFunItems(){
 function saveFunItems(list){
   localStorage.setItem("jlt_fun", JSON.stringify(list));
   renderFun();
-  // 编辑模式下改动即时同步云端（pushCloudSnapshot 内部会自行校验模式/锁定）
-  if(viewMode === "full" && isAuthGranted()) pushCloudSnapshot();
 }
 function seedFun(){
   if(!localStorage.getItem("jlt_fun")){
