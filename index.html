@@ -114,7 +114,20 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 }
 .th-bar{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px;min-height:26px;position:relative;}
 .th-title{position:absolute;left:-1px;top:10px;font-size:13px;color:#8b5a2b;font-weight:700;cursor:pointer;}
-.th-tools{display:flex;gap:8px;}
+.th-tools{display:flex;gap:14px;position:relative;}
+/* 每个圆圈上方三根小短线（眼睫毛） */
+.th-tool{position:relative;}
+.th-tool::before{
+  content:"";position:absolute;top:-7px;left:50%;transform:translateX(-50%);
+  width:2px;height:5px;background:#c98a4b;border-radius:1px;
+  box-shadow:-7px 0 0 #c98a4b, 7px 0 0 #c98a4b;
+}
+/* 两个圆圈中间一条像鼻子的竖线，居中 */
+.th-tools::after{
+  content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:2px;height:13px;background:#c98a4b;border-radius:2px;z-index:2;
+}
+body.dark .th-tool::before, body.dark .th-tools::after{background:#8a8f9a;}
 .th-tool{width:26px;height:26px;border-radius:50%;border:1px solid #d9a566;background:#fff;color:#8b5a2b;font-size:13px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;line-height:1;flex-shrink:0;}
 .th-tool:hover{background:#fff6ec;}
 .th-stage{
