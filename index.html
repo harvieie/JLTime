@@ -2397,9 +2397,7 @@ function applyViewMode(mode){
   const isEdit = mode === "full" && isAuthGranted();
   // 编辑选项卡：仅编辑模式可见
   const tabEdit = document.getElementById("tabEdit");
-  const panelEdit = document.getElementById("panelEdit");
   if(tabEdit) tabEdit.style.display = isEdit ? "" : "none";
-  if(panelEdit) panelEdit.style.display = "none"; // 面板始终默认隐藏，由选项卡切换控制
   const lbBtn = document.getElementById("lightboxEditLinkBtn");
   if(lbBtn) lbBtn.style.display = mode === "view" ? "none" : "";
   // 访客模式：主题弹窗里只看不能改（隐藏上传/清除背景图）
