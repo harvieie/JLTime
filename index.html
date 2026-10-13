@@ -2811,40 +2811,40 @@ function bindTreehole(){
     if(!sx && !sy) return;
     if(Math.abs(e.clientX - sx) > 14 && Math.abs(e.clientY - sy) < 60) swiping = true;
   });
+  // 用 pointerup 直接判定点击，不依赖 click 合成（弹幕飞行中 click 目标不稳定）
   st.addEventListener("pointerup", e => {
-    if(swiping){ thSwipeTab(e.clientX - sx); }
+    const moved = Math.hypot(e.clientX - sx, e.clientY - sy);
+    const dm = e.target.closest ? e.target.closest(".th-dm") : null;
+    if(swiping){
+      thSwipeTab(e.clientX - sx);
+    }else if(moved < 12 && dm){
+      handleThTap(e, dm);
+    }else if(moved < 12 && !dm){
+      thResume();  // 点空白处 → 继续滚动
+    }
     sx = 0; sy = 0; swiping = false;
   });
   st.addEventListener("pointercancel", () => { sx = 0; sy = 0; swiping = false; });
-  st.addEventListener("click", e => {
+  function handleThTap(e, dm){
     const x = e.target.closest(".th-x");
     if(x){
       e.stopPropagation();
-      const dm = x.closest(".th-dm");
-      if(dm && confirm("确定删除这条弹幕吗？")){
+      if(confirm("确定删除这条弹幕吗？")){
         saveTreehole(loadTreehole().filter(it => it.id !== dm.dataset.id));
         thStart();
       }
       return;
     }
-    const dm = e.target.closest(".th-dm");
-    if(!dm){ thResume(); return; }  // 点空白处 → 继续滚动
     e.stopPropagation();
     const paused = st.classList.contains("paused");
-    if(e.target.closest(".th-text")){
-      // 暂停态点文字：编辑模式编辑 / 访客查看
-      if((paused && dm.classList.contains("th-del-mode")) || !isFunEditMode()){
-        thEditId = dm.dataset.id; openThModal(); return;
-      }
+    if(paused){
+      // 暂停态再点弹幕任意位置：编辑模式编辑 / 访客查看
+      thEditId = dm.dataset.id; openThModal(); return;
     }
-    if(!paused){
-      // 点按 → 暂停固定，右上角出叉（编辑模式）
-      st.classList.add("paused");
-      if(isFunEditMode()) dm.classList.add("th-del-mode");
-    } else {
-      thResume();
-    }
-  });
+    // 点按 → 暂停固定，右上角出叉（编辑模式）
+    st.classList.add("paused");
+    if(isFunEditMode()) dm.classList.add("th-del-mode");
+  }
   bindThResize();
 }
 function bindThResize(){
