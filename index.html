@@ -2001,7 +2001,8 @@ function packCloudData(){
     card_badges: localStorage.getItem("card_badges"),
     last_music: localStorage.getItem("last_music"),
     fun: localStorage.getItem("jlt_fun"),
-    treehole: localStorage.getItem("jlt_treehole")
+    treehole: localStorage.getItem("jlt_treehole"),
+    daynight: localStorage.getItem("jlt_daynight")
   };
 }
 
@@ -2047,7 +2048,7 @@ async function thAutoPush(){
    ============================================================ */
 function openExportModal(){
   if(viewMode === "view") return;
-  const data = { title: getPageTitle(), cards: loadCards(), fun: loadFunItems(), treehole: localStorage.getItem("jlt_treehole") };
+  const data = { title: getPageTitle(), cards: loadCards(), fun: loadFunItems(), treehole: localStorage.getItem("jlt_treehole"), daynight: localStorage.getItem("jlt_daynight") };
   document.getElementById("exportText").value = JSON.stringify(data, null, 2);
   document.getElementById("exportModal").style.display = "flex";
 }
@@ -2057,7 +2058,7 @@ function copyExportData(){
 }
 
 function downloadExportFile(){
-  const data = { title: getPageTitle(), cards: loadCards(), fun: loadFunItems() };
+  const data = { title: getPageTitle(), cards: loadCards(), fun: loadFunItems(), treehole: localStorage.getItem("jlt_treehole"), daynight: localStorage.getItem("jlt_daynight") };
   const json = JSON.stringify(data, null, 2);
   const blob = new Blob([json], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -2122,6 +2123,7 @@ function applyImportedData(imported){
     if(imported.last_music) localStorage.setItem("last_music", imported.last_music);
     if(imported.fun) localStorage.setItem("jlt_fun", typeof imported.fun === "string" ? imported.fun : JSON.stringify(imported.fun));
     if(imported.treehole) localStorage.setItem("jlt_treehole", typeof imported.treehole === "string" ? imported.treehole : JSON.stringify(imported.treehole));
+    if(imported.daynight) localStorage.setItem("jlt_daynight", imported.daynight);
   }else{
     throw new Error("数据格式不正确：需要卡片数组，或 {title, cards} 对象");
   }
@@ -2130,6 +2132,7 @@ function applyImportedData(imported){
   document.getElementById("pageTitle").textContent = getPageTitle();
   renderAnniChips();
   applyTheme();
+  applyDayNight(); updateThemeFab();  // 应用云端保存的昼夜模式
   renderFun();
   renderAllCards();
   return cards.length;
@@ -3917,18 +3920,22 @@ function updateThemeFab(){
   const m = getDayNight();
   b.textContent = m === "dark" ? "🌙" : m === "light" ? "☀️" : "🌗";
 }
-/* 进入页面或任意交互后显示按钮，5 秒无操作自动隐藏 */
-let themeFabTimer = null;
-function themeFabShowTemporarily(){
+/* 进入页面或任意交互后显示按钮，5 秒无操作自动隐藏（轮询机制，滚动/触摸/按键都可靠触发） */
+let themeFabLastInteract = 0;
+function themeFabMarkInteract(){ themeFabLastInteract = Date.now(); }
+function themeFabTick(){
   const b = document.getElementById("themeFab");
   if(!b) return;
-  b.classList.remove("theme-fab-hidden");
-  clearTimeout(themeFabTimer);
-  themeFabTimer = setTimeout(() => b.classList.add("theme-fab-hidden"), 5000);
+  if(Date.now() - themeFabLastInteract < 5000) b.classList.remove("theme-fab-hidden");
+  else b.classList.add("theme-fab-hidden");
 }
-document.addEventListener("pointerdown", themeFabShowTemporarily, true);
-document.addEventListener("scroll", themeFabShowTemporarily, true);
-document.addEventListener("touchstart", themeFabShowTemporarily, true);
+function themeFabShowTemporarily(){
+  themeFabMarkInteract();
+  themeFabTick();
+}
+["pointerdown", "scroll", "touchstart", "touchmove", "wheel", "keydown"].forEach(ev =>
+  document.addEventListener(ev, themeFabShowTemporarily, true));
+setInterval(themeFabTick, 500);
 function cycleDayNight(){
   const cur = getDayNight();
   const next = DAYNIGHT_STEPS[(DAYNIGHT_STEPS.indexOf(cur) + 1) % DAYNIGHT_STEPS.length];
