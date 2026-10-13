@@ -35,6 +35,8 @@ body{background:#ffffff;color:#333;padding:20px;}
 }
 .fun-chip:hover{border-color:#ff9ec4;background:#fff0f6;}
 .fun-chip.fun-no-url{opacity:.6;}
+#cloudUploadBtn{position:relative;}
+#cloudUploadBtn.dirty-dot::after{content:"";position:absolute;top:2px;right:2px;width:9px;height:9px;border-radius:50%;background:#ff4757;box-shadow:0 0 0 2px #fff;}
 .fun-chip.fun-random{background:#fff7e6;border-color:#ffd591;color:#d46b08;font-weight:600;flex:none;}
 .fun-chip.fun-random:hover{background:#fff1cc;border-color:#ffc069;}
 .fun-chip.fun-edit-mode{position:relative;}
@@ -1289,7 +1291,10 @@ function openMosaic(footprintEl){
   if(!item) return;
   mosaicCardId = item.dataset.cardId;
   mosaicSorting = false;
-  document.getElementById("mosaicSortBtn").textContent = "排序";
+  const sortBtn = document.getElementById("mosaicSortBtn");
+  sortBtn.textContent = "排序";
+  // 访客模式不显示排序按钮
+  sortBtn.style.display = isFunEditMode() ? "" : "none";
   const imgWrap = item.querySelector(".card-imgs");
   const imgs = JSON.parse(imgWrap.dataset.imgs);
   const locs = JSON.parse(item.dataset.locs || "[]");
@@ -2414,10 +2419,14 @@ function applyViewMode(mode){
   if(tabEdit) tabEdit.style.display = isEdit ? "" : "none";
   const lbBtn = document.getElementById("lightboxEditLinkBtn");
   if(lbBtn) lbBtn.style.display = mode === "view" ? "none" : "";
-  // 访客模式：主题弹窗里只看不能改（隐藏上传/清除背景图）
+  // 访客模式：主题弹窗里只看不能改（隐藏上传/清除背景图）；背景音乐不能上传
   document.querySelectorAll("#themeModal button").forEach(b => {
     if(b.textContent.includes("上传背景图") || b.textContent.includes("清除背景图")) b.style.display = isEdit ? "" : "none";
   });
+  document.querySelectorAll("#musicModal button").forEach(b => {
+    if(b.textContent.includes("上传")) b.style.display = isEdit ? "" : "none";
+  });
+  updateDirtyDot();  // 红点只在编辑模式且有改动时显示
   if(!isEdit) funEditActive = false;
   renderFun();
   // 当前若停在编辑选项卡则回到筛选
@@ -2444,6 +2453,7 @@ function loadFunItems(){
 }
 function saveFunItems(list){
   localStorage.setItem("jlt_fun", JSON.stringify(list));
+  if(typeof markDirty === "function") markDirty();
   renderFun();
 }
 const DEFAULT_FUN = [
@@ -3145,6 +3155,7 @@ function musicStep(delta){
 function musicPrev(){ musicStep(-1); }
 function musicNext(){ musicStep(1); }
 function pickMusicFile(){
+  if(viewMode === "view") return;
   const fi = document.createElement("input");
   fi.type = "file"; fi.accept = "audio/*";
   fi.onchange = () => {
@@ -3288,10 +3299,21 @@ function bindFootLongPress(){
   });
 }
 
-/* ---------- 未上传小红点：已按用户要求取消 ---------- */
-function markDirty(){}
-function clearDirty(){}
-function updateDirtyDot(){}
+/* ---------- 上传红点：仅编辑模式下有改动时，上传按钮显示红点 ---------- */
+function markDirty(){
+  localStorage.setItem("jlt_dirty", "1");
+  updateDirtyDot();
+}
+function clearDirty(){
+  localStorage.removeItem("jlt_dirty");
+  updateDirtyDot();
+}
+function updateDirtyDot(){
+  const btn = document.getElementById("cloudUploadBtn");
+  if(!btn) return;
+  const show = isFunEditMode() && localStorage.getItem("jlt_dirty") === "1";
+  btn.classList.toggle("dirty-dot", show);
+}
 
 /* ---------- 倒带模式：点时间轴顶端触发，从最早卡片一路平滑滚到最新；用户手动滑动即打断 ---------- */
 let rewinding = false;
