@@ -101,6 +101,48 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 .card-note{width:100%;box-sizing:border-box;text-align:left;margin-top:6px;}
 .card-note .desc.collapsed{display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden;}
 .note-toggle{display:inline-block;color:var(--primary);font-size:12px;cursor:pointer;margin-top:2px;user-select:none;}
+/* ===== 树洞弹幕 ===== */
+.th-bar{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.th-title{font-size:13px;color:var(--primary);font-weight:600;}
+.th-tool{width:26px;height:26px;border-radius:50%;border:1px solid #ffd6e2;background:#fff;color:#c2567f;font-size:13px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;line-height:1;flex-shrink:0;}
+.th-tool:hover{background:#fff0f6;}
+.th-stage{
+  position:relative;width:100%;height:88px;overflow:hidden;border-radius:12px;
+  background:linear-gradient(180deg,rgba(255,214,226,.28),rgba(255,240,246,.38));
+  border:1px dashed #ffd6e2;
+}
+.th-stage.paused .th-dm{animation-play-state:paused;}
+.th-dm{
+  position:absolute;left:100%;top:0;display:flex;align-items:center;gap:8px;
+  white-space:nowrap;will-change:transform;cursor:pointer;max-width:96%;
+  background:rgba(255,255,255,.92);border:1px solid #ffe0ea;border-radius:14px;
+  padding:4px 14px 4px 4px;box-shadow:0 2px 8px rgba(255,150,180,.16);
+  animation-name:thFly;animation-timing-function:linear;animation-fill-mode:forwards;
+}
+.th-dm:hover{border-color:#ff9ec4;}
+@keyframes thFly{from{transform:translateX(0)}to{transform:translateX(var(--thw,-1200px))}}
+.th-dm .th-avatar{width:30px;height:30px;border-radius:50%;background:#ffe3ec;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.th-dm .th-meta{display:flex;flex-direction:column;align-items:flex-start;line-height:1.3;}
+.th-dm .th-name{font-size:12px;font-weight:600;color:#c2567f;max-width:120px;overflow:hidden;text-overflow:ellipsis;}
+.th-dm .th-time{font-size:10px;color:#999;}
+.th-dm .th-text{font-size:14px;color:#444;line-height:1.45;overflow:hidden;text-overflow:ellipsis;}
+.th-dm .th-x{position:absolute;top:-8px;right:-8px;width:18px;height:18px;border-radius:50%;background:#ff6b81;color:#fff;font-size:12px;line-height:18px;text-align:center;cursor:pointer;display:none;box-shadow:0 1px 3px rgba(0,0,0,.25);z-index:2;}
+.th-dm.th-del-mode .th-x{display:block;}
+.th-resize{height:10px;cursor:ns-resize;background:linear-gradient(180deg,transparent,rgba(255,150,180,.3));border-radius:0 0 12px 12px;margin-top:2px;touch-action:none;}
+.th-quick{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px;}
+.th-quick span{background:#fff0f6;border:1px solid #ffd6e2;color:#c2567f;font-size:12px;padding:3px 10px;border-radius:12px;cursor:pointer;user-select:none;}
+.th-quick span:hover{background:#ffe3ec;}
+.th-quick .th-q-hint{color:#bbb;border-color:transparent;background:transparent;cursor:default;}
+.th-search-panel{width:100%;margin-top:10px;border-top:1px dashed #ffe0ea;padding-top:8px;}
+.th-search-res{max-height:180px;overflow:auto;}
+.th-search-item{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed #ffeef4;}
+.th-search-item .th-avatar{width:26px;height:26px;border-radius:50%;background:#ffe3ec;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.th-search-item .th-t{flex:1;min-width:0;font-size:12px;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.th-search-item button{font-size:12px;padding:2px 8px;border-radius:10px;border:1px solid #ffd6e2;background:#fff;color:#c2567f;cursor:pointer;}
+.th-search-item button.th-del{color:#c92a2a;border-color:#ffc9c9;background:#ffe3e3;}
+.th-emoji-pick{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px;}
+.th-emoji-pick span{font-size:20px;cursor:pointer;padding:2px;border-radius:8px;}
+.th-emoji-pick span:hover{background:#fff0f6;}
 
 /* ===== 大图灯箱（居中查看） ===== */
 .lightbox{
@@ -449,9 +491,45 @@ button{border-radius:12px;}
     <button onclick="openThemeModal()" title="主题色/背景">主题</button>
   </div>
 
-  <!-- 拾趣面板：点击跳转；编辑模式长按进入编辑态（×删除/点文字编辑/＋新增/拖动排序） -->
+  <!-- 拾趣面板：网页（点击跳转；编辑模式长按进入编辑态）+ 树洞（弹幕） -->
   <div class="tab-panel" id="panelFun">
+    <div style="width:100%;text-align:left;font-size:12px;color:#999;margin:2px 0 6px;">网页</div>
     <div id="funList" style="display:flex;flex-wrap:wrap;gap:10px;width:100%;"></div>
+    <div style="width:100%;text-align:left;font-size:12px;color:#999;margin:12px 0 6px;">树洞</div>
+    <div style="width:100%;">
+      <div class="th-bar">
+        <span class="th-title">树洞</span>
+        <span style="flex:1;"></span>
+        <span class="th-tool" onclick="thOpenSearch()" title="搜索弹幕">🔍</span>
+        <span class="th-tool" onclick="thAdd()" title="添加弹幕">＋</span>
+      </div>
+      <div class="th-stage" id="thStage"></div>
+      <div class="th-resize" id="thResize" title="拖动调整高度"></div>
+      <div class="th-search-panel" id="thSearchPanel" style="display:none;">
+        <input type="text" id="thSearchInput" placeholder="搜索用户名或内容" oninput="thSearch()" style="width:100%;">
+        <div class="th-search-res" id="thSearchRes"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 树洞编辑/添加弹幕 -->
+<div class="modal-overlay" id="thModal">
+  <div class="modal-box" style="max-width:380px;">
+    <div class="modal-title" id="thModalTitle">添加弹幕</div>
+    <div style="text-align:left;font-size:12px;color:#888;margin:4px 0;">头像：</div>
+    <div class="th-emoji-pick" id="thAvatarQuick"></div>
+    <input type="text" id="thAvatarInput" placeholder="或输入一个 emoji / 表情" maxlength="8" style="width:100%;">
+    <div style="text-align:left;font-size:12px;color:#888;margin:10px 0 4px;">名字：</div>
+    <input type="text" id="thNameInput" placeholder="输入名字" maxlength="12" style="width:100%;">
+    <div style="text-align:left;font-size:12px;color:#888;margin:10px 0 4px;">内容（最多 20 字）：</div>
+    <textarea id="thTextInput" maxlength="20" style="width:100%;min-height:60px;resize:vertical;" placeholder="想说的…"></textarea>
+    <div style="text-align:left;font-size:12px;color:#888;margin:10px 0 4px;">用过的人（点按填入，长按删除）：</div>
+    <div class="th-quick" id="thQuickNames"></div>
+    <div class="btn-row" style="justify-content:flex-end;margin-top:12px;">
+      <button class="btn-sec" onclick="closeThModal()">取消</button>
+      <button class="btn-pri" onclick="saveThModal()">保存</button>
+    </div>
   </div>
 </div>
 
@@ -1879,7 +1957,8 @@ function packCloudData(){
     theme: localStorage.getItem("jlt_theme"),
     card_badges: localStorage.getItem("card_badges"),
     last_music: localStorage.getItem("last_music"),
-    fun: localStorage.getItem("jlt_fun")
+    fun: localStorage.getItem("jlt_fun"),
+    treehole: localStorage.getItem("jlt_treehole")
   };
 }
 
@@ -1907,7 +1986,7 @@ async function pushCloudSnapshot(note){
    ============================================================ */
 function openExportModal(){
   if(viewMode === "view") return;
-  const data = { title: getPageTitle(), cards: loadCards(), fun: loadFunItems() };
+  const data = { title: getPageTitle(), cards: loadCards(), fun: loadFunItems(), treehole: localStorage.getItem("jlt_treehole") };
   document.getElementById("exportText").value = JSON.stringify(data, null, 2);
   document.getElementById("exportModal").style.display = "flex";
 }
@@ -1981,6 +2060,7 @@ function applyImportedData(imported){
     if(imported.card_badges) localStorage.setItem("card_badges", typeof imported.card_badges === "string" ? imported.card_badges : JSON.stringify(imported.card_badges));
     if(imported.last_music) localStorage.setItem("last_music", imported.last_music);
     if(imported.fun) localStorage.setItem("jlt_fun", typeof imported.fun === "string" ? imported.fun : JSON.stringify(imported.fun));
+    if(imported.treehole) localStorage.setItem("jlt_treehole", typeof imported.treehole === "string" ? imported.treehole : JSON.stringify(imported.treehole));
   }else{
     throw new Error("数据格式不正确：需要卡片数组，或 {title, cards} 对象");
   }
@@ -2518,6 +2598,221 @@ function saveFunItems(list){
   localStorage.setItem("jlt_fun", JSON.stringify(list));
   if(typeof markDirty === "function") markDirty("fun");
   renderFun();
+}
+
+/* ============ 树洞弹幕 ============ */
+const DEFAULT_TREEHOLE = [
+  { avatar: "🐰", name: "小琳", text: "想你了呀", time: "2026-05-20 12:30" },
+  { avatar: "🐻", name: "伟行", text: "今天也开心", time: "2026-05-21 18:00" },
+  { avatar: "🌸", name: "小琳", text: "一起吃碗面", time: "2026-06-01 09:00" }
+];
+const TH_EMOJIS = ["🐰","🐻","🌸","🐱","🐶","🦊","🐼","⭐","🍀","🌙","🍓","💌"];
+let thEditId = null, thLongTimer = null;
+
+function loadTreehole(){
+  try{ const d = JSON.parse(localStorage.getItem("jlt_treehole")); if(Array.isArray(d)) return d; }catch(e){}
+  return [];
+}
+function saveTreehole(list){
+  localStorage.setItem("jlt_treehole", JSON.stringify(list));
+  if(typeof markDirty === "function") markDirty("treehole");
+}
+function seedTreehole(){
+  if(!localStorage.getItem("jlt_treehole")){
+    saveTreehole(DEFAULT_TREEHOLE.map(x => Object.assign({}, x, { id: uid() })));
+  }
+}
+/* 当天优先飘往年往月今日的弹幕，随后随机 */
+function thTodayPriority(list){
+  const now = new Date();
+  const md = String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+  const today = [], rest = [];
+  list.forEach(it => { if(it.time && it.time.slice(5, 10) === md) today.push(it); else rest.push(it); });
+  return today.concat(rest);
+}
+function thRowH(){ return 44; }
+function thLaneCount(){
+  const st = document.getElementById("thStage");
+  const h = st ? st.clientHeight : 88;
+  return Math.max(2, Math.floor(h / thRowH()));
+}
+function thStart(){
+  const st = document.getElementById("thStage");
+  if(!st) return;
+  st.innerHTML = "";
+  const items = thTodayPriority(loadTreehole());
+  const n = thLaneCount();
+  for(let i = 0; i < n; i++){
+    const dm = document.createElement("div");
+    dm.className = "th-dm";
+    st.appendChild(dm);
+    thPlayOne(dm, items, i);
+  }
+}
+function thPlayOne(el, items, seed){
+  const pool = items.filter(it => it && it.text && it.text.trim());
+  if(!pool.length){ el.style.display = "none"; return; }
+  const it = pool[seed % pool.length];
+  const size = it.text.length <= 8 ? 15 : it.text.length <= 12 ? 14 : it.text.length <= 16 ? 13 : 12;
+  el.innerHTML = `
+    <span class="th-avatar">${escapeHtml(it.avatar || "🙂")}</span>
+    <span class="th-meta">
+      <span class="th-name">${escapeHtml(it.name || "")}</span>
+      <span class="th-time">${escapeHtml(it.time || "")}</span>
+    </span>
+    <span class="th-text" style="font-size:${size}px">${escapeHtml(it.text)}</span>
+    <span class="th-x" title="删除">×</span>`;
+  el.dataset.id = it.id;
+  const st = el.closest(".th-stage");
+  const dist = -(st.clientWidth + el.offsetWidth + 60);
+  el.style.setProperty("--thw", dist + "px");
+  el.style.animationDuration = Math.max(8, 6 + it.text.length * 0.5 + Math.random() * 3) + "s";
+  el.style.top = (seed % thLaneCount()) * thRowH() + 4 + "px";
+  el.classList.remove("fly");
+  void el.offsetWidth;
+  el.classList.add("fly");
+  el.onanimationend = () => thPlayOne(el, items, seed + pool.length);
+}
+function thTogglePause(){
+  const st = document.getElementById("thStage");
+  if(st) st.classList.toggle("paused");
+}
+function bindTreehole(){
+  const st = document.getElementById("thStage");
+  if(!st) return;
+  st.addEventListener("pointerdown", e => {
+    const dm = e.target.closest(".th-dm");
+    if(!dm || !isFunEditMode()) return;
+    if(e.target.closest(".th-x")) return;
+    thLongTimer = setTimeout(() => dm.classList.add("th-del-mode"), 550);
+  });
+  const clearT = () => { if(thLongTimer){ clearTimeout(thLongTimer); thLongTimer = null; } };
+  st.addEventListener("pointerup", clearT);
+  st.addEventListener("pointercancel", clearT);
+  st.addEventListener("click", e => {
+    const x = e.target.closest(".th-x");
+    if(x){
+      e.stopPropagation();
+      const dm = x.closest(".th-dm");
+      if(dm && confirm("确定删除这条弹幕吗？")){
+        saveTreehole(loadTreehole().filter(it => it.id !== dm.dataset.id));
+        thStart();
+      }
+      return;
+    }
+    const dm = e.target.closest(".th-dm");
+    if(!dm) return;
+    e.stopPropagation();
+    if(dm.classList.contains("th-del-mode")){ dm.classList.remove("th-del-mode"); return; }
+    if(e.target.closest(".th-text") && isFunEditMode()){ thEditId = dm.dataset.id; openThModal(); return; }
+    thTogglePause();
+  });
+  bindThResize();
+}
+function bindThResize(){
+  const handle = document.getElementById("thResize");
+  const stage = document.getElementById("thStage");
+  if(!handle || !stage) return;
+  let sy = 0, sh = 0, dragging = false;
+  handle.addEventListener("pointerdown", e => {
+    dragging = true; sy = e.clientY; sh = stage.clientHeight;
+    try{ handle.setPointerCapture(e.pointerId); }catch(err){}
+    e.preventDefault();
+  });
+  handle.addEventListener("pointermove", e => {
+    if(!dragging) return;
+    const h = Math.max(88, Math.min(400, sh + (e.clientY - sy)));
+    stage.style.height = h + "px";
+    thStart();
+  });
+  handle.addEventListener("pointerup", () => { dragging = false; });
+  handle.addEventListener("pointercancel", () => { dragging = false; });
+}
+function thQuickList(){
+  try{ const q = JSON.parse(localStorage.getItem("jlt_th_quick")); if(Array.isArray(q)) return q; }catch(e){}
+  return [];
+}
+function thSaveQuick(avatar, name){
+  if(!avatar && !name) return;
+  const q = thQuickList().filter(x => !(x.avatar === avatar && x.name === name));
+  q.push({ avatar: avatar, name: name });
+  localStorage.setItem("jlt_th_quick", JSON.stringify(q.slice(-12)));
+}
+function thAdd(){ thEditId = null; openThModal(); }
+function thEdit(id){ thEditId = id; openThModal(); }
+function thDel(id){
+  if(!confirm("确定删除这条弹幕吗？")) return;
+  saveTreehole(loadTreehole().filter(x => x.id !== id));
+  thStart(); thSearch();
+}
+function openThModal(){
+  document.getElementById("thModalTitle").textContent = thEditId ? "编辑弹幕" : "添加弹幕";
+  const it = thEditId ? loadTreehole().find(x => x.id === thEditId) : null;
+  document.getElementById("thAvatarInput").value = it ? it.avatar : "";
+  document.getElementById("thNameInput").value = it ? it.name : "";
+  document.getElementById("thTextInput").value = it ? it.text : "";
+  document.getElementById("thAvatarQuick").innerHTML = TH_EMOJIS.map(e =>
+    `<span onclick="document.getElementById('thAvatarInput').value='${e}'">${e}</span>`).join("");
+  const qbox = document.getElementById("thQuickNames");
+  const q = thQuickList();
+  qbox.innerHTML = q.length
+    ? q.map((x, i) => `<span data-i="${i}" title="点按填入 · 长按删除">${x.avatar || "🙂"} ${escapeHtml(x.name || "")} ×</span>`).join("")
+    : `<span class="th-q-hint">保存过的头像+名字会出现在这里</span>`;
+  qbox.querySelectorAll("span[data-i]").forEach(sp => {
+    sp.addEventListener("click", () => {
+      const x = thQuickList()[+sp.dataset.i];
+      if(x){ document.getElementById("thAvatarInput").value = x.avatar || ""; document.getElementById("thNameInput").value = x.name || ""; }
+    });
+    let t = null;
+    sp.addEventListener("pointerdown", () => { t = setTimeout(() => {
+      const nq = thQuickList().filter((_, j) => j !== +sp.dataset.i);
+      localStorage.setItem("jlt_th_quick", JSON.stringify(nq));
+      openThModal();
+    }, 550); });
+    sp.addEventListener("pointerup", () => { if(t){ clearTimeout(t); t = null; } });
+    sp.addEventListener("pointercancel", () => { if(t){ clearTimeout(t); t = null; } });
+  });
+  document.getElementById("thModal").style.display = "flex";
+}
+function closeThModal(){ document.getElementById("thModal").style.display = "none"; }
+function saveThModal(){
+  const avatar = document.getElementById("thAvatarInput").value.trim() || "🙂";
+  const name = document.getElementById("thNameInput").value.trim();
+  if(!name) return alert("请填写名字");
+  const text = document.getElementById("thTextInput").value.trim();
+  if(!text) return alert("请填写内容");
+  const now = new Date();
+  const time = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0") +
+    " " + String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
+  const list = loadTreehole();
+  if(thEditId){
+    const it = list.find(x => x.id === thEditId);
+    if(it){ it.avatar = avatar; it.name = name; it.text = text; }
+  }else{
+    list.push({ id: uid(), avatar: avatar, name: name, text: text, time: time });
+  }
+  saveTreehole(list);
+  thSaveQuick(avatar, name);
+  closeThModal();
+  thStart(); thSearch();
+}
+function thOpenSearch(){
+  const p = document.getElementById("thSearchPanel");
+  p.style.display = p.style.display === "none" ? "" : "none";
+  if(p.style.display !== "none") thSearch();
+}
+function thSearch(){
+  const kw = document.getElementById("thSearchInput").value.trim().toLowerCase();
+  const edit = isFunEditMode();
+  const list = loadTreehole().filter(it => !kw || (it.name || "").toLowerCase().includes(kw) || (it.text || "").toLowerCase().includes(kw));
+  document.getElementById("thSearchRes").innerHTML = list.length
+    ? list.map(it => `
+      <div class="th-search-item">
+        <span class="th-avatar">${escapeHtml(it.avatar || "🙂")}</span>
+        <span class="th-t">${escapeHtml(it.name || "")} · ${escapeHtml(it.text || "")} <span style="color:#bbb;font-size:11px;">${escapeHtml(it.time || "")}</span></span>
+        ${edit ? `<button onclick="thEdit('${it.id}')">编辑</button><button class="th-del" onclick="thDel('${it.id}')">删除</button>` : ""}
+      </div>`).join("")
+    : `<div style="font-size:12px;color:#bbb;padding:6px 0;">没有找到相关弹幕</div>`;
 }
 const DEFAULT_FUN = [
   { name: "4399双人游戏", url: "https://www.4399.com/theme/81.htm" },
@@ -3366,7 +3661,7 @@ function bindFootLongPress(){
 /* ---------- 上传红点：仅编辑模式下有改动时，上传按钮显示红点 ---------- */
 /* ---------- 上传红点：本次页面打开后有改动才显示（内存标记，不跨会话残留）----------
    标记带组件类型，上传弹窗据此列出具体修改了哪些部分 */
-const DIRTY_LABEL = { cards: "卡片", title: "大标题", theme: "主题", anni: "纪念日", fun: "拾趣", music: "背景音乐" };
+const DIRTY_LABEL = { cards: "卡片", title: "大标题", theme: "主题", anni: "纪念日", fun: "拾趣", music: "背景音乐", treehole: "树洞" };
 let dirtyFlags = {};
 function markDirty(type){ dirtyFlags[type] = true; updateDirtyDot(); }
 function clearDirty(){ dirtyFlags = {}; updateDirtyDot(); }
@@ -3610,6 +3905,10 @@ function init(){
   renderFun();
   bindFunPointer();
   bindFunClick();
+  seedTreehole();
+  bindTreehole();
+  thStart();
+  thSearch();
   startSurprises();
   checkAnniToday();
 }
