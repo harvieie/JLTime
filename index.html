@@ -802,11 +802,11 @@ function loadCards(){
 
 function saveCards(list){
   localStorage.setItem(STORAGE.cards, JSON.stringify(list));
-  if(typeof markDirty === "function") markDirty();
+  if(typeof markDirty === "function") markDirty("cards");
 }
 
 function getPageTitle(){ return localStorage.getItem(STORAGE.title) || "JL Time"; }
-function setPageTitle(text){ localStorage.setItem(STORAGE.title, text); if(typeof markDirty === "function") markDirty(); }
+function setPageTitle(text){ localStorage.setItem(STORAGE.title, text); if(typeof markDirty === "function") markDirty("title"); }
 
 /* 图片失败占位图（灰粉底+文字） */
 const IMG_PLACEHOLDER = "data:image/svg+xml;utf8," + encodeURIComponent(
@@ -1952,6 +1952,7 @@ function doImportData(){
     return alert(err.message);
   }
   closeImportModal();
+  if(typeof clearDirty === "function") clearDirty();  // 导入以导入内容为准，不算本地待传改动
   alert(`导入成功，已载入 ${count} 条记录`);
 }
 
@@ -2242,8 +2243,10 @@ async function wdUpload(){
   const imgCount = cards.reduce((s, c) => s + ((c.imgs && c.imgs.length) || 0), 0);
   const pendings = getPendingDeletes();
   const name = `jltime_${nowStamp()}.json`;
+  const modified = dirtyList();
   const lines = [
     "确认上传云端数据？",
+    modified.length ? "· 本次修改：" + modified.join("、") : "· 本次修改：无（将按当前内容新建备份）",
     "· 大标题：" + (getPageTitle() || "（空）"),
     "· 卡片：" + cards.length + " 张",
     "· 图片：" + imgCount + " 张",
@@ -2453,7 +2456,7 @@ function loadFunItems(){
 }
 function saveFunItems(list){
   localStorage.setItem("jlt_fun", JSON.stringify(list));
-  if(typeof markDirty === "function") markDirty();
+  if(typeof markDirty === "function") markDirty("fun");
   renderFun();
 }
 const DEFAULT_FUN = [
@@ -2982,7 +2985,7 @@ function loadAnniversaries(){
   try{ return JSON.parse(localStorage.getItem("anniversaries") || "[]"); }
   catch(e){ return []; }
 }
-function saveAnniversaries(list){ localStorage.setItem("anniversaries", JSON.stringify(list)); }
+function saveAnniversaries(list){ localStorage.setItem("anniversaries", JSON.stringify(list)); if(typeof markDirty === "function") markDirty("anni"); }
 function daysBetween(dateStr){
   const today = new Date(); today.setHours(0,0,0,0);
   const d = new Date(dateStr); d.setHours(0,0,0,0);
@@ -3121,6 +3124,7 @@ function loadMusic(name, autoplay){
   const audio = document.getElementById("bgmAudio");
   audio.src = musicCdn(name);
   localStorage.setItem("last_music", name);
+  if(typeof markDirty === "function") markDirty("music");
   if(autoplay){ audio.play().catch(()=>{}); document.getElementById("musicFab").classList.add("playing"); }
 }
 function toggleMusic(){
@@ -3300,18 +3304,19 @@ function bindFootLongPress(){
 }
 
 /* ---------- 上传红点：仅编辑模式下有改动时，上传按钮显示红点 ---------- */
-function markDirty(){
-  localStorage.setItem("jlt_dirty", "1");
-  updateDirtyDot();
-}
-function clearDirty(){
-  localStorage.removeItem("jlt_dirty");
-  updateDirtyDot();
+/* ---------- 上传红点：本次页面打开后有改动才显示（内存标记，不跨会话残留）----------
+   标记带组件类型，上传弹窗据此列出具体修改了哪些部分 */
+const DIRTY_LABEL = { cards: "卡片", title: "大标题", theme: "主题", anni: "纪念日", fun: "拾趣", music: "背景音乐" };
+let dirtyFlags = {};
+function markDirty(type){ dirtyFlags[type] = true; updateDirtyDot(); }
+function clearDirty(){ dirtyFlags = {}; updateDirtyDot(); }
+function dirtyList(){
+  return Object.keys(DIRTY_LABEL).filter(k => dirtyFlags[k]).map(k => DIRTY_LABEL[k]);
 }
 function updateDirtyDot(){
   const btn = document.getElementById("cloudUploadBtn");
   if(!btn) return;
-  const show = isFunEditMode() && localStorage.getItem("jlt_dirty") === "1";
+  const show = isFunEditMode() && Object.keys(dirtyFlags).length > 0;
   btn.classList.toggle("dirty-dot", show);
 }
 
@@ -3403,11 +3408,11 @@ function openThemeModal(){
 function closeThemeModal(){ document.getElementById("themeModal").style.display = "none"; }
 function setSolidTheme(i){
   localStorage.setItem("jlt_theme", JSON.stringify({ color: SOLID_THEMES[i].color }));
-  applyTheme(); markDirty();
+  applyTheme(); markDirty("theme");
 }
 function setGradTheme(i){
   localStorage.setItem("jlt_theme", JSON.stringify({ gradient: GRAD_THEMES[i].bg }));
-  applyTheme(); markDirty();
+  applyTheme(); markDirty("theme");
 }
 function pickBgImage(){
   const fi = document.createElement("input");
@@ -3425,7 +3430,7 @@ function pickBgImage(){
           setUploadTip("完成 ✓", 100); setTimeout(hideUploadTip, 900);
           const url = musicCdn && ghOwner() ? `https://${ghOwner()}.github.io/${ghRepo()}/bg/bg.jpg?v=${Date.now()}` : "";
           localStorage.setItem("jlt_theme", JSON.stringify({ bgImage: url }));
-          applyTheme(); markDirty();
+          applyTheme(); markDirty("theme");
         })
         .catch(err => { hideUploadTip(); alert("上传失败：" + err.message); });
     };
@@ -3435,7 +3440,7 @@ function pickBgImage(){
 }
 function clearBgImage(){
   localStorage.setItem("jlt_theme", "{}");
-  applyTheme(); markDirty();
+  applyTheme(); markDirty("theme");
 }
 
 /* ---------- 回收站清空 ---------- */
