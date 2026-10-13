@@ -152,7 +152,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 .th-search-item .th-t-time{flex-shrink:0;color:#bbb;font-size:11px;white-space:nowrap;}
 .th-search-item .th-x-del{width:20px;height:20px;border-radius:50%;background:#ffe3e3;border:1px solid #ffc9c9;color:#c92a2a;font-size:13px;line-height:18px;text-align:center;cursor:pointer;flex-shrink:0;}
 .th-search-item .th-x-del:hover{background:#ffd6d6;}
-.th-emoji-pick{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px;}
+.th-emoji-pick{display:flex;flex-wrap:nowrap;gap:4px;margin-bottom:4px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch;}
 .th-emoji-pick span{font-size:20px;cursor:pointer;padding:2px;border-radius:8px;}
 .th-emoji-pick span:hover{background:#fff6ec;}
 
@@ -537,7 +537,7 @@ button{border-radius:12px;}
     <input type="text" id="thNameInput" placeholder="输入名字" maxlength="12" style="width:100%;">
     <div style="text-align:left;font-size:12px;color:#888;margin:10px 0 4px;">日期时间：</div>
     <input type="text" id="thTimeInput" placeholder="YYYY-MM-DD HH:mm（留空=当前时间）" style="width:100%;">
-    <div style="text-align:left;font-size:12px;color:#888;margin:10px 0 4px;">内容（不限字数，弹幕条最多显示 20 字）：</div>
+    <div style="text-align:left;font-size:12px;color:#888;margin:10px 0 4px;">内容（不限字数，弹幕条最多显示 30 字）：</div>
     <textarea id="thTextInput" style="width:100%;min-height:90px;resize:vertical;" placeholder="想说的…"></textarea>
     <div style="text-align:left;font-size:12px;color:#888;margin:10px 0 4px;">用过的人（点按填入，长按删除）：</div>
     <div class="th-quick" id="thQuickNames"></div>
@@ -2689,8 +2689,9 @@ function thPlayOne(el, items, seed){
   const pool = items.filter(it => it && it.text && it.text.trim());
   if(!pool.length){ el.style.display = "none"; return; }
   const it = pool[seed % pool.length];
-  const size = it.text.length <= 8 ? 15 : it.text.length <= 15 ? 13 : 11;
-  const shown = it.text.length > 15 ? it.text.slice(0, 15) + "…" : it.text;
+  // 字号随字数缩小：≤6字15px / ≤12字13px / ≤30字11px（15字一行，两行刚好排满30字）
+  const size = it.text.length <= 6 ? 15 : it.text.length <= 12 ? 13 : it.text.length <= 30 ? 11 : 10;
+  const shown = it.text.length > 30 ? it.text.slice(0, 30) + "…" : it.text;
   el.innerHTML = `
     <span class="th-head">
       <span class="th-row1"><span class="th-avatar">${escapeHtml(it.avatar || "🙂")}</span><span class="th-name">${escapeHtml(it.name || "")}</span></span>
@@ -2808,6 +2809,17 @@ function thSaveQuick(avatar, name){
 }
 function thAdd(){ thEditId = null; openThModal(); }
 function thEdit(id){ thEditId = id; openThModal(); }
+/* 最近用的头像（末尾3个） */
+function thRecentAvatars(){
+  try{ const a = JSON.parse(localStorage.getItem("jlt_th_recent_avatars")); if(Array.isArray(a)) return a.slice(-3); }catch(e){}
+  return [];
+}
+function thSaveRecentAvatar(avatar){
+  if(!avatar) return;
+  const a = thRecentAvatars().filter(x => x !== avatar);
+  a.push(avatar);
+  localStorage.setItem("jlt_th_recent_avatars", JSON.stringify(a.slice(-3)));
+}
 function thDel(id){
   if(!confirm("确定删除这条弹幕吗？")) return;
   saveTreehole(loadTreehole().filter(x => x.id !== id));
@@ -2831,8 +2843,11 @@ function openThModal(){
   document.getElementById("thSaveBtn").style.display = viewOnly ? "none" : "";
   // 删除按钮：仅编辑模式编辑已有弹幕时显示
   document.getElementById("thDelBtn").style.display = (thEditId !== null && !viewOnly) ? "" : "none";
-  document.getElementById("thAvatarQuick").innerHTML = TH_EMOJIS.map(e =>
-    `<span onclick="document.getElementById('thAvatarInput').value='${e}'">${e}</span>`).join("");
+  // 头像快捷：一排，末尾三个为最近用过的头像
+  const recent = thRecentAvatars();
+  document.getElementById("thAvatarQuick").innerHTML =
+    TH_EMOJIS.map(e => `<span onclick="document.getElementById('thAvatarInput').value='${e}'">${e}</span>`).join("") +
+    recent.map(e => `<span style="background:#ffe9c9;border:1px solid #d9a566;" onclick="document.getElementById('thAvatarInput').value='${e}'">${e}</span>`).join("");
   const qbox = document.getElementById("thQuickNames");
   const q = thQuickList();
   qbox.innerHTML = q.length
@@ -2874,6 +2889,7 @@ function saveThModal(){
   }
   saveTreehole(list);
   thSaveQuick(avatar, name);
+  thSaveRecentAvatar(avatar);
   closeThModal();
   thStart(); thSearch();
   if(thEditId === null && viewMode === "view") thAutoPush();  // 访客添加：自动上传云端
