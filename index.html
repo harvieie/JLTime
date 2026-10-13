@@ -115,18 +115,19 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 .th-bar{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px;min-height:26px;position:relative;}
 .th-title{position:absolute;left:-1px;top:10px;font-size:13px;color:#8b5a2b;font-weight:700;cursor:pointer;}
 .th-tools{display:flex;gap:22px;position:relative;}
-/* 每个圆圈上方三根小短线，分开贴在圆上沿（眼睫毛，左中右错开） */
+/* 每个圆圈上方一根弯着的眉毛 */
 .th-tool{position:relative;}
-.th-lash{position:absolute;top:-6px;left:50%;width:2px;height:6px;background:#c98a4b;border-radius:1px;transform-origin:50% 100%;}
-.th-lash-l{left:calc(50% - 9px);transform:translateX(-50%) rotate(-45deg);}
-.th-lash-c{left:50%;transform:translateX(-50%);}
-.th-lash-r{left:calc(50% + 9px);transform:translateX(-50%) rotate(45deg);}
+.th-brow{
+  position:absolute;top:-7px;left:50%;transform:translateX(-50%);pointer-events:none;
+  width:18px;height:9px;border-top:2px solid #c98a4b;border-radius:50%;
+}
+body.dark .th-brow{border-top-color:#8a8f9a;}
 /* 两个圆圈中间一个小圆点，位于两圆中心偏下一点 */
 .th-tools::after{
   content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,4px);
   width:4px;height:4px;border-radius:50%;background:#c98a4b;z-index:2;
 }
-body.dark .th-lash{background:#8a8f9a;}
+body.dark .th-brow{border-top-color:#8a8f9a;}
 body.dark .th-tools::after{background:#8a8f9a;}
 .th-tool{width:26px;height:26px;border-radius:50%;border:1px solid #d9a566;background:#fff;color:#8b5a2b;font-size:13px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;line-height:1;flex-shrink:0;}
 .th-tool:hover{background:#fff6ec;}
@@ -539,8 +540,8 @@ button{border-radius:12px;}
       <div class="th-bar">
         <span class="th-title" onclick="thStart()" title="点击重新刷新弹幕随机弹出">树洞</span>
         <span class="th-tools">
-          <span class="th-tool" onclick="thOpenSearch()" title="搜索弹幕">🔍<i class="th-lash th-lash-l"></i><i class="th-lash th-lash-c"></i><i class="th-lash th-lash-r"></i></span>
-          <span class="th-tool" onclick="thAdd()" title="添加弹幕">＋<i class="th-lash th-lash-l"></i><i class="th-lash th-lash-c"></i><i class="th-lash th-lash-r"></i></span>
+          <span class="th-tool" onclick="thOpenSearch()" title="搜索弹幕">🔍<i class="th-brow"></i></span>
+          <span class="th-tool" onclick="thAdd()" title="添加弹幕">＋<i class="th-brow"></i></span>
         </span>
       </div>
       <div class="th-stage" id="thStage"></div>
