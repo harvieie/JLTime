@@ -2674,6 +2674,7 @@ function thStart(){
   for(let i = 0; i < n; i++){
     const dm = document.createElement("div");
     dm.className = "th-dm";
+    dm.style.animationDelay = (i * 0.7) + "s";  // 每行错峰进场，不齐刷刷
     st.appendChild(dm);
     thPlayOne(dm, items, i);
   }
