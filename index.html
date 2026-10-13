@@ -35,6 +35,8 @@ body{background:#ffffff;color:#333;padding:20px;}
 }
 .fun-chip:hover{border-color:#ff9ec4;background:#fff0f6;}
 .fun-chip.fun-no-url{opacity:.6;}
+.fun-chip.fun-random{background:#fff7e6;border-color:#ffd591;color:#d46b08;font-weight:600;flex:none;}
+.fun-chip.fun-random:hover{background:#fff1cc;border-color:#ffc069;}
 .fun-chip.fun-edit-mode{position:relative;}
 .fun-del{
   position:absolute;top:-7px;right:-7px;width:18px;height:18px;border-radius:50%;
@@ -355,6 +357,14 @@ button{border-radius:12px;}
       <button class="btn-sec" onclick="closeFunModal()">取消</button>
       <button class="btn-pri" onclick="saveFunModal()">保存</button>
     </div>
+  </div>
+</div>
+
+<!-- 随机进入拾趣提示弹窗 -->
+<div class="modal-overlay" id="funRandomTip" style="display:none;">
+  <div class="modal-box" style="max-width:300px;text-align:center;">
+    <div style="font-size:15px;color:#888;margin-bottom:6px;">🎲 即将随机进入</div>
+    <div id="funRandomName" style="font-size:22px;font-weight:bold;color:var(--primary);"></div>
   </div>
 </div>
 
@@ -2454,14 +2464,15 @@ function seedFun(){
     renderFun();
   }
 }
-/* 编辑态：长按激活。点击跳转；编辑态下 ×删除/点文字编辑/＋新增/拖动排序 */
-let funEditActive = false;
+/* 编辑态：长按激活。点击跳转；编辑态下 ×删除/点文字编辑/＋新增/拖动排序。🎲随机固定最前，不可删改排序 */
+let funEditActive = false, funRandomTimer = null;
 function renderFun(){
   const items = loadFunItems();
   const list = document.getElementById("funList");
   if(!list) return;
   const editMode = isFunEditMode() && funEditActive;
-  list.innerHTML = items.map((it, i) => {
+  const rand = `<span class="fun-chip fun-random" onclick="funRandom()" title="随机进入一个拾趣">🎲 随机</span>`;
+  list.innerHTML = rand + items.map((it, i) => {
     const x = editMode ? `<span class="fun-del" onclick="event.stopPropagation();delFun(${i})" title="删除">×</span>` : "";
     return `<span class="fun-chip${it.url ? "" : " fun-no-url"}${editMode ? " fun-edit-mode" : ""}" data-idx="${i}">${escapeHtml(it.name)}${x}</span>`;
   }).join("");
@@ -2471,6 +2482,21 @@ function renderFun(){
 }
 function isFunEditMode(){ return viewMode === "full" && isAuthGranted(); }
 function funAdd(){ funEditingIndex = -1; openFunModal(); }
+function funRandom(){
+  const items = loadFunItems().filter(it => it.url);
+  if(!items.length){ showToast("还没有可随机进入的拾趣，请先添加带链接的选项", 3); return; }
+  const pick = items[Math.floor(Math.random() * items.length)];
+  const nameEl = document.getElementById("funRandomName");
+  const tip = document.getElementById("funRandomTip");
+  if(nameEl && tip){
+    nameEl.textContent = pick.name;
+    tip.style.display = "flex";
+    clearTimeout(funRandomTimer);
+    funRandomTimer = setTimeout(() => { tip.style.display = "none"; window.open(pick.url, "_blank", "noopener"); }, 1600);
+  }else{
+    window.open(pick.url, "_blank", "noopener");
+  }
+}
 function openFun(i){
   const it = loadFunItems()[i];
   if(!it || !it.url){ showToast("「" + (it && it.name ? it.name : "这个拾趣") + "」还没填链接，请在编辑模式下长按它来添加", 3); return; }
@@ -2491,6 +2517,7 @@ function bindFunPointer(){
     if(!isFunEditMode()) return;            // 访客：交给 click 跳转
     const chip = e.target.closest(".fun-chip");
     if(!chip) return;
+    if(chip.classList.contains("fun-random")) return;  // 随机项：点击走 funRandom，不参与长按/编辑
     if(funEditActive && (chip.classList.contains("fun-add") || e.target.classList.contains("fun-del"))) return;
     funDown = { idx: +chip.dataset.idx, x: e.clientX, y: e.clientY, dragging: false, longFired: false, chip: chip };
     if(!funEditActive){
@@ -2534,7 +2561,7 @@ function bindFunPointer(){
 }
 function funDragSort(e){
   const list = document.getElementById("funList");
-  const chips = [...list.querySelectorAll(".fun-chip:not(.fun-add):not(.fun-dragging)")];
+  const chips = [...list.querySelectorAll(".fun-chip:not(.fun-add):not(.fun-random):not(.fun-dragging)")];
   const over = chips.find(c => {
     const r = c.getBoundingClientRect();
     return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
@@ -2556,11 +2583,17 @@ function bindFunClick(){
   if(!list) return;
   list.addEventListener("click", e => {
     const chip = e.target.closest(".fun-chip");
-    if(!isFunEditMode()){ if(chip) openFun(+chip.dataset.idx); return; }
+    const isRand = chip && chip.classList.contains("fun-random");
+    if(!isFunEditMode()){
+      if(isRand) funRandom();
+      else if(chip) openFun(+chip.dataset.idx);
+      return;
+    }
     if(funEditActive){
-      if(!chip){ funEditActive = false; renderFun(); }  // 点空白退出
+      if(!chip){ funEditActive = false; renderFun(); }   // 点空白退出
+      else if(isRand) funRandom();
     }else if(chip){
-      openFun(+chip.dataset.idx);
+      if(isRand) funRandom(); else openFun(+chip.dataset.idx);
     }
   });
 }
