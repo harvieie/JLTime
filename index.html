@@ -539,7 +539,7 @@ button{border-radius:12px;}
     </div>
     <div class="th-box" id="treeholeBox">
       <div class="th-bar">
-        <span class="th-title" onclick="thStart()" title="点击重新刷新弹幕随机弹出">树洞</span>
+        <span class="th-title" onclick="thRepeatLast()" title="重复刚才弹出的弹幕">树洞</span>
         <span class="th-tools">
           <span class="th-tool" onclick="thOpenSearch()" title="搜索弹幕">🔍<i class="th-brow"></i></span>
           <span class="th-tool" onclick="thAdd()" title="添加弹幕">＋<i class="th-brow"></i></span>
@@ -2450,17 +2450,18 @@ async function wdUpload(){
   const pendings = getPendingDeletes();
   const name = `jltime_${nowStamp()}.json`;
   const modified = dirtyList();
+  const ts = name.slice(7, 21);  // jltime_ 后 14 位时间戳
   const lines = [
     "确认上传云端数据？",
-    modified.length ? "· 本次修改：" + modified.join("、") : "· 本次修改：无（将按当前内容新建备份）",
+    modified.length ? "· 本次修改部位：" + modified.join("、") : "· 本次修改部位：无（将按当前内容新建备份）",
     "· 大标题：" + (getPageTitle() || "（空）"),
     "· 卡片：" + cards.length + " 张",
     "· 图片：" + imgCount + " 张",
-    "· 拾趣：" + loadFunItems().length + " 个",
+    "· 网页：" + loadFunItems().length + " 个",
     "· 树洞：" + loadTreehole().length + " 条",
     pendings.length ? "· 待同步删除云端图：" + pendings.length + " 张（移入回收站）" : "",
     "· 云端现有节点：" + files.length + " 个" + (files.length >= GH.maxNodes ? "（将删除最旧1个）" : ""),
-    "· 将保存为新节点：" + formatNodeTime(name.slice(8, 22)),
+    "· 将保存为新节点：" + formatNodeTime(ts),
     "",
     "点「确定」开始上传"
   ].filter(l => l !== "");
@@ -2481,7 +2482,7 @@ async function wdUpload(){
     }
     await wdWriteFile(name, packCloudData());
     if(typeof clearDirty === "function") clearDirty();
-    alert(`已上传至云端（${formatNodeTime(name.slice(8, 22))}），云端保留最近 ${GH.maxNodes} 个节点`);
+    alert(`已上传至云端（${formatNodeTime(ts)}），云端保留最近 ${GH.maxNodes} 个节点`);
   }catch(err){
     alert("上传失败：" + err.message);
   }finally{
@@ -2506,6 +2507,7 @@ async function wdDownload(){
     setCloudLoaded(latest);
     if(typeof clearDirty === "function") clearDirty();
     alert(`下载成功，已载入 ${count} 条记录（备份时间 ${formatNodeTime(latest.ts)}）`);
+    setTimeout(() => location.reload(), 300);  // 载入云端数据后自动刷新页面
   }catch(err){
     alert("下载失败：" + err.message);
   }finally{
@@ -2559,6 +2561,7 @@ async function wdRestoreNode(name){
     closeRestoreModal();
     if(typeof clearDirty === "function") clearDirty();  // 恢复以备份为准，不视为本地改动
     alert(`已恢复到 ${formatNodeTime(ts)} 的备份，共载入 ${count} 条记录`);
+    setTimeout(() => location.reload(), 300);  // 载入云端数据后自动刷新页面
   }catch(err){
     alert("恢复失败：" + err.message);
   }
@@ -2751,24 +2754,40 @@ function thLaneCount(){
   const h = st ? st.clientHeight : 176;
   return Math.max(2, Math.floor(h / thRowH()));
 }
-function thStart(){
+/* 每行最近播放的弹幕 id（树洞标题点按 → 重复刚才弹出的弹幕） */
+let thLastIds = null;
+function thRender(todayFirst){
   const st = document.getElementById("thStage");
   if(!st) return;
   st.innerHTML = "";
   const items = thTodayPriority(loadTreehole());
   const n = thLaneCount();
+  thLastIds = [];
   for(let i = 0; i < n; i++){
     const dm = document.createElement("div");
     dm.className = "th-dm";
     dm.style.animationDelay = (i * 0.7) + "s";  // 每行错峰进场，不齐刷刷
     st.appendChild(dm);
-    thPlayOne(dm, items, i);
+    // 当天第一次：按往年今日优先的顺序弹（首条固定），随后随机循环
+    const seed = todayFirst ? i : Math.floor(Math.random() * 1e9);
+    thPlayOne(dm, items, seed, true);
+    thLastIds.push(dm.dataset.id);
   }
 }
-/* 喜忧：点按随机刷出不同的弹幕（每次行种子随机、循环也随机不固定） */
-function thShuffle(){
+/* 树洞/进入树洞页：随机弹；当天第一次进入优先往年往月今日的弹幕，随后随机 */
+function thStart(){
+  const todayStr = new Date().getFullYear() + "-" + String(new Date().getMonth() + 1).padStart(2, "0") + "-" + String(new Date().getDate()).padStart(2, "0");
+  const firstToday = sessionStorage.getItem("jlt_th_first_done") !== todayStr;
+  if(firstToday) sessionStorage.setItem("jlt_th_first_done", todayStr);
+  thRender(firstToday);
+}
+/* 喜忧：每次点按随机刷出不同的弹幕 */
+function thShuffle(){ thRender(false); }
+/* 树洞标题点按：重复刚才弹出的弹幕（每行固定重放刚才那条） */
+function thRepeatLast(){
   const st = document.getElementById("thStage");
   if(!st) return;
+  if(!thLastIds || !thLastIds.length){ thRender(false); return; }
   st.innerHTML = "";
   const items = thTodayPriority(loadTreehole());
   const n = thLaneCount();
@@ -2777,7 +2796,7 @@ function thShuffle(){
     dm.className = "th-dm";
     dm.style.animationDelay = (i * 0.7) + "s";
     st.appendChild(dm);
-    thPlayOne(dm, items, Math.floor(Math.random() * 1e9), true);
+    thPlayOne(dm, items, i, true, thLastIds[i] || null);
   }
 }
 /* 树洞当前是否还有弹幕在飘（没有 → 点空白随机继续弹） */
@@ -2785,10 +2804,15 @@ function thStageHasDm(){
   const st = document.getElementById("thStage");
   return st ? [...st.querySelectorAll(".th-dm")].some(el => el.style.display !== "none") : false;
 }
-function thPlayOne(el, items, seed, rand){
+function thPlayOne(el, items, seed, rand, fixedId){
   const pool = items.filter(it => it && it.text && it.text.trim());
   if(!pool.length){ el.style.display = "none"; return; }
-  const it = pool[seed % pool.length];
+  let it;
+  if(fixedId){
+    it = pool.find(x => x.id === fixedId) || pool[seed % pool.length];
+  }else{
+    it = pool[seed % pool.length];
+  }
   // 字号随字数缩小：≤6字15px / ≤12字13px / ≤30字11px（15字一行，两行刚好排满30字）
   const size = it.text.length <= 6 ? 15 : it.text.length <= 12 ? 13 : it.text.length <= 30 ? 11 : 10;
   const shown = it.text.length > 30 ? it.text.slice(0, 30) + "…" : it.text;
@@ -2810,7 +2834,8 @@ function thPlayOne(el, items, seed, rand){
   el.classList.add("fly");
   el.onanimationend = () => {
     el.style.animationDelay = "0s";  // 仅首轮错峰，循环后连续弹，树洞不空
-    // 随机模式：下一条随机挑（避免固定重复同一条）；固定模式保持原循环
+    if(fixedId){ thPlayOne(el, items, seed, rand, fixedId); return; }  // 重复刚才：固定重放同一条
+    // 随机模式：下一条随机挑（避免固定重复同一条）
     const nextSeed = rand ? seed + 1 + Math.floor(Math.random() * Math.max(1, pool.length - 1)) : seed + pool.length;
     thPlayOne(el, items, nextSeed, rand);
   };
@@ -3290,6 +3315,7 @@ async function cloudPullAfterClear(){
     setCloudLoaded(latest);
     showToast(`已载入云端最新数据（${formatNodeTime(latest.ts)}，共 ${count} 条记录）`, 3);
     cleanTrash().catch(() => {});                        // 后台清理回收站中超过30天的图片
+    setTimeout(() => location.reload(), 900);            // 载入云端数据后自动刷新页面
   }catch(err){
     showToast("云端拉取失败：" + err.message, 4);
   }
