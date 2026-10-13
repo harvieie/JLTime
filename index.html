@@ -814,7 +814,7 @@ function loadCards(){
     const parsed = JSON.parse(raw);
     const migrated = migrateCardData(parsed);
     const needFix = parsed.some(c => !c.id || !c.locs);
-    if(needFix) saveCards(migrated);
+    if(needFix) localStorage.setItem(STORAGE.cards, JSON.stringify(migrated));  // 加载时数据规范化，不算改动、不产生红点
     return migrated;
   }catch(err){
     console.warn("卡片数据解析失败，已重置为空", err);
@@ -2408,6 +2408,7 @@ async function wdRestoreNode(name){
     const count = applyImportedData(imported);
     setCloudLoaded({ name, ts, label: (name.match(/^(?:jltime|xinglin)_\d{14}(?:_[^/]+)?\.json$/) && name.length > 22) ? name.replace(/^(?:jltime|xinglin)_\d{14}_/, "").slice(0, -5) : "" });
     closeRestoreModal();
+    if(typeof clearDirty === "function") clearDirty();  // 恢复以备份为准，不视为本地改动
     alert(`已恢复到 ${formatNodeTime(ts)} 的备份，共载入 ${count} 条记录`);
   }catch(err){
     alert("恢复失败：" + err.message);
