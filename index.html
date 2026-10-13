@@ -97,9 +97,9 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 .card .desc a{color:#ff7da9;text-decoration:underline;cursor:pointer;}
 .card .desc:hover{color:#3b82f6;}
 .card-checkbox{position:absolute;top:12px;left:12px;width:20px;height:20px;cursor:pointer;z-index:5;}
-/* 备注超过 6 行自动折叠 */
-.note-box{text-align:left;margin-top:6px;}
-.note-box .desc.collapsed{display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden;}
+/* 备注超过 6 行自动折叠（卡片内备注容器，宽度与照片一致） */
+.card-note{width:100%;box-sizing:border-box;text-align:left;margin-top:6px;}
+.card-note .desc.collapsed{display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden;}
 .note-toggle{display:inline-block;color:var(--primary);font-size:12px;cursor:pointer;margin-top:2px;user-select:none;}
 
 /* ===== 大图灯箱（居中查看） ===== */
@@ -159,6 +159,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
   background:#fff;padding:20px;border-radius:12px;width:90%;max-width:550px;max-height:90vh;overflow-y:auto;
 }
 .export-box{max-width:800px;}
+.note-modal .note-box{max-width:780px;width:94%;}
 .link-box h3,.note-box h3,.add-box h3,.img-edit-box h3,.export-box h3,.import-box h3,.title-box h3,.restore-box h3{margin-bottom:10px;color:#222;}
 .link-box label,.note-box label,.add-box label,.img-edit-box label,.title-box label,.import-box label{display:block;margin:10px 0 4px;font-weight:500;color:#333;}
 .link-box input,.link-box textarea,.note-box textarea,.add-box input,.add-box textarea,.img-edit-box input,.title-box input,.import-box textarea{
@@ -1055,7 +1056,7 @@ function renderAllCards(){
         <div class="card-imgs" data-imgs='${JSON.stringify(card.imgs)}'>
           <img loading="lazy" decoding="async" src="${getThumbnailUrl(card.imgs[0])}" data-src="${getThumbnailUrl(card.imgs[0])}" data-full="${card.imgs[0]}" onerror="imgFallback(this)" onclick="openGallery(this)" alt="${card.locs.join(',')}">
         </div>
-        <div class="note-box">
+        <div class="card-note">
           <p class="desc" ${viewMode === "view" ? "" : `onclick="openNote(this)"`}>${linkifyNote(card.note)}</p>
           <span class="note-toggle" style="display:none;" onclick="event.stopPropagation();toggleNote(this)">展开 ▾</span>
         </div>
@@ -1093,7 +1094,7 @@ function applyNoteCollapse(){
   });
 }
 function toggleNote(toggle){
-  const box = toggle.closest(".note-box");
+  const box = toggle.closest(".card-note");
   const desc = box && box.querySelector(".desc");
   if(!desc) return;
   if(desc.classList.contains("collapsed")){
