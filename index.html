@@ -118,13 +118,13 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 /* 每个圆圈上方三根小短线，分开贴在圆上沿（眼睫毛，左中右错开） */
 .th-tool{position:relative;}
 .th-lash{position:absolute;top:-6px;left:50%;width:2px;height:6px;background:#c98a4b;border-radius:1px;transform-origin:50% 100%;}
-.th-lash-l{left:calc(50% - 9px);transform:translateX(-50%) rotate(45deg);}
+.th-lash-l{left:calc(50% - 9px);transform:translateX(-50%) rotate(-45deg);}
 .th-lash-c{left:50%;transform:translateX(-50%);}
-.th-lash-r{left:calc(50% + 9px);transform:translateX(-50%) rotate(-45deg);}
+.th-lash-r{left:calc(50% + 9px);transform:translateX(-50%) rotate(45deg);}
 /* 两个圆圈中间一个小圆点，位于两圆中心偏下一点 */
 .th-tools::after{
-  content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,3px);
-  width:5px;height:5px;border-radius:50%;background:#c98a4b;z-index:2;
+  content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,4px);
+  width:4px;height:4px;border-radius:50%;background:#c98a4b;z-index:2;
 }
 body.dark .th-lash{background:#8a8f9a;}
 body.dark .th-tools::after{background:#8a8f9a;}
