@@ -2138,6 +2138,8 @@ function applyImportedData(imported){
   applyDayNight(); updateThemeFab();  // 应用云端保存的昼夜模式
   renderFun();
   renderAllCards();
+  // 载入/导入的数据作为当前基线：清除改动标记，上传按钮不再出现红点
+  if(typeof clearDirty === "function") clearDirty();
   return cards.length;
 }
 
