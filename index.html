@@ -120,7 +120,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 }
 .th-stage.paused .th-dm{animation-play-state:paused;}
 .th-dm{
-  position:absolute;left:100%;top:0;display:flex;flex-direction:column;gap:2px;
+  position:absolute;left:100%;top:0;display:flex;align-items:center;gap:8px;
   width:max-content;max-width:94%;min-width:0;will-change:transform;cursor:pointer;
   background:rgba(255,252,246,.94);border:1px solid #e8c89a;border-radius:14px;
   padding:5px 14px 5px 5px;box-shadow:0 2px 8px rgba(150,90,40,.18);
@@ -129,10 +129,12 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 .th-dm:hover{border-color:#c98a4b;}
 @keyframes thFly{from{transform:translateX(0)}to{transform:translateX(var(--thw,-1200px))}}
 .th-dm .th-avatar{width:30px;height:30px;border-radius:50%;background:#ffe9c9;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.th-dm .th-main{display:flex;align-items:center;gap:8px;min-width:0;max-width:100%;}
-.th-dm .th-name{font-size:12px;font-weight:700;color:#8b5a2b;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;}
-.th-dm .th-text{font-size:14px;color:#4d3a21;line-height:1.4;white-space:nowrap;overflow:hidden;}
-.th-dm .th-time{font-size:10px;color:#9a7a55;padding-left:38px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px;}
+/* 固定表头：第一行头像+用户名，第二行日期时间 */
+.th-dm .th-head{display:flex;flex-direction:column;align-items:flex-start;gap:1px;flex-shrink:0;}
+.th-dm .th-name{font-size:12px;font-weight:700;color:#8b5a2b;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.35;}
+.th-dm .th-time{font-size:10px;color:#9a7a55;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3;}
+/* 表头后面接的文本框：最多显示两行 */
+.th-dm .th-text{font-size:14px;color:#4d3a21;line-height:1.4;min-width:56px;max-width:170px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-all;align-self:center;}
 .th-dm .th-x{position:absolute;top:-8px;right:-8px;width:18px;height:18px;border-radius:50%;background:#ff6b81;color:#fff;font-size:12px;line-height:18px;text-align:center;cursor:pointer;display:none;box-shadow:0 1px 3px rgba(0,0,0,.25);z-index:2;}
 .th-dm.th-del-mode .th-x{display:block;}
 .th-resize{height:14px;cursor:ns-resize;background:linear-gradient(180deg,transparent,rgba(201,138,75,.35));border-radius:0 0 14px 14px;margin-top:2px;touch-action:none;position:relative;}.th-resize::after{content:"⋮";position:absolute;right:6px;top:2px;color:#c98a4b;font-size:11px;}
@@ -2659,10 +2661,10 @@ function thTodayPriority(list){
   list.forEach(it => { if(it.time && it.time.slice(5, 10) === md) today.push(it); else rest.push(it); });
   return today.concat(rest);
 }
-function thRowH(){ return 44; }
+function thRowH(){ return 56; }
 function thLaneCount(){
   const st = document.getElementById("thStage");
-  const h = st ? st.clientHeight : 88;
+  const h = st ? st.clientHeight : 176;
   return Math.max(2, Math.floor(h / thRowH()));
 }
 function thStart(){
@@ -2687,11 +2689,11 @@ function thPlayOne(el, items, seed){
   const shown = it.text.length > 15 ? it.text.slice(0, 15) + "…" : it.text;
   el.innerHTML = `
     <span class="th-avatar">${escapeHtml(it.avatar || "🙂")}</span>
-    <span class="th-main">
+    <span class="th-head">
       <span class="th-name">${escapeHtml(it.name || "")}</span>
-      <span class="th-text" style="font-size:${size}px">${escapeHtml(shown)}</span>
+      <span class="th-time">${escapeHtml(it.time || "")}</span>
     </span>
-    <span class="th-time">${escapeHtml(it.time || "")}</span>
+    <span class="th-text" style="font-size:${size}px">${escapeHtml(shown)}</span>
     <span class="th-x" title="删除">×</span>`;
   el.dataset.id = it.id;
   const st = el.closest(".th-stage");
@@ -2702,7 +2704,10 @@ function thPlayOne(el, items, seed){
   el.classList.remove("fly");
   void el.offsetWidth;
   el.classList.add("fly");
-  el.onanimationend = () => thPlayOne(el, items, seed + pool.length);
+  el.onanimationend = () => {
+    el.style.animationDelay = "0s";  // 仅首轮错峰，循环后连续弹，树洞不空
+    thPlayOne(el, items, seed + pool.length);
+  };
 }
 function thTogglePause(){
   const st = document.getElementById("thStage");
