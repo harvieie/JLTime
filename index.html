@@ -28,14 +28,21 @@ body{background:#ffffff;color:#333;padding:20px;}
 .tab-btn.active{background:var(--primary);color:#fff;}
 .tab-panel{display:none;padding:14px;background:#f7f9fc;border:1px solid #eef2f7;border-radius:14px;gap:10px;align-items:center;flex-wrap:wrap;}
 .tab-panel.active{display:flex;}
-.fun-edit-tools{display:flex;gap:8px;width:100%;justify-content:center;flex-wrap:wrap;}
 .fun-chip{
   display:inline-flex;align-items:center;gap:4px;padding:7px 16px;border-radius:18px;
   background:#fff;border:1px solid #ffe0ea;color:#c2567f;cursor:pointer;font-size:14px;transition:.15s;
+  touch-action:none;user-select:none;-webkit-user-select:none;
 }
 .fun-chip:hover{border-color:#ff9ec4;background:#fff0f6;}
 .fun-chip.fun-no-url{opacity:.6;}
-.fun-chip.fun-selected{border-color:var(--primary);background:#fff0f6;box-shadow:0 0 0 2px rgba(255,125,169,.25);}
+.fun-chip.fun-edit-mode{position:relative;}
+.fun-del{
+  position:absolute;top:-7px;right:-7px;width:18px;height:18px;border-radius:50%;
+  background:#ff6b81;color:#fff;font-size:13px;line-height:18px;text-align:center;
+  cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.25);z-index:2;
+}
+.fun-chip.fun-add{background:#f0f6ff;color:#1971c2;border-style:dashed;border-color:#b6d4f7;}
+.fun-chip.fun-dragging{opacity:.55;transform:scale(1.06);box-shadow:0 6px 16px rgba(0,0,0,.15);}
 select,button,input,textarea{padding:8px 12px;border:1px solid #dde5ee;border-radius:10px;font-size:14px;background:#fff;color:#333;}
 input{flex:1;min-width:180px;}
 #searchInput{flex:none;width:160px;min-width:120px;}
@@ -407,17 +414,9 @@ button{border-radius:12px;}
     <button onclick="openThemeModal()" title="主题色/背景">主题</button>
   </div>
 
-  <!-- 拾趣面板：访客可跳转，编辑模式点击选中后在下方统一操作 -->
+  <!-- 拾趣面板：点击跳转；编辑模式长按进入编辑态（×删除/点文字编辑/＋新增/拖动排序） -->
   <div class="tab-panel" id="panelFun">
-    <div id="funList" style="display:flex;flex-wrap:wrap;gap:8px;width:100%;"></div>
-    <div id="funEditTools" class="fun-edit-tools">
-      <button class="btn-sec" onclick="funOp('up')">上移</button>
-      <button class="btn-sec" onclick="funOp('down')">下移</button>
-      <button class="btn-pri" onclick="funOp('edit')">编辑</button>
-      <button class="btn-danger" onclick="funOp('del')">删除</button>
-      <button class="btn-pri" onclick="funOp('add')">新增</button>
-      <button class="btn-sec" onclick="switchFunSort()">排序</button>
-    </div>
+    <div id="funList" style="display:flex;flex-wrap:wrap;gap:10px;width:100%;"></div>
   </div>
 </div>
 
@@ -2408,6 +2407,7 @@ function applyViewMode(mode){
   document.querySelectorAll("#themeModal button").forEach(b => {
     if(b.textContent.includes("上传背景图") || b.textContent.includes("清除背景图")) b.style.display = isEdit ? "" : "none";
   });
+  if(!isEdit) funEditActive = false;
   renderFun();
   // 当前若停在编辑选项卡则回到筛选
   if(!isEdit && isTabActive("edit")) switchTab("filter");
@@ -2440,67 +2440,117 @@ function seedFun(){
     saveFunItems([{ name: "树洞", url: "" }, { name: "小事", url: "" }, { name: "喜好", url: "" }]);
   }
 }
-function funSortMode(){ return localStorage.getItem("fun_sort_mode") === "1"; }
-let funSelected = -1;
+/* 编辑态：长按激活。点击跳转；编辑态下 ×删除/点文字编辑/＋新增/拖动排序 */
+let funEditActive = false;
 function renderFun(){
   const items = loadFunItems();
   const list = document.getElementById("funList");
-  const isEdit = viewMode === "full" && isAuthGranted();
-  const sorting = isEdit && funSortMode();
-  if(funSelected >= items.length) funSelected = -1;
+  if(!list) return;
+  const editMode = isFunEditMode() && funEditActive;
   list.innerHTML = items.map((it, i) => {
-    const sel = isEdit && funSelected === i ? " fun-selected" : "";
-    return `<span class="fun-chip${it.url ? "" : " fun-no-url"}${sel}" onclick="onFunChip(${i})">${escapeHtml(it.name)}</span>`;
+    const x = editMode ? `<span class="fun-del" onclick="event.stopPropagation();delFun(${i})" title="删除">×</span>` : "";
+    return `<span class="fun-chip${it.url ? "" : " fun-no-url"}${editMode ? " fun-edit-mode" : ""}" data-idx="${i}">${escapeHtml(it.name)}${x}</span>`;
   }).join("");
-  const tools = document.getElementById("funEditTools");
-  if(tools){
-    tools.style.display = isEdit ? "flex" : "none";
-    const sb = tools.querySelector("button:last-child");
-    if(sb) sb.textContent = sorting ? "完成" : "排序";
+  if(editMode){
+    list.insertAdjacentHTML("beforeend", `<span class="fun-chip fun-add" onclick="event.stopPropagation();funAdd()" title="新增">＋</span>`);
   }
 }
-function onFunChip(i){
-  const isEdit = viewMode === "full" && isAuthGranted();
-  if(!isEdit){ openFun(i); return; }
-  funSelected = (funSelected === i) ? -1 : i;
-  renderFun();
-}
+function isFunEditMode(){ return viewMode === "full" && isAuthGranted(); }
+function funAdd(){ funEditingIndex = -1; openFunModal(); }
 function openFun(i){
   const it = loadFunItems()[i];
-  if(!it || !it.url){ showToast("「" + (it && it.name ? it.name : "这个拾趣") + "」还没填链接，请在编辑模式下给它加上", 3); return; }
+  if(!it || !it.url){ showToast("「" + (it && it.name ? it.name : "这个拾趣") + "」还没填链接，请在编辑模式下长按它来添加", 3); return; }
   window.open(it.url, "_blank", "noopener");
 }
-function switchFunSort(){
-  localStorage.setItem("fun_sort_mode", funSortMode() ? "0" : "1");
-  renderFun();
-}
-/* 统一操作区：所有按钮文字化，对选中项操作 */
-function funOp(op){
-  const items = loadFunItems();
-  if(op === "add"){ funSelected = -1; funEditingIndex = -1; openFunModal(); return; }
-  if(funSelected < 0 || funSelected >= items.length){ showToast("请先点选一个拾趣，再进行操作", 2); return; }
-  if(op === "up") moveFun(funSelected, -1);
-  if(op === "down") moveFun(funSelected, 1);
-  if(op === "edit") editFun(funSelected);
-  if(op === "del") delFun(funSelected);
-}
-function moveFun(i, d){
-  const items = loadFunItems();
-  const j = i + d;
-  if(j < 0 || j >= items.length) return;
-  [items[i], items[j]] = [items[j], items[i]];
-  funSelected = j;
-  saveFunItems(items);
-}
-let funEditingIndex = -1;
-function addFunItem(){ funEditingIndex = -1; openFunModal(); }
 function editFun(i){ funEditingIndex = i; openFunModal(); }
 function delFun(i){
   const items = loadFunItems();
   items.splice(i, 1);
-  funSelected = -1;
   saveFunItems(items);
 }
+/* 指针交互：访客点击跳转；编辑模式长按进入编辑态；编辑态下拖动排序、点击编辑 */
+let funDown = null, dragItems = null;
+function bindFunPointer(){
+  const list = document.getElementById("funList");
+  if(!list) return;
+  list.addEventListener("pointerdown", e => {
+    if(!isFunEditMode()) return;            // 访客：交给 click 跳转
+    const chip = e.target.closest(".fun-chip");
+    if(!chip) return;
+    if(funEditActive && (chip.classList.contains("fun-add") || e.target.classList.contains("fun-del"))) return;
+    funDown = { idx: +chip.dataset.idx, x: e.clientX, y: e.clientY, dragging: false, longFired: false, chip: chip };
+    if(!funEditActive){
+      funDown.timer = setTimeout(() => {
+        funEditActive = true;
+        funDown.longFired = true;
+        renderFun();
+      }, 550);
+    }
+    e.preventDefault();
+  });
+  list.addEventListener("pointermove", e => {
+    if(!funDown) return;
+    const dx = e.clientX - funDown.x, dy = e.clientY - funDown.y;
+    if(Math.abs(dx) + Math.abs(dy) > 14){
+      if(funDown.timer){ clearTimeout(funDown.timer); funDown.timer = null; }
+      if(funEditActive){
+        if(!funDown.dragging){
+          funDown.dragging = true;
+          dragItems = loadFunItems();
+          funDown.chip.classList.add("fun-dragging");
+        }
+        funDragSort(e);
+      }
+    }
+  });
+  const end = e => {
+    if(!funDown) return;
+    if(funDown.timer){ clearTimeout(funDown.timer); funDown.timer = null; }
+    if(funEditActive && funDown.dragging){
+      funDown.chip.classList.remove("fun-dragging");
+      if(dragItems) saveFunItems(dragItems);
+      dragItems = null;
+    } else if(!funDown.longFired && funEditActive && !funDown.dragging){
+      editFun(funDown.idx);                 // 编辑态点击文字 → 编辑
+    }
+    funDown = null;
+  };
+  list.addEventListener("pointerup", end);
+  list.addEventListener("pointercancel", end);
+}
+function funDragSort(e){
+  const list = document.getElementById("funList");
+  const chips = [...list.querySelectorAll(".fun-chip:not(.fun-add):not(.fun-dragging)")];
+  const over = chips.find(c => {
+    const r = c.getBoundingClientRect();
+    return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+  });
+  if(!over || !dragItems) return;
+  const overIdx = +over.dataset.idx;
+  if(overIdx !== funDown.idx){
+    [dragItems[funDown.idx], dragItems[overIdx]] = [dragItems[overIdx], dragItems[funDown.idx]];
+    const movingBefore = over.getBoundingClientRect().top > funDown.chip.getBoundingClientRect().top;
+    list.insertBefore(funDown.chip, movingBefore ? over : over.nextSibling);
+    funDown.chip.dataset.idx = overIdx;
+    over.dataset.idx = funDown.idx;
+    funDown.idx = overIdx;
+  }
+}
+/* 编辑态下点面板空白 → 退出编辑态；访客/编辑非编辑态点击 → 跳转 */
+function bindFunClick(){
+  const list = document.getElementById("funList");
+  if(!list) return;
+  list.addEventListener("click", e => {
+    const chip = e.target.closest(".fun-chip");
+    if(!isFunEditMode()){ if(chip) openFun(+chip.dataset.idx); return; }
+    if(funEditActive){
+      if(!chip){ funEditActive = false; renderFun(); }  // 点空白退出
+    }else if(chip){
+      openFun(+chip.dataset.idx);
+    }
+  });
+}
+let funEditingIndex = -1;
 function openFunModal(){
   const editing = funEditingIndex >= 0 ? loadFunItems()[funEditingIndex] : null;
   document.getElementById("funModalTitle").textContent = editing ? "编辑拾趣" : "新增拾趣";
@@ -3394,6 +3444,8 @@ function init(){
   renderAnniChips();
   seedFun();
   renderFun();
+  bindFunPointer();
+  bindFunClick();
   startSurprises();
   checkAnniToday();
 }
