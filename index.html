@@ -2507,7 +2507,7 @@ async function wdDownload(){
     setCloudLoaded(latest);
     if(typeof clearDirty === "function") clearDirty();
     alert(`下载成功，已载入 ${count} 条记录（备份时间 ${formatNodeTime(latest.ts)}）`);
-    setTimeout(() => location.reload(), 300);  // 载入云端数据后自动刷新页面
+    reloadAfterCloudLoad();
   }catch(err){
     alert("下载失败：" + err.message);
   }finally{
@@ -2561,10 +2561,16 @@ async function wdRestoreNode(name){
     closeRestoreModal();
     if(typeof clearDirty === "function") clearDirty();  // 恢复以备份为准，不视为本地改动
     alert(`已恢复到 ${formatNodeTime(ts)} 的备份，共载入 ${count} 条记录`);
-    setTimeout(() => location.reload(), 300);  // 载入云端数据后自动刷新页面
+    reloadAfterCloudLoad();
   }catch(err){
     alert("恢复失败：" + err.message);
   }
+}
+
+/* 载入云端数据后自动刷新页面（不再次弹出密码框：刷新前确保提示已标记、登录状态保留） */
+function reloadAfterCloudLoad(){
+  sessionStorage.setItem("cache_prompt_shown", "1");
+  setTimeout(() => location.reload(), 300);
 }
 
 /* ---------- 大标题编辑 ---------- */
@@ -3315,7 +3321,7 @@ async function cloudPullAfterClear(){
     setCloudLoaded(latest);
     showToast(`已载入云端最新数据（${formatNodeTime(latest.ts)}，共 ${count} 条记录）`, 3);
     cleanTrash().catch(() => {});                        // 后台清理回收站中超过30天的图片
-    setTimeout(() => location.reload(), 900);            // 载入云端数据后自动刷新页面
+    setTimeout(reloadAfterCloudLoad, 900);
   }catch(err){
     showToast("云端拉取失败：" + err.message, 4);
   }
