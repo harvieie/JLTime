@@ -3280,8 +3280,9 @@ function enterWithPwd(){
   sessionStorage.setItem("auth_granted", "1");
   applyViewMode(mode);
   sessionStorage.removeItem("cloud_locked");
-  clearLocalCache();
+  sessionStorage.setItem("cache_prompt_shown", "1");
   closeCacheConfirm();
+  // 先拉取云端，成功才覆盖本地；失败则保留当前本地数据（不空白）
   cloudPullAfterClear();
 }
 
@@ -3301,23 +3302,22 @@ function getCloudLoadedText(){
   }
 }
 
-// 清除缓存后自动拉取云端最新数据覆盖（结果用 3 秒自动关闭的提示条显示）
+// 清除缓存后自动拉取云端最新数据覆盖（先拉取成功才覆盖本地，失败保留本地数据）
 async function cloudPullAfterClear(){
   try{
     const files = await wdList();
     if(!files.length){
-      showToast("本地缓存已清除；云端暂无备份", 3);
+      showToast("云端暂无备份，已保留本地数据", 3);
       return;
     }
     const latest = files[0];
-    const imported = await wdReadFile(latest.name);
-    const count = applyImportedData(imported);
+    const imported = await wdReadFile(latest.name);   // 先成功拉取
+    const count = applyImportedData(imported);         // 再覆盖本地
     setCloudLoaded(latest);
     showToast(`已载入云端最新数据（${formatNodeTime(latest.ts)}，共 ${count} 条记录）`, 3);
     cleanTrash().catch(() => {});                        // 后台清理回收站中超过30天的图片
-    setTimeout(reloadAfterCloudLoad, 900);
   }catch(err){
-    showToast("云端拉取失败：" + err.message, 4);
+    showToast("云端拉取失败，已保留本地数据：" + err.message, 5);
   }
 }
 
@@ -3333,12 +3333,8 @@ function showToast(msg, seconds){
 
 document.getElementById("cacheOkBtn").addEventListener("click", confirmClearCache);
 document.getElementById("cacheCancelBtn").addEventListener("click", function(){
-  // 取消：回到原本缓存的本地模式——可浏览本地缓存数据，云端连接保持断开（下载/上传/恢复不可用）
-  sessionStorage.setItem("auth_granted", "1");
-  sessionStorage.setItem("cloud_locked", "1");
-  sessionStorage.setItem("view_mode", "view");
-  viewMode = "view";
-  applyViewMode("view");  // 访客：可看筛选/拾趣，标题、纪念日、编辑不可操作
+  // 取消：不改变任何状态，仅关闭弹窗
+  //   （原本是本地浏览就保持本地浏览；是编辑模式就保持编辑；清缓存后就保持清除后状态）
   closeCacheConfirm();
 });
 document.getElementById("cacheEnterBtn").addEventListener("click", enterWithPwd);
@@ -4153,7 +4149,13 @@ function registerSW(){
 }
 function init(){
   document.getElementById("pageTitle").textContent = getPageTitle();
-  // 全新打开默认访客（view）；有编辑状态（full）则按状态恢复
+  // 状态机：首次打开（无任何授权状态）默认 = 本地缓存浏览（访客模式、云端断开）
+  //   取消 = 保持当前状态；确定 = 清缓存全锁（auth=0）；进入 = 输密码解锁云端并拉取
+  if(sessionStorage.getItem("auth_granted") === null){
+    sessionStorage.setItem("auth_granted", "1");
+    sessionStorage.setItem("cloud_locked", "1");
+    sessionStorage.setItem("view_mode", "view");
+  }
   const savedMode = sessionStorage.getItem("view_mode");
   applyViewMode(savedMode === "full" ? "full" : "view");
   if(!sessionStorage.getItem("cache_prompt_shown")) openCacheConfirm();
