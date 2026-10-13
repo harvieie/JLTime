@@ -2232,6 +2232,7 @@ async function wdUpload(){
     "· 大标题：" + (getPageTitle() || "（空）"),
     "· 卡片：" + cards.length + " 张",
     "· 图片：" + imgCount + " 张",
+    "· 拾趣：" + loadFunItems().length + " 个",
     pendings.length ? "· 待同步删除云端图：" + pendings.length + " 张（移入回收站）" : "",
     "· 云端现有节点：" + files.length + " 个" + (files.length >= GH.maxNodes ? "（将删除最旧1个）" : ""),
     "· 将保存为新节点：" + formatNodeTime(name.slice(8, 22)),
@@ -2434,10 +2435,13 @@ function loadFunItems(){
 function saveFunItems(list){
   localStorage.setItem("jlt_fun", JSON.stringify(list));
   renderFun();
+  // 编辑模式下改动即时同步云端（pushCloudSnapshot 内部会自行校验模式/锁定）
+  if(viewMode === "full" && isAuthGranted()) pushCloudSnapshot();
 }
 function seedFun(){
   if(!localStorage.getItem("jlt_fun")){
-    saveFunItems([{ name: "树洞", url: "" }, { name: "小事", url: "" }, { name: "喜好", url: "" }]);
+    localStorage.setItem("jlt_fun", JSON.stringify([{ name: "树洞", url: "" }, { name: "小事", url: "" }, { name: "喜好", url: "" }]));
+    renderFun();
   }
 }
 /* 编辑态：长按激活。点击跳转；编辑态下 ×删除/点文字编辑/＋新增/拖动排序 */
