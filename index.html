@@ -23,7 +23,7 @@ body{background:#ffffff;color:#333;padding:20px;}
 
 /* ===== 筛选栏 ===== */
 .topbar{max-width:800px;margin:0 auto 30px;}
-.tab-bar{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+.tab-bar{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;justify-content:center;}
 .tab-btn{padding:8px 26px;border-radius:20px;background:#f0f2f5;color:#666;border:1px solid transparent;cursor:pointer;font-size:14px;flex:none;}
 .tab-btn.active{background:var(--primary);color:#fff;}
 .tab-panel{display:none;padding:14px;background:#f7f9fc;border:1px solid #eef2f7;border-radius:14px;gap:10px;align-items:center;flex-wrap:wrap;}
@@ -177,7 +177,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 
 /* ===== 移动端 ===== */
 @media (max-width:640px){
-  .tab-bar{justify-content:flex-start;}
+  .tab-bar{justify-content:center;}
   .tab-panel{align-items:flex-start;}
   .timeline-path{left:22px;transform:none;width:32px;}
   .timeline-item{width:100%;padding-left:56px !important;padding-right:0 !important;text-align:left !important;}
