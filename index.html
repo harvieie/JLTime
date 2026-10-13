@@ -102,16 +102,15 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
 .card-note .desc.collapsed{display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden;}
 .note-toggle{display:inline-block;color:var(--primary);font-size:12px;cursor:pointer;margin-top:2px;user-select:none;}
 /* ===== 树洞弹幕 ===== */
-.fun-box{width:100%;box-sizing:border-box;border:1px solid #ffe0ea;border-radius:16px;padding:12px;background:#fff;box-shadow:0 2px 10px rgba(255,150,180,.08);}
+.fun-box{width:100%;box-sizing:border-box;padding:4px 0;background:transparent;border:none;box-shadow:none;}
 .fun-box-title{text-align:left;font-size:12px;color:#999;margin-bottom:6px;}
 .th-box{
-  width:100%;box-sizing:border-box;margin-top:12px;padding:10px 12px 8px;
-  border-radius:44% 44% 18px 18px;border:2px solid #c98a4b;
-  background:linear-gradient(180deg,#fff6ec,#ffe9d6);
-  box-shadow:0 4px 14px rgba(150,90,40,.18), inset 0 0 22px rgba(201,138,75,.14);
+  width:100%;box-sizing:border-box;margin-top:12px;padding:10px 0 8px;position:relative;
+  background:transparent;border:none;box-shadow:none;border-radius:0;
 }
-.th-bar{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
-.th-title{font-size:13px;color:#8b5a2b;font-weight:700;}
+.th-bar{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px;min-height:26px;position:relative;}
+.th-title{position:absolute;left:0;top:2px;font-size:13px;color:#8b5a2b;font-weight:700;}
+.th-tools{display:flex;gap:8px;}
 .th-tool{width:26px;height:26px;border-radius:50%;border:1px solid #d9a566;background:#fff;color:#8b5a2b;font-size:13px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;line-height:1;flex-shrink:0;}
 .th-tool:hover{background:#fff6ec;}
 .th-stage{
@@ -512,9 +511,10 @@ button{border-radius:12px;}
     <div class="th-box" id="treeholeBox">
       <div class="th-bar">
         <span class="th-title">树洞</span>
-        <span style="flex:1;"></span>
-        <span class="th-tool" onclick="thOpenSearch()" title="搜索弹幕">🔍</span>
-        <span class="th-tool" onclick="thAdd()" title="添加弹幕">＋</span>
+        <span class="th-tools">
+          <span class="th-tool" onclick="thOpenSearch()" title="搜索弹幕">🔍</span>
+          <span class="th-tool" onclick="thAdd()" title="添加弹幕">＋</span>
+        </span>
       </div>
       <div class="th-stage" id="thStage"></div>
       <div class="th-resize" id="thResize" title="拖动调整高度"></div>
@@ -541,10 +541,10 @@ button{border-radius:12px;}
     <textarea id="thTextInput" style="width:100%;min-height:90px;resize:vertical;" placeholder="想说的…"></textarea>
     <div style="text-align:left;font-size:12px;color:#888;margin:10px 0 4px;">用过的人（点按填入，长按删除）：</div>
     <div class="th-quick" id="thQuickNames"></div>
-    <div class="btn-row" style="justify-content:flex-end;margin-top:12px;">
-      <button class="btn-sec" onclick="closeThModal()">关闭</button>
+    <div class="btn-row" style="justify-content:center;margin-top:12px;">
       <button class="btn-danger" id="thDelBtn" onclick="thDelModal()" style="display:none;">删除</button>
       <button class="btn-pri" id="thSaveBtn" onclick="saveThModal()">保存</button>
+      <button class="btn-sec" onclick="closeThModal()">关闭</button>
     </div>
   </div>
 </div>
@@ -2622,6 +2622,9 @@ function switchTab(name){
     const b = document.getElementById(btns[k]);
     if(b) b.classList.toggle("active", k === name);
   });
+  // 拾趣面板时隐藏卡片时间轴，切回筛选/编辑时恢复
+  const tl = document.getElementById("timelineWrap");
+  if(tl) tl.style.display = name === "fun" ? "none" : "";
   if(name === "fun" && typeof thStart === "function") thStart();  // 切回拾趣时确保弹幕在飘
 }
 
