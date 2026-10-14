@@ -2678,6 +2678,13 @@ function applyViewMode(mode){
   });
   updateDirtyDot();  // 红点只在编辑模式且有改动时显示
   if(!isEdit) funEditActive = false;
+  // 清缓存未进入（cloud_locked）：背景音乐按钮置灰禁用，点中间提示输入暗号后恢复
+  const fab = document.getElementById("musicFab");
+  if(fab){
+    const locked = isCloudLocked();
+    fab.style.opacity = locked ? ".3" : "";
+    fab.style.cursor = locked ? "not-allowed" : "";
+  }
   renderFun();
   // 非编辑模式若停在编辑选项卡则回到筛选（访客可停留在拾趣）
   if(!isEdit && isTabActive("edit")) switchTab("filter");
@@ -3859,16 +3866,11 @@ function checkAnniToday(){
 
 /* ---------- 背景音乐 ---------- */
 function musicCdn(name){ return `https://${ghOwner()}.github.io/${ghRepo()}/music/` + name; }
-/* 内置默认曲目（公开CDN直连，不依赖GitHub API；fetch失败/清缓存后也能播） */
-const DEFAULT_MUSIC_LIST = ["music_01_piano.mp3","music_02_guitar.mp3","music_03_musicbox.mp3","music_04_rainpiano.mp3","music_05_cello.mp3","music_06_ambient.mp3"];
 function listMusicFiles(){
   return fetch(ghApi() + "music", { headers: ghHeaders() })
     .then(r => r.ok ? r.json() : [])
-    .then(list => {
-      const names = (list || []).filter(f => f.name.match(/\.(mp3|m4a|ogg|wav)$/i)).map(f => f.name);
-      return names.length ? names : DEFAULT_MUSIC_LIST;   // 云端列表拉不到（限流/清缓存/断网）就用内置曲目
-    })
-    .catch(() => DEFAULT_MUSIC_LIST);
+    .then(list => (list || []).filter(f => f.name.match(/\.(mp3|m4a|ogg|wav)$/i)).map(f => f.name))
+    .catch(() => []);
 }
 function loadMusic(name, autoplay){
   const audio = document.getElementById("bgmAudio");
@@ -3878,6 +3880,7 @@ function loadMusic(name, autoplay){
   if(autoplay){ audio.play().catch(()=>{}); document.getElementById("musicFab").classList.add("playing"); }
 }
 function toggleMusic(){
+  if(isCloudLocked()) return showToast("请先输入暗号进入后使用背景音乐", 2);
   const audio = document.getElementById("bgmAudio");
   const fab = document.getElementById("musicFab");
   if(audio.paused){
@@ -3959,7 +3962,10 @@ function delMusic(name){
     })
     .catch(err => alert("删除失败：" + err.message));
 }
-function openMusicModal(){ renderMusicList(); document.getElementById("musicModal").style.display = "flex"; }
+function openMusicModal(){
+  if(isCloudLocked()) return showToast("请先输入暗号进入后使用背景音乐", 2);
+  renderMusicList(); document.getElementById("musicModal").style.display = "flex";
+}
 function closeMusicModal(){ document.getElementById("musicModal").style.display = "none"; }
 /* 长按悬浮钮 = 打开音乐管理 */
 (function(){
