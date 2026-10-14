@@ -2827,7 +2827,8 @@ function thLaunchRow(st, items, lane, dms, seeds){
     const dur = (W + w) / v;             // 完整飞行时间（整条飞出左屏才结束）
     dm.dataset.dur = dur.toFixed(2);
     const tid = setTimeout(() => {
-      if(!dm.isConnected) return;
+      if(!dm.isConnected){ console.log('[TH] skip disconnected j=', j); return; }
+      console.log('[TH] launch j=', j, 'lane=', lane);
       thStartFly(dm, items, seeds[j], true, null, lane, j, dms.length, dur, dur, 0, rowObj);
     }, t * 1000);
     thPendingTimers.push(tid);
