@@ -994,7 +994,8 @@ function findCardById(id){
 }
 
 function makeCardLabel(dateStr, locArr){
-  return `${dateStr.slice(0,4)}.${dateStr.slice(5,7)}.${dateStr.slice(8,10)} · ${locArr.join(" / ")}`;
+  if(!dateStr) return (locArr || []).join(" / ");
+  return `${dateStr.slice(0,4)}.${dateStr.slice(5,7)}.${dateStr.slice(8,10)} · ${(locArr || []).join(" / ")}`;
 }
 
 function applySort(list){
