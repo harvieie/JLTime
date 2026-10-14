@@ -2855,6 +2855,7 @@ function thPlayOne(el, items, seed, rand, fixedId){
 /* 启动飞行：立即从屏右飞入（opacity 1）；飞完后透明隐藏，屏外等待到相位对齐再淡入 → 循环绝不闪现 */
 function thStartFly(el, items, seed, rand, fixedId, lane, j, perRow, dur, delay, cycle, gap){
   const st = el.closest(".th-stage");
+  if(!st || !st.isConnected) return;
   thPlayOne(el, items, seed, rand, fixedId);
   const pool = items.filter(it => it && it.text && it.text.trim());
   if(!pool.length) return;
