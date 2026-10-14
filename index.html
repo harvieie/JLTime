@@ -2811,7 +2811,6 @@ function thSpawnRow(st, items, lane, baseSeed){
    各泳道首发错开；先发的层级(z-index)高于后发的 */
 let thPendingTimers = [];
 function thLaunchRow(st, items, lane, dms, seeds){
-  console.log('[TH] thLaunchRow lane=', lane, 'dms=', dms.length, 'items=', items.length);
   const rowObj = { dms, seeds, lane, perRow: dms.length, finished: 0 };
   dms.forEach((dm, j) => {
     dm.style.zIndex = 100 - j;          // 先发的层级高
@@ -2819,7 +2818,7 @@ function thLaunchRow(st, items, lane, dms, seeds){
     dm.style.opacity = "0";
   });
   const W = st.clientWidth;
-  let t = 400 + lane * 800 + Math.random() * 500;   // 首发错落
+  let t = 400 + lane * 800 + Math.random() * 500;   // 首发错落（毫秒）
   dms.forEach((dm, j) => {
     thPlayOne(dm, items, seeds[j], true, null);
     const len = parseInt(dm.dataset.len || 0, 10);
@@ -2827,13 +2826,13 @@ function thLaunchRow(st, items, lane, dms, seeds){
     const w = dm.offsetWidth || 200;
     const dur = (W + w) / v;             // 完整飞行时间（整条飞出左屏才结束）
     dm.dataset.dur = dur.toFixed(2);
+    const gap = (W / v) * 1000;         // 前条飞完屏宽所需时间（毫秒）→ 前条左端触左缘时后条发车
     const tid = setTimeout(() => {
-      if(!dm.isConnected){ console.log('[TH] skip disconnected j=', j); return; }
-      console.log('[TH] launch j=', j, 'lane=', lane);
+      if(!dm.isConnected) return;
       thStartFly(dm, items, seeds[j], true, null, lane, j, dms.length, dur, dur, 0, rowObj);
-    }, t * 1000);
+    }, t);
     thPendingTimers.push(tid);
-    t += W / v;                          // 下一条：前一条左端刚触左缘时发车（前条继续往外走完整宽度才消失）
+    t += gap;
   });
 }
 /* 下一轮重排：复用本行元素，重新随机选弹幕、重算时长，错峰再起飞 */
