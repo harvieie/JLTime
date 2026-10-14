@@ -2911,9 +2911,10 @@ function thPlayOne(el, items, seed, rand, fixedId){
   }else{
     it = pool[seed % pool.length];
   }
-  // 字号随字数缩小：≤6字15px / ≤12字13px / ≤30字11px（15字一行，两行刚好排满30字）
-  const size = it.text.length <= 6 ? 15 : it.text.length <= 12 ? 13 : it.text.length <= 30 ? 11 : 10;
-  const shown = it.text.length > 30 ? it.text.slice(0, 30) + "…" : it.text;
+  // 弹幕上只显示回车前的第一行（后面的文字不在弹幕条出现，编辑详情里仍可见全文）；字号/速度都按这一行字数判定
+  const firstLine = (it.text || "").split("\n")[0];
+  const size = firstLine.length <= 6 ? 15 : firstLine.length <= 12 ? 13 : firstLine.length <= 30 ? 11 : 10;
+  const shown = firstLine.length > 30 ? firstLine.slice(0, 30) + "…" : firstLine;
   el.innerHTML = `
     <span class="th-head">
       <span class="th-row1"><span class="th-avatar">${escapeHtml(it.avatar || "🙂")}</span><span class="th-name">${escapeHtml(it.name || "")}</span></span>
@@ -2922,7 +2923,7 @@ function thPlayOne(el, items, seed, rand, fixedId){
     <span class="th-text" style="font-size:${size}px">${escapeHtml(shown)}</span>
     <span class="th-x" title="删除">×</span>`;
   el.dataset.id = it.id;
-  el.dataset.len = String(it.text.length);
+  el.dataset.len = String(firstLine.length);
   return it;
 }
 /* 启动飞行：Web Animations API 确定性动画。每次起飞都是全新动画，首帧即屏右外（left:100%+translateX(0)），
