@@ -2754,25 +2754,26 @@ function thLaneCount(){
   const h = st ? st.clientHeight : 176;
   return Math.max(2, Math.floor(h / thRowH()));
 }
-/* 每行最近播放的弹幕 id（树洞标题点按 → 重复刚才弹出的弹幕） */
-let thLastIds = null;
-function thRender(todayFirst, fixedN){
+/* 记录刚才的弹幕计划：所在行 lane 与 seed（树洞标题点按 → 完全复现刚才的排布） */
+let thLastPlan = null;
+function thRender(todayFirst){
   const st = document.getElementById("thStage");
   if(!st) return;
   st.innerHTML = "";
   const items = thTodayPriority(loadTreehole());
-  const n = fixedN || (3 + Math.floor(Math.random() * 4));  // 每次随机出 3~6 个
-  st.style.height = (n * thRowH() + 8) + "px";
-  thLastIds = [];
-  for(let i = 0; i < n; i++){
-    const dm = document.createElement("div");
-    dm.className = "th-dm";
-    dm.style.animationDelay = (i * 0.6) + "s";  // 每行错峰进场，不齐刷刷
-    st.appendChild(dm);
-    // 当天第一次：按往年今日优先的顺序弹（首条固定），随后随机循环
-    const seed = todayFirst ? i : Math.floor(Math.random() * 1e9);
-    thPlayOne(dm, items, seed, true);
-    thLastIds.push(dm.dataset.id);
+  const n = thLaneCount();                       // 行数 = 当前树洞高度（拖高后自动多出行）
+  thLastPlan = [];
+  for(let lane = 0; lane < n; lane++){
+    const perRow = 1 + Math.floor(Math.random() * 3);   // 每行一次 1~3 条，行内错峰不遮挡
+    for(let j = 0; j < perRow; j++){
+      const dm = document.createElement("div");
+      dm.className = "th-dm";
+      dm.style.top = lane * thRowH() + 4 + "px";
+      st.appendChild(dm);
+      const seed = todayFirst ? lane : Math.floor(Math.random() * 1e9);
+      thPlayOne(dm, items, seed, true, null, j, perRow);
+      thLastPlan.push({ lane, seed, fixedId: null, perRow });
+    }
   }
 }
 /* 树洞/进入树洞页：随机弹；当天第一次进入优先往年往月今日的弹幕，随后随机 */
@@ -2782,23 +2783,21 @@ function thStart(){
   if(firstToday) sessionStorage.setItem("jlt_th_first_done", todayStr);
   thRender(firstToday);
 }
-/* 喜忧：每次点按随机刷出不同的弹幕 */
+/* 喜忧：只刷新弹幕内容，树洞高度保持不变 */
 function thShuffle(){ thRender(false); }
-/* 树洞标题点按：重复刚才弹出的弹幕（行数与每条都与刚才一致） */
+/* 树洞标题点按：重复刚才弹出的弹幕（行数、每行几条、每条内容都与刚才一致） */
 function thRepeatLast(){
   const st = document.getElementById("thStage");
   if(!st) return;
-  if(!thLastIds || !thLastIds.length){ thRender(false); return; }
+  if(!thLastPlan || !thLastPlan.length){ thRender(false); return; }
   st.innerHTML = "";
   const items = thTodayPriority(loadTreehole());
-  const n = thLastIds.length;
-  st.style.height = (n * thRowH() + 8) + "px";
-  for(let i = 0; i < n; i++){
+  for(const p of thLastPlan){
     const dm = document.createElement("div");
     dm.className = "th-dm";
-    dm.style.animationDelay = (i * 0.6) + "s";
+    dm.style.top = p.lane * thRowH() + 4 + "px";
     st.appendChild(dm);
-    thPlayOne(dm, items, i, true, thLastIds[i] || null);
+    thPlayOne(dm, items, p.seed, true, p.fixedId, 0, 1);
   }
 }
 /* 树洞当前是否还有弹幕在飘（没有 → 点空白随机继续弹） */
@@ -2806,7 +2805,7 @@ function thStageHasDm(){
   const st = document.getElementById("thStage");
   return st ? [...st.querySelectorAll(".th-dm")].some(el => el.style.display !== "none") : false;
 }
-function thPlayOne(el, items, seed, rand, fixedId){
+function thPlayOne(el, items, seed, rand, fixedId, j, perRow){
   const pool = items.filter(it => it && it.text && it.text.trim());
   if(!pool.length){ el.style.display = "none"; return; }
   let it;
@@ -2829,8 +2828,11 @@ function thPlayOne(el, items, seed, rand, fixedId){
   const st = el.closest(".th-stage");
   const dist = -(st.clientWidth + el.offsetWidth + 60);
   el.style.setProperty("--thw", dist + "px");
-  el.style.animationDuration = Math.max(8, 6 + it.text.length * 0.5 + Math.random() * 3) + "s";
-  el.style.top = (seed % thLaneCount()) * thRowH() + 4 + "px";
+  const dur = Math.max(8, 6 + it.text.length * 0.5 + Math.random() * 3);
+  el.style.animationDuration = dur + "s";
+  if(!el.style.top) el.style.top = (seed % thLaneCount()) * thRowH() + 4 + "px";
+  // 行内错峰：同一条行 1~3 条均匀分布在屏上，不折叠遮挡
+  if(typeof j === "number" && perRow > 1) el.style.animationDelay = (j * dur / perRow) + "s";
   el.classList.remove("fly");
   void el.offsetWidth;
   el.classList.add("fly");
