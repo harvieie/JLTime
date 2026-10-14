@@ -3064,15 +3064,14 @@ function openThModal(){
   document.getElementById("thNameInput").value = it ? it.name : "";
   document.getElementById("thTimeInput").value = it ? it.time : nowStr;
   document.getElementById("thTextInput").value = it ? it.text : "";
-  // 访客查看详情：只读；访客添加：可写
-  const viewOnly = thEditId !== null && !isFunEditMode();
+  // 访客 / 编辑模式都可编辑弹幕内容并保存本地（缓存）；删除仅限编辑模式
   ["thTextInput", "thTimeInput", "thNameInput", "thAvatarInput"].forEach(id => {
-    document.getElementById(id).readOnly = viewOnly;
+    document.getElementById(id).readOnly = false;
   });
-  document.getElementById("thSaveBtn").style.display = viewOnly ? "none" : "";
+  document.getElementById("thSaveBtn").style.display = "";   // 保存本地：所有模式可见
   // 上传云端：所有模式可见（把本地已有+新增的弹幕同步到云端）
   // 删除按钮：仅编辑模式编辑已有弹幕时显示
-  document.getElementById("thDelBtn").style.display = (thEditId !== null && !viewOnly) ? "" : "none";
+  document.getElementById("thDelBtn").style.display = (thEditId !== null && isFunEditMode()) ? "" : "none";
   // 头像快捷：整排按使用先后从左到右（用过的排前面，未用过的排后面）
   const recent = thRecentAvatars();
   document.getElementById("thAvatarQuick").innerHTML =
