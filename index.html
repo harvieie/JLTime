@@ -539,12 +539,12 @@ button{border-radius:12px;}
     </div>
     <div class="th-box" id="treeholeBox">
       <div class="th-bar">
-        <span class="th-title" onclick="thShuffle()" title="随机刷出不同的弹幕">喜忧</span>
+        <span class="th-title" onclick="thRepeatLast()" title="重复刚才弹出的弹幕">喜忧</span>
         <span class="th-tools">
           <span class="th-tool" onclick="thOpenSearch()" title="搜索弹幕">🔍<i class="th-brow"></i></span>
           <span class="th-tool" onclick="thAdd()" title="添加弹幕">＋<i class="th-brow"></i></span>
         </span>
-        <span class="th-title th-x-title" onclick="thRepeatLast()" title="重复刚才弹出的弹幕">树洞</span>
+        <span class="th-title th-x-title" onclick="thShuffle()" title="随机刷出不同的弹幕">树洞</span>
       </div>
       <div class="th-stage" id="thStage"></div>
       <div class="th-resize" id="thResize" title="拖动调整高度"></div>
@@ -2764,7 +2764,7 @@ function thRender(todayFirst){
   const n = thLaneCount();                       // 行数 = 当前树洞高度（拖高后自动多出行）
   thLastPlan = [];
   for(let lane = 0; lane < n; lane++){
-    const perRow = 1 + Math.floor(Math.random() * 3);   // 每行一次 1~3 条
+    const perRow = 1 + Math.floor(Math.random() * 5);   // 每行一次 1~5 条
     const arr = [];
     for(let j = 0; j < perRow; j++){
       const dm = document.createElement("div");
@@ -2775,13 +2775,11 @@ function thRender(todayFirst){
       thPlayOne(dm, items, seed, true, null);    // 先渲染内容用于测量宽度/长度
       arr.push({ dm, seed, len: parseInt(dm.dataset.len || 0, 10) });
     }
-    // 按文本长度升序排槽位：短（快）先发、长（慢）后发 → 后发速度更慢，永不追上先发
-    arr.sort((a, b) => a.len - b.len);
-    // 时长按文字长度算（文字多更慢），并强制单调递增（后发槽位时长 ≥ 前发槽位）
+    // 时长按文字长度（文字多更慢）；后发条若比前发快（短），压到跟前面一个速度贴住走，永不追尾
     let prevD = 0;
     arr.forEach((r, j) => {
       let D = Math.max(8, 6 + r.len * 0.5 + Math.random() * 3);
-      if(j > 0 && D <= prevD) D = prevD * 1.08;
+      if(j > 0 && D < prevD) D = prevD;        // 后发不超过前发速度（贴住前面跟随）
       r.D = D;
       prevD = D;
     });
