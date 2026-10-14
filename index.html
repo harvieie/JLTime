@@ -3421,6 +3421,12 @@ async function enterWithPwd(){
   sessionStorage.removeItem("cloud_locked");
   sessionStorage.setItem("cache_prompt_shown", "1");
   closeCacheConfirm();
+  // 密码正确后：先清掉本地旧业务数据（保留 jlt_mode 与 gh_* 仓库配置），再从云端拉最新，避免旧数据残留
+  [
+    STORAGE.cards, STORAGE.title, "anniversaries", "jlt_theme", "jlt_fun", "jlt_treehole",
+    "jlt_daynight", "card_badges", "last_music", "cloud_loaded", "loaded_full_urls",
+    "jlt_th_quick", "jlt_th_recent_avatars", "jlt_th_first_done", "jlt_fun_edit", "jlt_captions"
+  ].forEach(k => { try{ localStorage.removeItem(k); }catch(e){} });
   // 先清掉旧版页面缓存与旧 Service Worker（下次打开自动拿最新版），再直接拉取云端数据
   try{
     if("caches" in window){
