@@ -671,7 +671,7 @@ button{border-radius:12px;}
 </div>
 
 <!-- 纪念日管理 -->
-<div class="modal-overlay" id="anniModal">
+<div class="modal-overlay" id="anniModal" onclick="if(event.target===this) closeAnniModal()">
   <div class="modal-box">
     <div class="modal-title">纪念日天数</div>
     <div id="anniList" style="max-height:50vh;overflow:auto;text-align:left;margin:10px 0;"></div>
@@ -689,7 +689,6 @@ button{border-radius:12px;}
     </div>
     <div class="btn-row">
       <button class="btn-pri" id="anniAddBtn" onclick="openAnniEditor()">＋ 添加纪念日</button>
-      <button class="btn-sec" onclick="closeAnniModal()">关闭</button>
     </div>
   </div>
 </div>
