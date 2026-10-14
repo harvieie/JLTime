@@ -2788,13 +2788,15 @@ function thRender(todayFirst){
       prevD = D;
     });
     const maxD = Math.max(...arr.map(r => r.D));   // 行统一周期（最长那条）
+    const gap = (maxD / perRow) * 1.8;            // 错峰间隔加大，条与条之间明显分开
     arr.forEach((r, j) => {
-      const delay = j * (maxD / perRow);        // 槽位错峰：后发等先发飞出足够距离
+      const delay = j * gap;
       r.dm.dataset.dur = r.D.toFixed(2);
       r.dm.dataset.delay = delay.toFixed(2);
       r.dm.dataset.cycle = maxD.toFixed(2);
-      thStartFly(r.dm, items, r.seed, true, null, lane, j, perRow, r.D, delay, maxD);
-      thLastPlan.push({ lane, seed: r.seed, fixedId: null, j, perRow, dur: r.D, delay, cycle: maxD });
+      r.dm.dataset.gap = gap.toFixed(2);
+      thStartFly(r.dm, items, r.seed, true, null, lane, j, perRow, r.D, delay, maxD, gap);
+      thLastPlan.push({ lane, seed: r.seed, fixedId: null, j, perRow, dur: r.D, delay, cycle: maxD, gap });
     });
   }
 }
@@ -2819,7 +2821,7 @@ function thRepeatLast(){
     dm.className = "th-dm";
     dm.style.top = p.lane * thRowH() + 4 + "px";
     st.appendChild(dm);
-    thStartFly(dm, items, p.seed, true, p.fixedId, p.lane, p.j, p.perRow, p.dur, p.delay, p.cycle);
+    thStartFly(dm, items, p.seed, true, p.fixedId, p.lane, p.j, p.perRow, p.dur, p.delay, p.cycle, p.gap);
   }
 }
 /* 树洞当前是否还有弹幕在飘（没有 → 点空白随机继续弹） */
@@ -2852,7 +2854,7 @@ function thPlayOne(el, items, seed, rand, fixedId){
   return it;
 }
 /* 启动飞行：时长按文字长度（文字多更慢）；行内统一周期，循环时屏外等待相位对齐 → 同周期错峰，永不贴合 */
-function thStartFly(el, items, seed, rand, fixedId, lane, j, perRow, dur, delay, cycle){
+function thStartFly(el, items, seed, rand, fixedId, lane, j, perRow, dur, delay, cycle, gap){
   const st = el.closest(".th-stage");
   thPlayOne(el, items, seed, rand, fixedId);
   const pool = items.filter(it => it && it.text && it.text.trim());
@@ -2860,6 +2862,7 @@ function thStartFly(el, items, seed, rand, fixedId, lane, j, perRow, dur, delay,
   if(dur == null) dur = parseFloat(el.dataset.dur || 8);
   if(delay == null) delay = parseFloat(el.dataset.delay || 0);
   if(cycle == null) cycle = parseFloat(el.dataset.cycle || dur);
+  if(gap == null) gap = parseFloat(el.dataset.gap || (cycle / perRow));
   const W = st.clientWidth;
   const dist = -(W + el.offsetWidth + 60);
   el.style.setProperty("--thw", dist + "px");
@@ -2870,11 +2873,10 @@ function thStartFly(el, items, seed, rand, fixedId, lane, j, perRow, dur, delay,
   void el.offsetWidth;
   el.classList.add("fly");
   el.onanimationend = () => {
-    if(fixedId){ thStartFly(el, items, seed, rand, fixedId, lane, j, perRow, dur, delay, cycle); return; }  // 固定重放同一条
-    // 随机模式：下一条随机挑；循环时等待到相位对齐（屏外右侧），同周期错峰 → 永不贴合
+    if(fixedId){ thStartFly(el, items, seed, rand, fixedId, lane, j, perRow, dur, delay, cycle, gap); return; }
     const nextSeed = rand ? seed + 1 + Math.floor(Math.random() * Math.max(1, pool.length - 1)) : seed + pool.length;
-    const nextDelay = cycle ? (cycle - dur + j * (cycle / perRow)) : delay;
-    thStartFly(el, items, nextSeed, rand, null, lane, j, perRow, dur, nextDelay, cycle);
+    const nextDelay = cycle ? (cycle - dur + j * gap) : delay;   // 屏外等待相位对齐，条间保持拉开
+    thStartFly(el, items, nextSeed, rand, null, lane, j, perRow, dur, nextDelay, cycle, gap);
   };
 }
 function thTogglePause(){
