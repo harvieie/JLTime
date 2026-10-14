@@ -572,8 +572,8 @@ button{border-radius:12px;}
     <div style="text-align:left;font-size:12px;color:#888;margin:10px 0 4px;">用过的人（点按填入，长按删除）：</div>
     <div class="th-quick" id="thQuickNames"></div>
     <div class="btn-row" style="justify-content:center;margin-top:12px;">
-      <button class="btn-danger" id="thDelBtn" onclick="thDelModal()" style="display:none;">删除</button>
-      <button class="btn-pri" id="thSaveBtn" onclick="saveThModal()">保存</button>
+      <button class="btn-pri" id="thSaveBtn" onclick="saveThModal()">保存本地</button>
+      <button class="success" id="thCloudBtn" onclick="thUploadCloud()">上传云端</button>
       <button class="btn-sec" onclick="closeThModal()">关闭</button>
     </div>
   </div>
@@ -2027,10 +2027,10 @@ async function pushCloudSnapshot(note){
     showToast("云端数据更新失败：" + err.message, 4);
   }
 }
-/* 访客模式添加树洞弹幕后自动上传到云端 */
-async function thAutoPush(){
+/* 上传云端：把本地已有的（包括新增加的）树洞弹幕整体上传为云端快照（保留 10 节点，最新替换最旧） */
+async function thUploadCloud(){
   if(isCloudLocked()){
-    showToast("云端已断开：弹幕已存本地，解锁后手动点「上传」可同步", 4);
+    showToast("云端已断开：数据仅保存在本地，解锁后重试", 4);
     return;
   }
   try{
@@ -2038,9 +2038,9 @@ async function thAutoPush(){
     if(files.length >= GH.maxNodes){
       for(const f of files.slice(GH.maxNodes - 1)) await wdDeleteFile(f);
     }
-    const name = `jltime_${nowStamp()}_树洞新增.json`;
+    const name = `jltime_${nowStamp()}_树洞.json`;
     await wdWriteFile(name, packCloudData());
-    showToast("树洞弹幕已自动上传到云端", 2);
+    showToast("树洞弹幕已上传到云端", 2);
   }catch(err){
     showToast("云端同步失败：" + err.message, 4);
   }
@@ -3047,8 +3047,7 @@ function openThModal(){
     document.getElementById(id).readOnly = viewOnly;
   });
   document.getElementById("thSaveBtn").style.display = viewOnly ? "none" : "";
-  // 删除按钮：仅编辑模式编辑已有弹幕时显示
-  document.getElementById("thDelBtn").style.display = (thEditId !== null && !viewOnly) ? "" : "none";
+  // 上传云端：所有模式可见（把本地已有+新增的弹幕同步到云端）
   // 头像快捷：整排按使用先后从左到右（用过的排前面，未用过的排后面）
   const recent = thRecentAvatars();
   document.getElementById("thAvatarQuick").innerHTML =
@@ -3098,7 +3097,6 @@ function saveThModal(){
   thSaveRecentAvatar(avatar);
   closeThModal();
   thStart(); thSearch();
-  if(thEditId === null && viewMode === "view") thAutoPush();  // 访客添加：自动上传云端
 }
 function thOpenSearch(){
   const p = document.getElementById("thSearchPanel");
@@ -3126,14 +3124,6 @@ function thSearch(){
 function thOpenFromSearch(id){
   thEditId = id;
   openThModal();  // 访客只读查看，编辑模式可编辑
-}
-function thDelModal(){
-  if(!thEditId) return;
-  if(confirm("确定删除这条弹幕吗？")){
-    saveTreehole(loadTreehole().filter(it => it.id !== thEditId));
-    closeThModal();
-    thStart(); thSearch();
-  }
 }
 const DEFAULT_FUN = [
   { name: "4399双人游戏", url: "https://www.4399.com/theme/81.htm" },
