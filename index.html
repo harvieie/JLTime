@@ -9,7 +9,7 @@
 <title>JL Time</title>
 <style>
 :root{--primary:#ff7da9;}
-*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji";}
 body{background:#ffffff;color:#333;padding:20px;}
 
 /* ===== 顶部大标题（空心胖圆） ===== */
@@ -359,9 +359,17 @@ body:has(#mosaicModal[style*="flex"]) .music-fab{opacity:.35;}
 /* 大标题两侧跳动爱心 */
 .title-wrap{position:relative;display:inline-block;}
 .title-heart{
-  position:absolute;top:50%;transform:translateY(-50%);color:var(--primary);font-size:24px;opacity:.85;
+  position:absolute;top:50%;transform:translateY(-50%);color:#ff5b8a;font-size:26px;opacity:.95;
+  filter:drop-shadow(0 0 7px rgba(255,120,165,.65));
   transition:left .9s cubic-bezier(.3,1.2,.4,1),right .9s cubic-bezier(.3,1.2,.4,1);
+  animation:heartBeat 1.7s ease-in-out infinite;
   pointer-events:none;
+}
+@keyframes heartBeat{
+  0%,100%{transform:translateY(-50%) scale(1);}
+  30%{transform:translateY(-50%) scale(1.22);}
+  45%{transform:translateY(-50%) scale(1.05);}
+  60%{transform:translateY(-50%) scale(1.18);}
 }
 button{border-radius:12px;}
 .card{
@@ -500,8 +508,8 @@ button{border-radius:12px;}
 
 <div class="topbar">
   <div class="tab-bar" id="tabBar">
-    <button type="button" class="tab-btn active" id="tabFilter" onclick="switchTab('filter')">筛选</button>
-    <button type="button" class="tab-btn" id="tabEdit" onclick="switchTab('edit')">编辑</button>
+    <button type="button" class="tab-btn active" id="tabFilter" onclick="switchTab('filter')">时迹</button>
+    <button type="button" class="tab-btn" id="tabEdit" onclick="switchTab('edit')">简驭</button>
     <button type="button" class="tab-btn" id="tabFun" onclick="switchTab('fun')">拾趣</button>
   </div>
 
@@ -540,7 +548,7 @@ button{border-radius:12px;}
   <!-- 拾趣面板：网页框 + 树洞框 -->
   <div class="tab-panel" id="panelFun">
     <div class="fun-box">
-      <div class="fun-box-title">网页</div>
+      <div class="fun-box-title">移步</div>
       <div id="funList" style="display:flex;flex-wrap:wrap;gap:10px;width:100%;"></div>
     </div>
     <div class="th-box" id="treeholeBox">
@@ -669,13 +677,14 @@ button{border-radius:12px;}
     <div id="anniEditBox" style="display:none;text-align:left;border-top:1px solid #ffe3ec;padding-top:10px;">
       <input id="anniLabel" placeholder="名称，如：在一起 / 求婚" style="width:100%;padding:8px;margin-bottom:8px;border:1px solid #e9ecef;border-radius:10px;box-sizing:border-box;outline:none;">
       <input type="date" id="anniDate" style="width:100%;padding:8px;margin-bottom:8px;border:1px solid #e9ecef;border-radius:10px;box-sizing:border-box;outline:none;">
-      <div style="font-size:13px;color:#888;margin-bottom:6px;">选一个小图标：</div>
-      <div id="anniIconPick" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;font-size:20px;"></div>
-      <div style="display:flex;gap:6px;margin-bottom:12px;">
-        <input id="anniIconInput" placeholder="也可以输入任意图标/文字" style="flex:1;padding:8px;border:1px solid #e9ecef;border-radius:20px;box-sizing:border-box;outline:none;">
-        <button class="btn-pri" onclick="pickAnniIconInput()">用</button>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+        <input id="anniIconInput" placeholder="图标" oninput="pickAnniIconInput()" style="width:56px;flex:none;padding:8px;border:1px solid #e9ecef;border-radius:16px;box-sizing:border-box;outline:none;text-align:center;font-size:16px;">
+        <div id="anniIconPick" style="display:flex;gap:6px;flex-wrap:wrap;font-size:20px;flex:1;"></div>
       </div>
-      <button class="btn-pri" onclick="saveAnni()" style="width:100%;padding:10px;">保存</button>
+      <div style="display:flex;gap:8px;justify-content:center;margin-bottom:12px;">
+        <button class="btn-pri" onclick="saveAnni()">保存</button>
+        <button class="btn-sec" onclick="closeAnniModal()">关闭</button>
+      </div>
     </div>
     <div class="btn-row">
       <button class="btn-pri" id="anniAddBtn" onclick="openAnniEditor()">＋ 添加纪念日</button>
@@ -700,14 +709,13 @@ button{border-radius:12px;}
 
 <!-- 脚印图标点选 -->
 <div class="modal-overlay" id="footIconModal">
-  <div class="modal-box" style="max-width:300px;">
+  <div class="modal-box" style="max-width:320px;">
     <div class="modal-title">给脚印加个标记</div>
-    <div id="footIconGrid" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:12px 0;font-size:26px;"></div>
-    <div style="display:flex;gap:6px;margin-bottom:10px;">
-      <input id="footIconInput" placeholder="也可以输入任意图标/文字" style="flex:1;padding:8px;border:1px solid #e9ecef;border-radius:20px;box-sizing:border-box;outline:none;">
-      <button class="btn-pri" onclick="setFootBadgeInput()" title="用输入的内容">用</button>
+    <div style="display:flex;align-items:center;gap:8px;margin:12px 0;">
+      <input id="footIconInput" placeholder="图标" oninput="footIconLive()" onkeydown="if(event.key==='Enter'){setFootBadge(this.value.trim());}" style="width:56px;flex:none;padding:8px;border:1px solid #e9ecef;border-radius:16px;box-sizing:border-box;outline:none;text-align:center;font-size:16px;">
+      <div id="footIconGrid" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;font-size:24px;flex:1;"></div>
     </div>
-    <div class="btn-row">
+    <div style="display:flex;gap:8px;justify-content:center;margin-bottom:4px;">
       <button class="btn-danger" onclick="clearFootBadge()">清除标记</button>
       <button class="btn-sec" onclick="closeFootIconModal()">完成</button>
     </div>
@@ -3868,10 +3876,15 @@ function openAnniEditor(id){
   const a = id ? loadAnniversaries().find(x => x.id === id) : null;
   document.getElementById("anniLabel").value = a ? (a.label || "") : "";
   document.getElementById("anniDate").value = a ? a.date : "";
-  document.getElementById("anniIconPick").innerHTML = ANNI_ICONS.map(ic =>
+  // 图标顺序：最近用过的排前，预选常用补后（去重）
+  const used = loadAnniversaries().map(x => x.icon).filter(Boolean);
+  const presets = ANNI_ICONS.slice(0, 6);
+  const order = [...new Set([...used, ...presets])];
+  document.getElementById("anniIconPick").innerHTML = order.map(ic =>
     `<span data-ic="${ic}" style="cursor:pointer;padding:2px;border-radius:6px;" onclick="pickAnniIcon(this)">${ic}</span>`).join("");
   window._anniIcon = a ? (a.icon || "💛") : "💛";
   document.getElementById("anniIconInput").value = "";
+  document.querySelectorAll("#anniIconPick span").forEach(s => s.style.background = s.dataset.ic === window._anniIcon ? "#ffd6e4" : "");
   document.getElementById("anniList").style.display = "none";
   document.getElementById("anniAddBtn").style.display = "none";
   document.getElementById("anniEditBox").style.display = "block";
@@ -4068,10 +4081,16 @@ let footIconCardId = null;
 function pickFootIcon(cardId){
   footIconCardId = cardId;
   const cur = loadBadges()[cardId] || "";
-  document.getElementById("footIconGrid").innerHTML = FOOT_ICONS.map(ic =>
+  const used = Object.values(loadBadges());
+  const presets = FOOT_ICONS.slice(0, 8);
+  const order = [...new Set([...used, ...presets])];
+  document.getElementById("footIconGrid").innerHTML = order.map(ic =>
     `<span onclick="setFootBadge('${ic}')" style="cursor:pointer;padding:6px;border-radius:8px;${ic===cur?"background:#ffd6e4;":""}">${ic}</span>`).join("");
   document.getElementById("footIconInput").value = "";
   document.getElementById("footIconModal").style.display = "flex";
+}
+function footIconLive(){
+  document.querySelectorAll("#footIconGrid span").forEach(s => s.style.background = "");
 }
 function setFootBadge(icon){
   if(!footIconCardId) return;
