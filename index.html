@@ -360,6 +360,7 @@ body:has(#mosaicModal[style*="flex"]) .music-fab{opacity:.35;}
 .title-wrap{position:relative;display:inline-block;}
 .title-heart{
   position:absolute;top:50%;transform:translateY(-50%);color:#ff5b8a;font-size:26px;opacity:.95;
+  font-family:Georgia,"Times New Roman",serif;-webkit-text-fill-color:#ff5b8a;
   filter:drop-shadow(0 0 7px rgba(255,120,165,.65));
   transition:left .9s cubic-bezier(.3,1.2,.4,1),right .9s cubic-bezier(.3,1.2,.4,1);
   animation:heartBeat 1.7s ease-in-out infinite;
@@ -445,9 +446,9 @@ button{border-radius:12px;}
 
 <div class="header-wrap">
   <div class="title-wrap">
-    <span class="title-heart" id="titleHeartA">❤</span>
+    <span class="title-heart" id="titleHeartA">♥</span>
     <span class="page-title" id="pageTitle" onclick="openTitleEditModal()">JL Time</span>
-    <span class="title-heart" id="titleHeartB">❤</span>
+    <span class="title-heart" id="titleHeartB">♥</span>
   </div>
   <div class="anni-chips" id="anniChips" onclick="openAnniModal()"></div>
 </div>
