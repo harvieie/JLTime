@@ -3018,10 +3018,7 @@ function bindTreehole(){
     const x = e.target.closest(".th-x");
     if(x){
       e.stopPropagation();
-      if(confirm("确定删除这条弹幕吗？")){
-        saveTreehole(loadTreehole().filter(it => it.id !== dm.dataset.id));
-        thStart();
-      }
+      thAskDelete(dm.dataset.id);   // 非阻塞确认条，不用原生 confirm（避免打断手势导致后续按钮点不动）
       return;
     }
     e.stopPropagation();
@@ -3130,6 +3127,28 @@ function openThModal(){
   document.getElementById("thModal").style.display = "flex";
 }
 function closeThModal(){ document.getElementById("thModal").style.display = "none"; }
+/* 删除弹幕的非阻塞确认条：不弹原生 confirm，避免打断触摸手势导致后续按钮点不动 */
+let thPendingDeleteId = null;
+function thAskDelete(id){
+  thPendingDeleteId = id;
+  let bar = document.getElementById("thConfirmBar");
+  if(!bar){
+    bar = document.createElement("div");
+    bar.id = "thConfirmBar";
+    bar.style.cssText = "position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:#fff;border:1px solid #ffb3c8;border-radius:12px;padding:10px 14px;box-shadow:0 4px 16px rgba(0,0,0,.15);z-index:9999;display:flex;gap:10px;align-items:center;font-size:13px;white-space:nowrap;";
+    document.body.appendChild(bar);
+  }
+  bar.innerHTML = '<span style="color:#555;">删除这条弹幕？</span>'
+    + '<button id="thCfOk" style="background:#ff5b7f;color:#fff;border:none;border-radius:8px;padding:5px 12px;cursor:pointer;">删除</button>'
+    + '<button id="thCfNo" style="background:#eee;color:#333;border:none;border-radius:8px;padding:5px 12px;cursor:pointer;">取消</button>';
+  bar.style.display = "flex";
+  document.getElementById("thCfOk").onclick = () => {
+    saveTreehole(loadTreehole().filter(it => it.id !== thPendingDeleteId));
+    thStart();
+    bar.style.display = "none";
+  };
+  document.getElementById("thCfNo").onclick = () => { bar.style.display = "none"; };
+}
 function saveThModal(){
   const avatar = document.getElementById("thAvatarInput").value.trim() || "🙂";
   const name = document.getElementById("thNameInput").value.trim();
