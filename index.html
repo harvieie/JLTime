@@ -2788,7 +2788,7 @@ function thRender(todayFirst){
       prevD = D;
     });
     const maxD = Math.max(...arr.map(r => r.D));   // 行统一周期（最长那条）
-    const gap = (maxD / perRow) * 1.8;            // 错峰间隔加大，条与条之间明显分开
+    const gap = 4 + Math.random() * 2;            // 错峰间隔 4~6 秒，条与条之间拉开
     arr.forEach((r, j) => {
       const delay = j * gap;
       r.dm.dataset.dur = r.D.toFixed(2);
@@ -2870,6 +2870,7 @@ function thStartFly(el, items, seed, rand, fixedId, lane, j, perRow, dur, delay,
   el.style.animationDelay = delay + "s";
   el.style.top = lane * thRowH() + 4 + "px";
   el.classList.remove("fly");
+  el.style.transform = "translateX(0)";   // 显式回到屏右外，避免循环重启动画时左边闪现一帧
   void el.offsetWidth;
   el.classList.add("fly");
   el.onanimationend = () => {
