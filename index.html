@@ -574,6 +574,7 @@ button{border-radius:12px;}
     <div class="btn-row" style="justify-content:center;margin-top:12px;">
       <button class="btn-pri" id="thSaveBtn" onclick="saveThModal()">保存本地</button>
       <button class="success" id="thCloudBtn" onclick="thUploadCloud()">上传云端</button>
+      <button class="btn-danger" id="thDelBtn" onclick="thDelModal()" style="display:none;">删除</button>
       <button class="btn-sec" onclick="closeThModal()">关闭</button>
     </div>
   </div>
@@ -3001,6 +3002,7 @@ function bindTreehole(){
     }
     // 点按 → 暂停固定，右上角出叉（编辑模式）
     st.classList.add("paused");
+    st.getAnimations({ subtree: true }).forEach(a => { try{ a.pause(); }catch(err){} });  // WAAPI 动画同步暂停
     if(isFunEditMode()) dm.classList.add("th-del-mode");
   }
   bindThResize();
@@ -3069,6 +3071,8 @@ function openThModal(){
   });
   document.getElementById("thSaveBtn").style.display = viewOnly ? "none" : "";
   // 上传云端：所有模式可见（把本地已有+新增的弹幕同步到云端）
+  // 删除按钮：仅编辑模式编辑已有弹幕时显示
+  document.getElementById("thDelBtn").style.display = (thEditId !== null && !viewOnly) ? "" : "none";
   // 头像快捷：整排按使用先后从左到右（用过的排前面，未用过的排后面）
   const recent = thRecentAvatars();
   document.getElementById("thAvatarQuick").innerHTML =
@@ -3145,6 +3149,14 @@ function thSearch(){
 function thOpenFromSearch(id){
   thEditId = id;
   openThModal();  // 访客只读查看，编辑模式可编辑
+}
+function thDelModal(){
+  if(!thEditId) return;
+  if(confirm("确定删除这条弹幕吗？")){
+    saveTreehole(loadTreehole().filter(it => it.id !== thEditId));
+    closeThModal();
+    thStart(); thSearch();
+  }
 }
 const DEFAULT_FUN = [
   { name: "4399双人游戏", url: "https://www.4399.com/theme/81.htm" },
