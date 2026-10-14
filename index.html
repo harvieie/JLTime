@@ -683,7 +683,6 @@ button{border-radius:12px;}
       </div>
       <div style="display:flex;gap:8px;justify-content:center;margin-bottom:12px;">
         <button class="btn-pri" onclick="saveAnni()">保存</button>
-        <button class="btn-sec" onclick="closeAnniModal()">关闭</button>
       </div>
     </div>
     <div class="btn-row">
@@ -712,12 +711,12 @@ button{border-radius:12px;}
   <div class="modal-box" style="max-width:320px;">
     <div class="modal-title">给脚印加个标记</div>
     <div style="display:flex;align-items:center;gap:8px;margin:12px 0;">
-      <input id="footIconInput" placeholder="图标" oninput="footIconLive()" onkeydown="if(event.key==='Enter'){setFootBadge(this.value.trim());}" style="width:56px;flex:none;padding:8px;border:1px solid #e9ecef;border-radius:16px;box-sizing:border-box;outline:none;text-align:center;font-size:16px;">
-      <div id="footIconGrid" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;font-size:24px;flex:1;"></div>
+      <input id="footIconInput" placeholder="图标" oninput="footIconLive()" onkeydown="if(event.key==='Enter'){saveFootBadge();}" style="width:56px;flex:none;padding:8px;border:1px solid #e9ecef;border-radius:16px;box-sizing:border-box;outline:none;text-align:center;font-size:16px;">
+      <div id="footIconGrid" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-start;font-size:24px;flex:1;"></div>
     </div>
     <div style="display:flex;gap:8px;justify-content:center;margin-bottom:4px;">
-      <button class="btn-danger" onclick="clearFootBadge()">清除标记</button>
-      <button class="btn-sec" onclick="closeFootIconModal()">完成</button>
+      <button class="btn-danger" onclick="clearFootBadge()">清除</button>
+      <button class="btn-pri" onclick="saveFootBadge()">保存</button>
     </div>
   </div>
 </div>
@@ -3876,10 +3875,10 @@ function openAnniEditor(id){
   const a = id ? loadAnniversaries().find(x => x.id === id) : null;
   document.getElementById("anniLabel").value = a ? (a.label || "") : "";
   document.getElementById("anniDate").value = a ? a.date : "";
-  // 图标顺序：最近用过的排前，预选常用补后（去重）
+  // 图标顺序：最近用过的排前，预选常用补后（去重），右侧水平只放 3 个
   const used = loadAnniversaries().map(x => x.icon).filter(Boolean);
   const presets = ANNI_ICONS.slice(0, 6);
-  const order = [...new Set([...used, ...presets])];
+  const order = [...new Set([...used, ...presets])].slice(0, 3);
   document.getElementById("anniIconPick").innerHTML = order.map(ic =>
     `<span data-ic="${ic}" style="cursor:pointer;padding:2px;border-radius:6px;" onclick="pickAnniIcon(this)">${ic}</span>`).join("");
   window._anniIcon = a ? (a.icon || "💛") : "💛";
@@ -4078,19 +4077,37 @@ function renderFootBadges(){
 }
 const FOOT_ICONS = ["👑","💍","❤️","💌","🌸","⭐","🎂","🌙","☕","🐾","✨","💫","🌷","🦋","🍀","🎀"];
 let footIconCardId = null;
+let _footIcon = "";
 function pickFootIcon(cardId){
   footIconCardId = cardId;
   const cur = loadBadges()[cardId] || "";
+  _footIcon = cur;
   const used = Object.values(loadBadges());
   const presets = FOOT_ICONS.slice(0, 8);
-  const order = [...new Set([...used, ...presets])];
+  const order = [...new Set([...used, ...presets])].slice(0, 3);   // 右侧水平只放 3 个（按使用先后）
   document.getElementById("footIconGrid").innerHTML = order.map(ic =>
-    `<span onclick="setFootBadge('${ic}')" style="cursor:pointer;padding:6px;border-radius:8px;${ic===cur?"background:#ffd6e4;":""}">${ic}</span>`).join("");
+    `<span onclick="pickFootIconSelect('${ic}')" style="cursor:pointer;padding:6px;border-radius:8px;${ic===cur?"background:#ffd6e4;":""}">${ic}</span>`).join("");
   document.getElementById("footIconInput").value = "";
   document.getElementById("footIconModal").style.display = "flex";
 }
+function pickFootIconSelect(ic){
+  _footIcon = ic;
+  document.querySelectorAll("#footIconGrid span").forEach(s => s.style.background = s.textContent === ic ? "#ffd6e4" : "");
+  document.getElementById("footIconInput").value = "";
+}
 function footIconLive(){
+  _footIcon = document.getElementById("footIconInput").value.trim();
   document.querySelectorAll("#footIconGrid span").forEach(s => s.style.background = "");
+}
+function saveFootBadge(){
+  if(!footIconCardId) return;
+  const v = document.getElementById("footIconInput").value.trim() || _footIcon;
+  if(!v) return;
+  const badges = loadBadges();
+  badges[footIconCardId] = v;
+  localStorage.setItem("card_badges", JSON.stringify(badges));
+  renderFootBadges();
+  closeFootIconModal();
 }
 function setFootBadge(icon){
   if(!footIconCardId) return;
