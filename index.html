@@ -2829,7 +2829,7 @@ function thLaunchNext(st, items, rowObj, idx){
   const v = 90 / (1 + len / 20);       // 基准 90px/s，每 20 字减速 → 文本越长走得越慢
   const W = st.clientWidth;
   const w = dm.offsetWidth || 200;
-  const dur = (W + w + 80) / v;        // 飞完整程所需秒数
+  const dur = (W + w) / v;        // 飞完整程所需秒数（右缘刚出左屏即结束）
   dm.dataset.dur = dur.toFixed(2);
   dm.style.opacity = "0";
   const tid = setTimeout(() => {
@@ -2926,7 +2926,7 @@ function thStartFly(el, items, seed, rand, fixedId, lane, j, perRow, dur, cycle,
   if(cycle == null) cycle = parseFloat(el.dataset.cycle || dur);
   if(gap == null) gap = parseFloat(el.dataset.gap || 4);
   const W = st.clientWidth;
-  const dist = -(W + el.offsetWidth + 60);
+  const dist = -(W + el.offsetWidth);   // 弹幕右缘刚到屏幕左缘（刚完全出左屏）即结束，下一条立刻接上
   el.style.setProperty("--thw", dist + "px");
   el.style.top = lane * thRowH() + 4 + "px";
   el.style.opacity = "0";
