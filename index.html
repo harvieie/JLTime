@@ -2803,13 +2803,12 @@ function seedTreehole(){
 }
 /* 当天优先飘往年往月今日的弹幕，随后随机 */
 function thTodayPriority(list){
-  // 不按"往年同月同日"筛选；第一次进入随机挑几条弹幕先飘（洗牌后返回）
-  const arr = list.slice();
-  for(let i = arr.length - 1; i > 0; i--){
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
+  // 优先飘"往年/本年同月同日"创建的弹幕（月-日匹配今天，不限年份）；其余排在后面
+  const now = new Date();
+  const md = String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+  const today = [], rest = [];
+  list.forEach(it => { if(it.time && it.time.slice(5, 10) === md) today.push(it); else rest.push(it); });
+  return today.concat(rest);
 }
 function thRowH(){ return 56; }
 function thLaneCount(){
