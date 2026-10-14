@@ -689,7 +689,7 @@ button{border-radius:12px;}
     </div>
     <div class="btn-row">
       <button class="btn-pri" id="anniAddBtn" onclick="openAnniEditor()">＋ 添加纪念日</button>
-      <button class="btn-sec" onclick="closeAnniModal()">关闭</button>
+      <button class="btn-sec" id="anniListCloseBtn" onclick="closeAnniModal()">关闭</button>
     </div>
   </div>
 </div>
@@ -3888,6 +3888,7 @@ function openAnniEditor(id){
   document.querySelectorAll("#anniIconPick span").forEach(s => s.style.background = s.dataset.ic === window._anniIcon ? "#ffd6e4" : "");
   document.getElementById("anniList").style.display = "none";
   document.getElementById("anniAddBtn").style.display = "none";
+  document.getElementById("anniListCloseBtn").style.display = "none";   // 编辑页隐藏列表底部的关闭
   document.getElementById("anniEditBox").style.display = "block";
 }
 function pickAnniIconInput(){
@@ -3915,6 +3916,7 @@ function saveAnni(){
   document.getElementById("anniEditBox").style.display = "none";
   document.getElementById("anniList").style.display = "";
   document.getElementById("anniAddBtn").style.display = "";
+  document.getElementById("anniListCloseBtn").style.display = "";
   renderAnniList();
 }
 function delAnni(id){
