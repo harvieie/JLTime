@@ -4325,8 +4325,8 @@ function init(){
     sessionStorage.setItem("auth_granted", "1");
     sessionStorage.setItem("view_mode", "view");
     sessionStorage.removeItem("cloud_locked");
-  }else{ // local：默认本地浏览
-    sessionStorage.setItem("auth_granted", "1");
+  }else{ // local：首次打开/未授权——不点密码就保持锁定，不显示卡片、不能进拾趣
+    sessionStorage.setItem("auth_granted", "0");
     sessionStorage.setItem("view_mode", "view");
     sessionStorage.setItem("cloud_locked", "1");
   }
