@@ -142,10 +142,8 @@ body.dark .th-tools::after{background:#8a8f9a;}
   width:max-content;max-width:94%;min-width:0;will-change:transform;cursor:pointer;
   background:rgba(255,252,246,.94);border:1px solid #e8c89a;border-radius:14px;
   padding:5px 14px 5px 5px;box-shadow:0 2px 8px rgba(150,90,40,.18);
-  animation-name:thFly;animation-timing-function:linear;animation-fill-mode:forwards;
 }
 .th-dm:hover{border-color:#c98a4b;}
-@keyframes thFly{from{transform:translateX(0)}to{transform:translateX(var(--thw,-1200px))}}
 .th-dm .th-avatar{width:22px;height:22px;border-radius:50%;background:#ffe9c9;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 /* 固定表头：第一行头像+用户名（头像缩小），第二行日期（与头像最左侧对齐） */
 .th-dm .th-head{display:flex;flex-direction:column;align-items:flex-start;gap:2px;flex-shrink:0;}
@@ -2852,7 +2850,8 @@ function thPlayOne(el, items, seed, rand, fixedId){
   el.dataset.len = String(it.text.length);
   return it;
 }
-/* 启动飞行：立即从屏右飞入（opacity 1）；飞完后透明隐藏，屏外等待到相位对齐再淡入 → 循环绝不闪现 */
+/* 启动飞行：Web Animations API 确定性动画。每次重启都是全新动画，首帧即屏右外（left:100%+translateX(0)），
+   元素在屏右外不可见；飞完后透明隐藏，屏外等待相位对齐再淡入 → 循环全程无闪现 */
 function thStartFly(el, items, seed, rand, fixedId, lane, j, perRow, dur, delay, cycle, gap){
   const st = el.closest(".th-stage");
   if(!st || !st.isConnected) return;
@@ -2865,17 +2864,18 @@ function thStartFly(el, items, seed, rand, fixedId, lane, j, perRow, dur, delay,
   const W = st.clientWidth;
   const dist = -(W + el.offsetWidth + 60);
   el.style.setProperty("--thw", dist + "px");
-  el.style.animationDuration = dur + "s";
-  el.style.animationDelay = "0s";
   el.style.top = lane * thRowH() + 4 + "px";
+  el.style.opacity = "0";
+  if(el._thAnim){ try{ el._thAnim.cancel(); }catch(e){} }
+  const anim = el.animate(
+    [{ transform: "translateX(0)" }, { transform: "translateX(" + dist + "px)" }],
+    { duration: dur * 1000, delay: 0, easing: "linear", fill: "forwards" }
+  );
+  el._thAnim = anim;
   el.style.opacity = "1";
-  el.style.transform = "translateX(0)";
-  el.classList.remove("fly");
-  void el.offsetWidth;
-  el.classList.add("fly");
-  el.onanimationend = () => {
+  anim.onfinish = () => {
     el.style.opacity = "0";                       // 飞完立即透明，等待期间屏外不可见
-    const wait = cycle ? (cycle - dur + j * gap) : 0;
+    const wait = cycle ? Math.max(0, cycle - dur + j * gap) : 0;
     setTimeout(() => {
       if(fixedId){ thStartFly(el, items, seed, rand, fixedId, lane, j, perRow, dur, 0, cycle, gap); return; }
       const nextSeed = rand ? seed + 1 + Math.floor(Math.random() * Math.max(1, pool.length - 1)) : seed + pool.length;
@@ -2885,7 +2885,9 @@ function thStartFly(el, items, seed, rand, fixedId, lane, j, perRow, dur, delay,
 }
 function thTogglePause(){
   const st = document.getElementById("thStage");
-  if(st) st.classList.toggle("paused");
+  if(!st) return;
+  const paused = st.classList.toggle("paused");
+  st.getAnimations({ subtree: true }).forEach(a => paused ? a.pause() : a.play());
 }
 function thSwipeTab(dx){
   const order = isFunEditMode() ? ["filter", "edit", "fun"] : ["filter", "fun"];
@@ -2901,6 +2903,7 @@ function thResume(){
   const st = document.getElementById("thStage");
   if(!st) return;
   st.classList.remove("paused");
+  st.getAnimations({ subtree: true }).forEach(a => { try{ a.play(); }catch(e){} });
   st.querySelectorAll(".th-dm.th-del-mode").forEach(d => d.classList.remove("th-del-mode"));
 }
 function bindTreehole(){
