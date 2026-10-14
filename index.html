@@ -2790,13 +2790,12 @@ function thRender(todayFirst){
     const maxD = Math.max(...arr.map(r => r.D));   // 行统一周期（最长那条）
     const gap = 4 + Math.random() * 2;            // 错峰间隔 4~6 秒，条与条之间拉开
     arr.forEach((r, j) => {
-      const delay = j * gap;
       r.dm.dataset.dur = r.D.toFixed(2);
-      r.dm.dataset.delay = delay.toFixed(2);
       r.dm.dataset.cycle = maxD.toFixed(2);
       r.dm.dataset.gap = gap.toFixed(2);
-      thStartFly(r.dm, items, r.seed, true, null, lane, j, perRow, r.D, delay, maxD, gap);
-      thLastPlan.push({ lane, seed: r.seed, fixedId: null, j, perRow, dur: r.D, delay, cycle: maxD, gap });
+      r.dm.style.opacity = "0";                  // 错峰期间先隐藏，到点再淡入飞入
+      setTimeout(() => thStartFly(r.dm, items, r.seed, true, null, lane, j, perRow, r.D, 0, maxD, gap), j * gap * 1000);
+      thLastPlan.push({ lane, seed: r.seed, fixedId: null, j, perRow, dur: r.D, cycle: maxD, gap });
     });
   }
 }
@@ -2853,31 +2852,34 @@ function thPlayOne(el, items, seed, rand, fixedId){
   el.dataset.len = String(it.text.length);
   return it;
 }
-/* 启动飞行：时长按文字长度（文字多更慢）；行内统一周期，循环时屏外等待相位对齐 → 同周期错峰，永不贴合 */
+/* 启动飞行：立即从屏右飞入（opacity 1）；飞完后透明隐藏，屏外等待到相位对齐再淡入 → 循环绝不闪现 */
 function thStartFly(el, items, seed, rand, fixedId, lane, j, perRow, dur, delay, cycle, gap){
   const st = el.closest(".th-stage");
   thPlayOne(el, items, seed, rand, fixedId);
   const pool = items.filter(it => it && it.text && it.text.trim());
   if(!pool.length) return;
   if(dur == null) dur = parseFloat(el.dataset.dur || 8);
-  if(delay == null) delay = parseFloat(el.dataset.delay || 0);
   if(cycle == null) cycle = parseFloat(el.dataset.cycle || dur);
-  if(gap == null) gap = parseFloat(el.dataset.gap || (cycle / perRow));
+  if(gap == null) gap = parseFloat(el.dataset.gap || 4);
   const W = st.clientWidth;
   const dist = -(W + el.offsetWidth + 60);
   el.style.setProperty("--thw", dist + "px");
   el.style.animationDuration = dur + "s";
-  el.style.animationDelay = delay + "s";
+  el.style.animationDelay = "0s";
   el.style.top = lane * thRowH() + 4 + "px";
+  el.style.opacity = "1";
+  el.style.transform = "translateX(0)";
   el.classList.remove("fly");
-  el.style.transform = "translateX(0)";   // 显式回到屏右外，避免循环重启动画时左边闪现一帧
   void el.offsetWidth;
   el.classList.add("fly");
   el.onanimationend = () => {
-    if(fixedId){ thStartFly(el, items, seed, rand, fixedId, lane, j, perRow, dur, delay, cycle, gap); return; }
-    const nextSeed = rand ? seed + 1 + Math.floor(Math.random() * Math.max(1, pool.length - 1)) : seed + pool.length;
-    const nextDelay = cycle ? (cycle - dur + j * gap) : delay;   // 屏外等待相位对齐，条间保持拉开
-    thStartFly(el, items, nextSeed, rand, null, lane, j, perRow, dur, nextDelay, cycle, gap);
+    el.style.opacity = "0";                       // 飞完立即透明，等待期间屏外不可见
+    const wait = cycle ? (cycle - dur + j * gap) : 0;
+    setTimeout(() => {
+      if(fixedId){ thStartFly(el, items, seed, rand, fixedId, lane, j, perRow, dur, 0, cycle, gap); return; }
+      const nextSeed = rand ? seed + 1 + Math.floor(Math.random() * Math.max(1, pool.length - 1)) : seed + pool.length;
+      thStartFly(el, items, nextSeed, rand, null, lane, j, perRow, dur, 0, cycle, gap);
+    }, wait * 1000);
   };
 }
 function thTogglePause(){
