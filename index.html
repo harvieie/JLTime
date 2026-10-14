@@ -539,7 +539,7 @@ button{border-radius:12px;}
     </div>
     <div class="th-box" id="treeholeBox">
       <div class="th-bar">
-        <span class="th-title" onclick="thRepeatLast()" title="重复刚才弹出的弹幕">喜忧</span>
+        <span class="th-title" onclick="thRepeatLast()" title="重复刚才弹出的弹幕">耳语</span>
         <span class="th-tools">
           <span class="th-tool" onclick="thOpenSearch()" title="搜索弹幕">🔍<i class="th-brow"></i></span>
           <span class="th-tool" onclick="thAdd()" title="添加弹幕">＋<i class="th-brow"></i></span>
@@ -2868,7 +2868,7 @@ function thStart(){
   if(firstToday) sessionStorage.setItem("jlt_th_first_done", todayStr);
   thRender(firstToday);
 }
-/* 喜忧：只刷新弹幕内容，树洞高度保持不变 */
+/* 耳语：只刷新弹幕内容，树洞高度保持不变 */
 function thShuffle(){ thRender(false); }
 /* 树洞标题点按：重复刚才弹出的弹幕（行数、每行几条、内容与次序都与刚才一致，错峰弹出不一股脑） */
 function thRepeatLast(){
