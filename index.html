@@ -2811,6 +2811,7 @@ function thSpawnRow(st, items, lane, baseSeed){
    各泳道首发错开；先发的层级(z-index)高于后发的 */
 let thPendingTimers = [];
 function thLaunchRow(st, items, lane, dms, seeds){
+  console.log('[TH] thLaunchRow lane=', lane, 'dms=', dms.length, 'items=', items.length);
   const rowObj = { dms, seeds, lane, perRow: dms.length, finished: 0 };
   dms.forEach((dm, j) => {
     dm.style.zIndex = 100 - j;          // 先发的层级高
