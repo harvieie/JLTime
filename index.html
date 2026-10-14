@@ -2764,7 +2764,7 @@ function thRender(todayFirst){
   const n = thLaneCount();                       // 行数 = 当前树洞高度（拖高后自动多出行）
   thLastPlan = [];
   for(let lane = 0; lane < n; lane++){
-    const perRow = 1 + Math.floor(Math.random() * 5);   // 每行一次 1~5 条
+    const perRow = 2 + Math.floor(Math.random() * 4);   // 每行一次 2~5 条
     const arr = [];
     for(let j = 0; j < perRow; j++){
       const dm = document.createElement("div");
@@ -2775,11 +2775,11 @@ function thRender(todayFirst){
       thPlayOne(dm, items, seed, true, null);    // 先渲染内容用于测量宽度/长度
       arr.push({ dm, seed, len: parseInt(dm.dataset.len || 0, 10) });
     }
-    // 时长按文字长度（文字多更慢）；后发条若比前发快（短），压到跟前面一个速度贴住走，永不追尾
+    // 时长按文字长度（文字多更慢）；后发条若比前发快（短），略放慢一点跟在后面留空隙走，永不追尾
     let prevD = 0;
     arr.forEach((r, j) => {
       let D = Math.max(8, 6 + r.len * 0.5 + Math.random() * 3);
-      if(j > 0 && D < prevD) D = prevD;        // 后发不超过前发速度（贴住前面跟随）
+      if(j > 0 && D < prevD * 1.05) D = prevD * 1.05;   // 后发比前发稍慢，留一点空隙，不完全贴住
       r.D = D;
       prevD = D;
     });
