@@ -571,11 +571,11 @@ button{border-radius:12px;}
     <textarea id="thTextInput" style="width:100%;min-height:90px;resize:vertical;" placeholder="想说的…"></textarea>
     <div style="text-align:left;font-size:12px;color:#888;margin:10px 0 4px;">用过的人（点按填入，长按删除）：</div>
     <div class="th-quick" id="thQuickNames"></div>
-    <div class="btn-row" style="justify-content:center;margin-top:12px;">
-      <button class="btn-pri" id="thSaveBtn" onclick="saveThModal()">保存本地</button>
-      <button class="success" id="thCloudBtn" onclick="thUploadCloud()">上传云端</button>
-      <button class="btn-danger" id="thDelBtn" onclick="thDelModal()" style="display:none;">删除</button>
-      <button class="btn-sec" onclick="closeThModal()">关闭</button>
+    <div class="btn-row" style="display:flex;flex-wrap:nowrap;gap:6px;justify-content:center;margin-top:12px;">
+      <button class="btn-pri" id="thSaveBtn" onclick="saveThModal()" style="padding:6px 10px;font-size:13px;white-space:nowrap;">保存本地</button>
+      <button class="success" id="thCloudBtn" onclick="thUploadCloud()" style="padding:6px 10px;font-size:13px;white-space:nowrap;">上传云端</button>
+      <button class="btn-danger" id="thDelBtn" onclick="thDelModal()" style="display:none;padding:6px 10px;font-size:13px;white-space:nowrap;">删除</button>
+      <button class="btn-sec" onclick="closeThModal()" style="padding:6px 10px;font-size:13px;white-space:nowrap;">关闭</button>
     </div>
   </div>
 </div>
@@ -2807,25 +2807,25 @@ function thSpawnRow(st, items, lane, baseSeed){
   }
   thLaunchRow(st, items, lane, dms, seeds);
 }
-/* 发射一行：按文字长度算时长（文字多更慢）且行内升序（后发更慢 → 永不追尾）；
-   错峰 j*gap 起飞；整行飞完由行对象驱动下一轮重排 */
+/* 发射一行：统一飞行速度，按每条弹幕实际宽度动态错峰——后发起飞时前发已飞远“一条弹幕宽+安全距”，
+   同速后发永不追上前发，也不会叠在前面的文字上；整行飞完由行对象驱动下一轮重排 */
+let thPendingTimers = [];   // 排队待发弹幕的定时器，暂停时整体清空
 function thLaunchRow(st, items, lane, dms, seeds){
-  let prevD = 0;
-  const Ds = dms.map(dm => {
-    let D = Math.max(8, 6 + parseInt(dm.dataset.len || 0, 10) * 0.5 + Math.random() * 3);
-    if(D < prevD * 1.05) D = prevD * 1.05;   // 后发比前发稍慢，留空隙走，永不追尾
-    prevD = D; return D;
-  });
-  const maxD = Math.max(...Ds);                 // 行统一周期（最长那条）
-  const gap = 4 + Math.random() * 2;            // 错峰间隔 4~6 秒，条与条之间拉开
+  const v = 60;                 // 统一速度 px/s（文字多则飞全程时间自动更长，不快不慢）
+  const W = st.clientWidth;
+  let t = 0;                    // 累计起飞时刻
   const rowObj = { dms, seeds, lane, perRow: dms.length, finished: 0 };
   dms.forEach((dm, j) => {
-    dm.dataset.dur = Ds[j].toFixed(2);
-    dm.dataset.cycle = maxD.toFixed(2);
-    dm.dataset.gap = gap.toFixed(2);
-    dm.style.opacity = "0";                  // 错峰期间先隐藏，到点再从屏右淡入飞入
-    setTimeout(() => thStartFly(dm, items, seeds[j], true, null, lane, j, dms.length, Ds[j], maxD, gap, rowObj), j * gap * 1000);
-    thLastPlan.push({ lane, seed: seeds[j], fixedId: null, j, perRow: dms.length, dur: Ds[j], cycle: maxD, gap });
+    const w = dm.offsetWidth || 200;                 // 该条弹幕实际宽度
+    const dur = (W + w + 60) / v;                    // 飞完整程所需秒数
+    dm.dataset.dur = dur.toFixed(2);
+    dm.dataset.cycle = dur.toFixed(2);
+    dm.dataset.gap = t.toFixed(2);
+    dm.style.opacity = "0";                          // 错峰期间先隐藏，到点再从屏右淡入飞入
+    const tid = setTimeout(() => thStartFly(dm, items, seeds[j], true, null, lane, j, dms.length, dur, dur, 0, rowObj), t * 1000);
+    thPendingTimers.push(tid);
+    thLastPlan.push({ lane, seed: seeds[j], fixedId: null, j, perRow: dms.length, dur, cycle: dur, gap: t });
+    t += (w + 100) / v;                              // 下一条等本这条飞远(自身宽+100px安全距)后再发
   });
 }
 /* 下一轮重排：复用本行元素，重新随机选弹幕、重算时长，错峰再起飞（每轮结构都像首轮一样干净，无叠加无追尾） */
@@ -2961,6 +2961,11 @@ function thResume(){
   st.getAnimations({ subtree: true }).forEach(a => { try{ a.play(); }catch(e){} });
   st.querySelectorAll(".th-dm.th-del-mode").forEach(d => d.classList.remove("th-del-mode"));
 }
+/* 清空所有排队待发的弹幕定时器（暂停时调用，防止暂停后新弹幕还冒出来） */
+function thClearPending(){
+  thPendingTimers.forEach(t => { try{ clearTimeout(t); }catch(e){} });
+  thPendingTimers = [];
+}
 function bindTreehole(){
   const st = document.getElementById("thStage");
   if(!st) return;
@@ -3001,9 +3006,10 @@ function bindTreehole(){
       // 暂停态再点弹幕任意位置：编辑模式编辑 / 访客查看
       thEditId = dm.dataset.id; openThModal(); return;
     }
-    // 点按 → 暂停固定，右上角出叉（编辑模式）
+    // 点按 → 暂停固定，右上角出叉（编辑模式）；同时清空排队待发弹幕，暂停期间不再冒新弹幕
     st.classList.add("paused");
-    st.getAnimations({ subtree: true }).forEach(a => { try{ a.pause(); }catch(err){} });  // WAAPI 动画同步暂停
+    thClearPending();
+    st.getAnimations({ subtree: true }).forEach(a => { try{ a.pause(); }catch(err){} });
     if(isFunEditMode()) dm.classList.add("th-del-mode");
   }
   bindThResize();
