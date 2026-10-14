@@ -3378,8 +3378,8 @@ function confirmClearCache(){
   showToast("已清除所有本地缓存", 3);
 }
 
-// 进入：校验暗号（访客/编辑两种模式），解锁云端，清缓存后拉取云端
-function enterWithPwd(){
+// 进入：校验暗号（访客/编辑两种模式），解锁云端；先清掉旧版页面缓存与SW，重载到最新版再拉取云端
+async function enterWithPwd(){
   const pwd = document.getElementById("cachePwd").value.trim();
   let mode = "";
   if(pwd === VIEW_PWD){
@@ -3396,8 +3396,21 @@ function enterWithPwd(){
   sessionStorage.removeItem("cloud_locked");
   sessionStorage.setItem("cache_prompt_shown", "1");
   closeCacheConfirm();
-  // 先拉取云端，成功才覆盖本地；失败则保留当前本地数据（不空白）
-  cloudPullAfterClear();
+  // 先清掉旧版页面缓存与旧 Service Worker，再重载拿到最新页面，最后自动拉取云端
+  sessionStorage.setItem("after_clear_pull", mode === "full" ? "full" : "view");
+  try{
+    if("caches" in window){
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+  }catch(e){}
+  try{
+    if("serviceWorker" in navigator){
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+  }catch(e){}
+  location.reload();   // 重载后由 init 检测 after_clear_pull 自动拉取最新云端
 }
 
 // 记录当前载入的云端版本（恢复页小字展示用）
@@ -4285,6 +4298,12 @@ function init(){
   }
   applyViewMode(savedMode === "full" ? "full" : "view");
   if(!sessionStorage.getItem("cache_prompt_shown")) openCacheConfirm();
+  // 点「进入」后清缓存重载：拿到最新页面后自动拉取云端数据
+  if(sessionStorage.getItem("after_clear_pull")){
+    sessionStorage.removeItem("after_clear_pull");
+    sessionStorage.setItem("cache_prompt_shown", "1");
+    cloudPullAfterClear();
+  }
   bindLightboxSwipe();
   bindGalleryKeys();
   applySeason();
