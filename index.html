@@ -419,7 +419,9 @@ button{border-radius:12px;}
       确定→直接清除本地缓存，<br>
       进入→输入暗号后载入云端，<br>
       取消→不清缓存，直接浏览本地。<br><br>
-      <input type="password" id="cachePwd" placeholder="般若波罗蜜" autocomplete="off" style="width:100%;text-align:center;letter-spacing:4px;">
+      <input type="password" id="cachePwd" placeholder="般若波罗蜜" autocomplete="off" autofocus
+        onkeydown="if(event.key==='Enter'){event.preventDefault();enterWithPwd();}"
+        style="width:100%;text-align:center;letter-spacing:4px;">
     </div>
     <div class="modal-buttons">
       <button id="cacheOkBtn">确定</button>
@@ -2615,12 +2617,14 @@ let viewMode = "full";   // "full" | "view"
 function openCacheConfirm(){
   document.getElementById("cachePwd").value = "";
   document.getElementById("cacheConfirmModal").style.display = "flex";
-  // 弹窗出现同时聚焦密码框（手机端自动弹出键盘）
+  // 弹窗出现同时聚焦密码框（手机端自动弹出键盘）：连续两次 focus + 全选，提高弹起成功率
   const tryFocus = () => {
     const p = document.getElementById("cachePwd");
-    if(p){ p.focus({preventScroll:false}); }
+    if(!p) return;
+    p.focus({preventScroll:false});
+    setTimeout(() => { p.focus({preventScroll:false}); try{ p.select(); }catch(e){} }, 80);
   };
-  setTimeout(tryFocus, 60);
+  setTimeout(tryFocus, 50);
   // 首次触摸弹窗任意处也强制聚焦（绕过移动端非手势 focus 限制，确保弹出键盘）
   const ov = document.getElementById("cacheConfirmModal");
   ov.addEventListener("pointerdown", tryFocus, { once: true });
@@ -2783,13 +2787,14 @@ function thRender(todayFirst){
       r.D = D;
       prevD = D;
     });
-    const maxD = Math.max(...arr.map(r => r.D));
+    const maxD = Math.max(...arr.map(r => r.D));   // 行统一周期（最长那条）
     arr.forEach((r, j) => {
       const delay = j * (maxD / perRow);        // 槽位错峰：后发等先发飞出足够距离
       r.dm.dataset.dur = r.D.toFixed(2);
       r.dm.dataset.delay = delay.toFixed(2);
-      thStartFly(r.dm, items, r.seed, true, null, lane, j, perRow, r.D, delay);
-      thLastPlan.push({ lane, seed: r.seed, fixedId: null, j, perRow, dur: r.D, delay });
+      r.dm.dataset.cycle = maxD.toFixed(2);
+      thStartFly(r.dm, items, r.seed, true, null, lane, j, perRow, r.D, delay, maxD);
+      thLastPlan.push({ lane, seed: r.seed, fixedId: null, j, perRow, dur: r.D, delay, cycle: maxD });
     });
   }
 }
@@ -2814,7 +2819,7 @@ function thRepeatLast(){
     dm.className = "th-dm";
     dm.style.top = p.lane * thRowH() + 4 + "px";
     st.appendChild(dm);
-    thStartFly(dm, items, p.seed, true, p.fixedId, p.lane, p.j, p.perRow, p.dur, p.delay);
+    thStartFly(dm, items, p.seed, true, p.fixedId, p.lane, p.j, p.perRow, p.dur, p.delay, p.cycle);
   }
 }
 /* 树洞当前是否还有弹幕在飘（没有 → 点空白随机继续弹） */
@@ -2846,14 +2851,15 @@ function thPlayOne(el, items, seed, rand, fixedId){
   el.dataset.len = String(it.text.length);
   return it;
 }
-/* 启动飞行：时长按文字长度（文字多更慢）；行内短(快)先发、长(慢)后发且后发时长 ≥ 前发 → 后发永不追上先发；循环保持同一节奏（不闪现） */
-function thStartFly(el, items, seed, rand, fixedId, lane, j, perRow, dur, delay){
+/* 启动飞行：时长按文字长度（文字多更慢）；行内统一周期，循环时屏外等待相位对齐 → 同周期错峰，永不贴合 */
+function thStartFly(el, items, seed, rand, fixedId, lane, j, perRow, dur, delay, cycle){
   const st = el.closest(".th-stage");
   thPlayOne(el, items, seed, rand, fixedId);
   const pool = items.filter(it => it && it.text && it.text.trim());
   if(!pool.length) return;
   if(dur == null) dur = parseFloat(el.dataset.dur || 8);
   if(delay == null) delay = parseFloat(el.dataset.delay || 0);
+  if(cycle == null) cycle = parseFloat(el.dataset.cycle || dur);
   const W = st.clientWidth;
   const dist = -(W + el.offsetWidth + 60);
   el.style.setProperty("--thw", dist + "px");
@@ -2864,10 +2870,11 @@ function thStartFly(el, items, seed, rand, fixedId, lane, j, perRow, dur, delay)
   void el.offsetWidth;
   el.classList.add("fly");
   el.onanimationend = () => {
-    if(fixedId){ thStartFly(el, items, seed, rand, fixedId, lane, j, perRow, dur, delay); return; }  // 固定重放同一条
-    // 随机模式：下一条随机挑，但节奏（时长/延迟）保持不变，后发永不追先发
+    if(fixedId){ thStartFly(el, items, seed, rand, fixedId, lane, j, perRow, dur, delay, cycle); return; }  // 固定重放同一条
+    // 随机模式：下一条随机挑；循环时等待到相位对齐（屏外右侧），同周期错峰 → 永不贴合
     const nextSeed = rand ? seed + 1 + Math.floor(Math.random() * Math.max(1, pool.length - 1)) : seed + pool.length;
-    thStartFly(el, items, nextSeed, rand, null, lane, j, perRow, dur, delay);
+    const nextDelay = cycle ? (cycle - dur + j * (cycle / perRow)) : delay;
+    thStartFly(el, items, nextSeed, rand, null, lane, j, perRow, dur, nextDelay, cycle);
   };
 }
 function thTogglePause(){
