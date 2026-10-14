@@ -429,8 +429,6 @@ button{border-radius:12px;}
   </div>
 </div>
 
-<div id="clearedHint" onclick="openCacheConfirm()" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(0,0,0,.55);color:#fff;padding:8px 18px;border-radius:20px;font-size:13px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.2);">已清除本地缓存，点此输入密语进入</div>
-
 <div class="header-wrap">
   <div class="title-wrap">
     <span class="title-heart" id="titleHeartA">❤</span>
@@ -1146,11 +1144,14 @@ function renderAllCards(){
   wrap.innerHTML = "";
   wrap.appendChild(pathNode);
 
-  // 未输入暗号授权：不显示任何数据
+  // 未输入暗号授权：不显示任何数据；点中间这行字重新弹出密码框
   if(!isAuthGranted()){
     const tip = document.createElement("div");
     tip.className = "empty-tip";
+    tip.style.cursor = "pointer";
+    tip.style.opacity = ".85";
     tip.innerHTML = "🔒 请输入暗号进入后查看";
+    tip.onclick = () => openCacheConfirm();
     wrap.appendChild(tip);
     return;
   }
@@ -3392,7 +3393,6 @@ function confirmClearCache(){
   renderAllCards();
   renderFun();
   closeCacheConfirm();
-  document.getElementById("clearedHint").style.display = "block";   // 显示可点击提醒，点它重新弹密码框
   showToast("已清除所有本地缓存", 3);
 }
 
@@ -3414,7 +3414,6 @@ async function enterWithPwd(){
   sessionStorage.removeItem("cloud_locked");
   sessionStorage.setItem("cache_prompt_shown", "1");
   closeCacheConfirm();
-  document.getElementById("clearedHint").style.display = "none";   // 成功进入云端后隐藏提醒
   // 先清掉旧版页面缓存与旧 Service Worker（下次打开自动拿最新版），再直接拉取云端数据
   try{
     if("caches" in window){
@@ -3860,11 +3859,16 @@ function checkAnniToday(){
 
 /* ---------- 背景音乐 ---------- */
 function musicCdn(name){ return `https://${ghOwner()}.github.io/${ghRepo()}/music/` + name; }
+/* 内置默认曲目（公开CDN直连，不依赖GitHub API；fetch失败/清缓存后也能播） */
+const DEFAULT_MUSIC_LIST = ["music_01_piano.mp3","music_02_guitar.mp3","music_03_musicbox.mp3","music_04_rainpiano.mp3","music_05_cello.mp3","music_06_ambient.mp3"];
 function listMusicFiles(){
   return fetch(ghApi() + "music", { headers: ghHeaders() })
     .then(r => r.ok ? r.json() : [])
-    .then(list => (list || []).filter(f => f.name.match(/\.(mp3|m4a|ogg|wav)$/i)).map(f => f.name))
-    .catch(() => []);
+    .then(list => {
+      const names = (list || []).filter(f => f.name.match(/\.(mp3|m4a|ogg|wav)$/i)).map(f => f.name);
+      return names.length ? names : DEFAULT_MUSIC_LIST;   // 云端列表拉不到（限流/清缓存/断网）就用内置曲目
+    })
+    .catch(() => DEFAULT_MUSIC_LIST);
 }
 function loadMusic(name, autoplay){
   const audio = document.getElementById("bgmAudio");
@@ -4301,7 +4305,6 @@ function init(){
     sessionStorage.setItem("auth_granted", "0");
     sessionStorage.setItem("view_mode", "view");
     sessionStorage.setItem("cloud_locked", "1");
-    document.getElementById("clearedHint").style.display = "block";   // 清缓存模式：显示可点击提醒，点它重弹密码框
   }else if(savedMode === "full"){
     sessionStorage.setItem("auth_granted", "1");
     sessionStorage.setItem("view_mode", "full");
