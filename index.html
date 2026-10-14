@@ -2011,7 +2011,9 @@ function packCloudData(){
     last_music: localStorage.getItem("last_music"),
     fun: localStorage.getItem("jlt_fun"),
     treehole: localStorage.getItem("jlt_treehole"),
-    daynight: localStorage.getItem("jlt_daynight")
+    daynight: localStorage.getItem("jlt_daynight"),
+    thQuick: localStorage.getItem("jlt_th_quick"),            // 树洞用过的人（快捷用户名）
+    thAvatars: localStorage.getItem("jlt_th_recent_avatars")   // 树洞最近用过的头像
   };
 }
 
@@ -2133,6 +2135,8 @@ function applyImportedData(imported){
     if(imported.fun) localStorage.setItem("jlt_fun", typeof imported.fun === "string" ? imported.fun : JSON.stringify(imported.fun));
     if(imported.treehole) localStorage.setItem("jlt_treehole", typeof imported.treehole === "string" ? imported.treehole : JSON.stringify(imported.treehole));
     if(imported.daynight) localStorage.setItem("jlt_daynight", imported.daynight);
+    if(imported.thQuick) localStorage.setItem("jlt_th_quick", typeof imported.thQuick === "string" ? imported.thQuick : JSON.stringify(imported.thQuick));
+    if(imported.thAvatars) localStorage.setItem("jlt_th_recent_avatars", typeof imported.thAvatars === "string" ? imported.thAvatars : JSON.stringify(imported.thAvatars));
   }else{
     throw new Error("数据格式不正确：需要卡片数组，或 {title, cards} 对象");
   }
