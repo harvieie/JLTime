@@ -2756,17 +2756,18 @@ function thLaneCount(){
 }
 /* 每行最近播放的弹幕 id（树洞标题点按 → 重复刚才弹出的弹幕） */
 let thLastIds = null;
-function thRender(todayFirst){
+function thRender(todayFirst, fixedN){
   const st = document.getElementById("thStage");
   if(!st) return;
   st.innerHTML = "";
   const items = thTodayPriority(loadTreehole());
-  const n = thLaneCount();
+  const n = fixedN || (3 + Math.floor(Math.random() * 4));  // 每次随机出 3~6 个
+  st.style.height = (n * thRowH() + 8) + "px";
   thLastIds = [];
   for(let i = 0; i < n; i++){
     const dm = document.createElement("div");
     dm.className = "th-dm";
-    dm.style.animationDelay = (i * 0.7) + "s";  // 每行错峰进场，不齐刷刷
+    dm.style.animationDelay = (i * 0.6) + "s";  // 每行错峰进场，不齐刷刷
     st.appendChild(dm);
     // 当天第一次：按往年今日优先的顺序弹（首条固定），随后随机循环
     const seed = todayFirst ? i : Math.floor(Math.random() * 1e9);
@@ -2783,18 +2784,19 @@ function thStart(){
 }
 /* 喜忧：每次点按随机刷出不同的弹幕 */
 function thShuffle(){ thRender(false); }
-/* 树洞标题点按：重复刚才弹出的弹幕（每行固定重放刚才那条） */
+/* 树洞标题点按：重复刚才弹出的弹幕（行数与每条都与刚才一致） */
 function thRepeatLast(){
   const st = document.getElementById("thStage");
   if(!st) return;
   if(!thLastIds || !thLastIds.length){ thRender(false); return; }
   st.innerHTML = "";
   const items = thTodayPriority(loadTreehole());
-  const n = thLaneCount();
+  const n = thLastIds.length;
+  st.style.height = (n * thRowH() + 8) + "px";
   for(let i = 0; i < n; i++){
     const dm = document.createElement("div");
     dm.className = "th-dm";
-    dm.style.animationDelay = (i * 0.7) + "s";
+    dm.style.animationDelay = (i * 0.6) + "s";
     st.appendChild(dm);
     thPlayOne(dm, items, i, true, thLastIds[i] || null);
   }
@@ -3253,16 +3255,28 @@ function clearLocalCache(){
   renderAllCards();
 }
 
-// 确定：无需密码，直接清除本地缓存并断开云端连接（仍属未授权，进入访客限制）
+// 弹窗「确定」：清空页面所有本地内容（含拾趣/树洞/纪念日/主题等全部缓存），进入清理缓存模式
 function confirmClearCache(){
+  [
+    STORAGE.cards, STORAGE.title, "anniversaries", "jlt_theme", "jlt_fun", "jlt_treehole",
+    "jlt_daynight", "card_badges", "last_music", "cloud_loaded", "loaded_full_urls",
+    "jlt_th_quick", "jlt_th_recent_avatars", "jlt_th_first_done", "jlt_fun_edit", "jlt_captions"
+  ].forEach(k => { try{ localStorage.removeItem(k); }catch(e){} });
+  if("caches" in window){
+    caches.keys().then(keys => keys.forEach(key => caches.delete(key)));
+  }
+  localStorage.setItem("jlt_mode", "cleared");      // 持久化：以后打开网址都进入清理缓存模式
   sessionStorage.setItem("auth_granted", "0");
   sessionStorage.setItem("view_mode", "view");
   viewMode = "view";
-  clearLocalCache();
   sessionStorage.setItem("cloud_locked", "1");
-  applyViewMode("view");  // 访客：隐藏拾趣/编辑选项卡，标题、纪念日等不可点开
+  sessionStorage.setItem("cache_prompt_shown", "1");
+  applyViewMode("view");
+  document.getElementById("pageTitle").textContent = getPageTitle();
+  renderAllCards();
+  renderFun();
   closeCacheConfirm();
-  showToast("本地缓存已清除，云端连接已断开", 3);
+  showToast("已清除所有本地缓存", 3);
 }
 
 // 进入：校验暗号（访客/编辑两种模式），解锁云端，清缓存后拉取云端
@@ -3277,6 +3291,7 @@ function enterWithPwd(){
     alert("密语不对，请重新输入");
     return;
   }
+  localStorage.setItem("jlt_mode", mode === "full" ? "full" : "view");  // 持久化模式，下次打开网址自动恢复
   sessionStorage.setItem("auth_granted", "1");
   applyViewMode(mode);
   sessionStorage.removeItem("cloud_locked");
@@ -4149,14 +4164,26 @@ function registerSW(){
 }
 function init(){
   document.getElementById("pageTitle").textContent = getPageTitle();
-  // 状态机：首次打开（无任何授权状态）默认 = 本地缓存浏览（访客模式、云端断开）
-  //   取消 = 保持当前状态；确定 = 清缓存全锁（auth=0）；进入 = 输密码解锁云端并拉取
-  if(sessionStorage.getItem("auth_granted") === null){
-    sessionStorage.setItem("auth_granted", "1");
-    sessionStorage.setItem("cloud_locked", "1");
+  // 状态机：模式持久化在 localStorage（jlt_mode），每次打开网址自动恢复上次的模式
+  //   local  = 默认：本地缓存浏览（云端断开）；view = 访客云端；full = 编辑云端；cleared = 已清缓存（全空锁定）
+  const savedMode = localStorage.getItem("jlt_mode") || "local";
+  if(savedMode === "cleared"){
+    sessionStorage.setItem("auth_granted", "0");
     sessionStorage.setItem("view_mode", "view");
+    sessionStorage.setItem("cloud_locked", "1");
+  }else if(savedMode === "full"){
+    sessionStorage.setItem("auth_granted", "1");
+    sessionStorage.setItem("view_mode", "full");
+    sessionStorage.removeItem("cloud_locked");
+  }else if(savedMode === "view"){
+    sessionStorage.setItem("auth_granted", "1");
+    sessionStorage.setItem("view_mode", "view");
+    sessionStorage.removeItem("cloud_locked");
+  }else{ // local：默认本地浏览
+    sessionStorage.setItem("auth_granted", "1");
+    sessionStorage.setItem("view_mode", "view");
+    sessionStorage.setItem("cloud_locked", "1");
   }
-  const savedMode = sessionStorage.getItem("view_mode");
   applyViewMode(savedMode === "full" ? "full" : "view");
   if(!sessionStorage.getItem("cache_prompt_shown")) openCacheConfirm();
   bindLightboxSwipe();
