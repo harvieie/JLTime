@@ -539,12 +539,12 @@ button{border-radius:12px;}
     </div>
     <div class="th-box" id="treeholeBox">
       <div class="th-bar">
-        <span class="th-title" onclick="thRepeatLast()" title="重复刚才弹出的弹幕">树洞</span>
+        <span class="th-title" onclick="thShuffle()" title="随机刷出不同的弹幕">喜忧</span>
         <span class="th-tools">
           <span class="th-tool" onclick="thOpenSearch()" title="搜索弹幕">🔍<i class="th-brow"></i></span>
           <span class="th-tool" onclick="thAdd()" title="添加弹幕">＋<i class="th-brow"></i></span>
         </span>
-        <span class="th-title th-x-title" onclick="thShuffle()" title="随机刷出不同的弹幕">喜忧</span>
+        <span class="th-title th-x-title" onclick="thRepeatLast()" title="重复刚才弹出的弹幕">树洞</span>
       </div>
       <div class="th-stage" id="thStage"></div>
       <div class="th-resize" id="thResize" title="拖动调整高度"></div>
@@ -2754,7 +2754,7 @@ function thLaneCount(){
   const h = st ? st.clientHeight : 176;
   return Math.max(2, Math.floor(h / thRowH()));
 }
-/* 记录刚才的弹幕计划：所在行 lane 与 seed（树洞标题点按 → 完全复现刚才的排布） */
+/* 记录刚才的弹幕计划：完整排布（行/槽位/种子），树洞标题点按 → 完全复现 */
 let thLastPlan = null;
 function thRender(todayFirst){
   const st = document.getElementById("thStage");
@@ -2765,15 +2765,26 @@ function thRender(todayFirst){
   thLastPlan = [];
   for(let lane = 0; lane < n; lane++){
     const perRow = 1 + Math.floor(Math.random() * 3);   // 每行一次 1~3 条，行内错峰不遮挡
+    const dms = [];
+    const seeds = [];
     for(let j = 0; j < perRow; j++){
       const dm = document.createElement("div");
       dm.className = "th-dm";
       dm.style.top = lane * thRowH() + 4 + "px";
       st.appendChild(dm);
+      dms.push(dm);
       const seed = todayFirst ? lane : Math.floor(Math.random() * 1e9);
-      thPlayOne(dm, items, seed, true, null, j, perRow);
-      thLastPlan.push({ lane, seed, fixedId: null, perRow });
+      seeds.push(seed);
+      thPlayOne(dm, items, seed, true, null);    // 先渲染内容用于测量宽度
     }
+    const W = st.clientWidth;
+    const rowW = Math.max(...dms.map(d => d.offsetWidth));
+    const maxLen = Math.max(...dms.map(d => d.dataset.len || 0));
+    const rowDur = Math.max(8, 6 + maxLen * 0.5 + Math.random() * 3);  // 行统一时长
+    dms.forEach((dm, j) => {
+      thStartFly(dm, items, seeds[j], true, null, lane, j, perRow, rowDur, rowW);
+      thLastPlan.push({ lane, seed: seeds[j], fixedId: null, j, perRow, rowDur, rowW });
+    });
   }
 }
 /* 树洞/进入树洞页：随机弹；当天第一次进入优先往年往月今日的弹幕，随后随机 */
@@ -2797,7 +2808,7 @@ function thRepeatLast(){
     dm.className = "th-dm";
     dm.style.top = p.lane * thRowH() + 4 + "px";
     st.appendChild(dm);
-    thPlayOne(dm, items, p.seed, true, p.fixedId, 0, 1);
+    thStartFly(dm, items, p.seed, true, p.fixedId, p.lane, p.j, p.perRow, p.rowDur, p.rowW);
   }
 }
 /* 树洞当前是否还有弹幕在飘（没有 → 点空白随机继续弹） */
@@ -2805,9 +2816,10 @@ function thStageHasDm(){
   const st = document.getElementById("thStage");
   return st ? [...st.querySelectorAll(".th-dm")].some(el => el.style.display !== "none") : false;
 }
-function thPlayOne(el, items, seed, rand, fixedId, j, perRow){
+/* 渲染单条弹幕内容（不动画），返回弹幕对象 */
+function thPlayOne(el, items, seed, rand, fixedId){
   const pool = items.filter(it => it && it.text && it.text.trim());
-  if(!pool.length){ el.style.display = "none"; return; }
+  if(!pool.length){ el.style.display = "none"; return null; }
   let it;
   if(fixedId){
     it = pool.find(x => x.id === fixedId) || pool[seed % pool.length];
@@ -2825,23 +2837,32 @@ function thPlayOne(el, items, seed, rand, fixedId, j, perRow){
     <span class="th-text" style="font-size:${size}px">${escapeHtml(shown)}</span>
     <span class="th-x" title="删除">×</span>`;
   el.dataset.id = it.id;
+  el.dataset.len = String(it.text.length);
+  return it;
+}
+/* 启动飞行：同一行统一速度（后发永不追上先发、不会互相遮挡），循环时保持同样的节奏（不闪现） */
+function thStartFly(el, items, seed, rand, fixedId, lane, j, perRow, rowDur, rowW){
   const st = el.closest(".th-stage");
-  const dist = -(st.clientWidth + el.offsetWidth + 60);
+  thPlayOne(el, items, seed, rand, fixedId);
+  const pool = items.filter(it => it && it.text && it.text.trim());
+  if(!pool.length) return;
+  const W = st.clientWidth;
+  const V = (W + rowW) / rowDur;                          // 行内统一速度
+  const dur = (W + el.offsetWidth) / V;                   // 每条按自身宽度折算时长（同速）
+  const delay = perRow > 1 ? (j * rowDur / perRow) : 0;   // 槽位错峰，固定不变
+  const dist = -(W + el.offsetWidth + 60);
   el.style.setProperty("--thw", dist + "px");
-  const dur = Math.max(8, 6 + it.text.length * 0.5 + Math.random() * 3);
   el.style.animationDuration = dur + "s";
-  if(!el.style.top) el.style.top = (seed % thLaneCount()) * thRowH() + 4 + "px";
-  // 行内错峰：同一条行 1~3 条均匀分布在屏上，不折叠遮挡
-  if(typeof j === "number" && perRow > 1) el.style.animationDelay = (j * dur / perRow) + "s";
+  el.style.animationDelay = delay + "s";
+  el.style.top = lane * thRowH() + 4 + "px";
   el.classList.remove("fly");
   void el.offsetWidth;
   el.classList.add("fly");
   el.onanimationend = () => {
-    el.style.animationDelay = "0s";  // 仅首轮错峰，循环后连续弹，树洞不空
-    if(fixedId){ thPlayOne(el, items, seed, rand, fixedId); return; }  // 重复刚才：固定重放同一条
-    // 随机模式：下一条随机挑（避免固定重复同一条）
+    if(fixedId){ thStartFly(el, items, seed, rand, fixedId, lane, j, perRow, rowDur, rowW); return; }  // 固定重放同一条
+    // 随机模式：下一条随机挑，但节奏（行时长/槽位/速度）保持不变
     const nextSeed = rand ? seed + 1 + Math.floor(Math.random() * Math.max(1, pool.length - 1)) : seed + pool.length;
-    thPlayOne(el, items, nextSeed, rand);
+    thStartFly(el, items, nextSeed, rand, null, lane, j, perRow, rowDur, rowW);
   };
 }
 function thTogglePause(){
