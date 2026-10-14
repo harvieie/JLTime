@@ -3762,7 +3762,7 @@ function seedAnniversaries(){
 const ANNI_ICONS = ["💛","❤️","💌","💍","🌸","⭐","🎂","🌙","☕","🐾"];
 let editingAnniId = null;
 function openAnniModal(){
-  if(viewMode === "view") return;  // 访客无法点开纪念日
+  // 访客模式可点开查看（只读），编辑按钮/添加按钮在渲染时已按访客模式隐藏
   renderAnniList();
   document.getElementById("anniEditBox").style.display = "none";
   document.getElementById("anniList").style.display = "";
@@ -3773,7 +3773,7 @@ function closeAnniModal(){ document.getElementById("anniModal").style.display = 
 function renderAnniList(){
   const list = document.getElementById("anniList");
   const arr = loadAnniversaries();
-  if(!arr.length){ list.innerHTML = '<div style="color:#999;text-align:center;padding:16px;">还没有纪念日，点下面添加一个</div>'; return; }
+  if(!arr.length){ list.innerHTML = '<div style="color:#999;text-align:center;padding:16px;">' + (viewMode === "view" ? "还没有纪念日" : "还没有纪念日，点下面添加一个") + '</div>'; return; }
   list.innerHTML = arr.map(a => {
     const days = daysBetween(a.date);
     const editBtn = viewMode === "view" ? "" :
