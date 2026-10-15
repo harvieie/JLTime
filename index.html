@@ -3646,19 +3646,23 @@ function openXzModal(){
   document.getElementById("xzModal").style.display="flex";
   xzFitTimeInputs();
 }
-/* 时间框宽度自适应内容，不留空 */
+/* 时间框宽度自适应内容，不留空（直接改输入框宽度，与输入框字体一致测量） */
 function xzFitTimeInputs(){
   const fit=el=>{
     if(!el) return;
+    const cs=getComputedStyle(el);
     const span=document.createElement("span");
-    span.style.cssText="position:absolute;visibility:hidden;white-space:pre;font:10px monospace;";
+    span.style.cssText="position:absolute;visibility:hidden;white-space:pre;";
+    span.style.font = cs.font || "10px monospace";
     span.textContent = el.value || " ";
     document.body.appendChild(span);
     const w=span.offsetWidth;
     document.body.removeChild(span);
-    el.style.width = Math.max(40, w + 8) + "px";
+    const pad=(parseFloat(cs.paddingLeft)||0)+(parseFloat(cs.paddingRight)||0);
+    const bd=(parseFloat(cs.borderLeftWidth)||0)+(parseFloat(cs.borderRightWidth)||0);
+    el.style.width = Math.max(40, Math.ceil(w + pad + bd + 2)) + "px";
   };
-  document.querySelectorAll("#xzVotesEdit input[data-oi]").forEach(fit);
+  document.querySelectorAll('#xzVotesEdit input[data-oi][title="时间"]').forEach(fit);
   fit(document.getElementById("xzNVTime"));
 }
 function renderXzVotesEdit(it){
@@ -3677,6 +3681,7 @@ function renderXzVotesEdit(it){
       <input type="text" value="${escapeHtml(v.note||"")}" data-oi="${oi}" oninput="xzEditNote(this)" title="备注" placeholder="备注" style="width:100%;padding:2px 3px;border:1px solid #f0d8e2;border-radius:6px;font-size:10px;box-sizing:border-box;flex:1 1 100%;">
     </div>`;
   }).join("");
+  xzFitTimeInputs();
 }
 function xzEditUser(oi){
   const list = loadXinze();
@@ -3822,9 +3827,14 @@ function xzOpenSearch(){
   const show = p.style.display==="none" || !p.style.display;
   if(show){
     p.style.display="flex";
-    // 顶部与调整高度条对齐
+    // 面板底部与调整高度条底部对齐
+    const box=document.getElementById("xinzeBox");
     const resize=document.getElementById("xzResize");
-    if(resize) p.style.top = resize.offsetTop + "px";
+    if(box&&resize){
+      const br=box.getBoundingClientRect(), rr=resize.getBoundingClientRect();
+      p.style.top="auto";
+      p.style.bottom = Math.max(8, Math.round(br.bottom - rr.bottom)) + "px";
+    }
     // 全屏遮罩：点面板外任何地方只负责关闭搜索，不误触下层按钮
     let mask=document.getElementById("xzSearchMask");
     if(!mask){
