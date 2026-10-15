@@ -3734,6 +3734,11 @@ function xzOpenDetail(id){
   // 先让搜索面板/遮罩完全关闭，再于下一帧打开详情，避免同一次点击内的层叠/事件误关
   setTimeout(function(){
     xzEditId=id; xzPause(); openXzModal();
+    const m=document.getElementById("xzModal");
+    const cs=getComputedStyle(m);
+    const r=m.getBoundingClientRect();
+    const top=document.elementFromPoint(innerWidth/2, innerHeight/2);
+    alert("disp="+m.style.display+" vis="+cs.visibility+" op="+cs.opacity+" z="+cs.zIndex+" rect="+Math.round(r.width)+"x"+Math.round(r.height)+" topEl="+(top?top.className||top.tagName:"none")+" modalAtTop="+m.contains(top));
   }, 40);
 }
 /* 详情弹窗打开后短时间内忽略背景点击，避免搜索条目点击时合成事件误关 */
