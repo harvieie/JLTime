@@ -704,7 +704,7 @@ button{border-radius:12px;}
         </select>
       </div>
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
-        <input id="xzNVTime" placeholder="时间" style="width:73px;padding:6px;border:1px solid #e9eec;border-radius:10px;font-size:11px;flex-shrink:0;">
+        <input id="xzNVTime" placeholder="时间" oninput="xzFitTimeInputs()" style="width:73px;padding:6px;border:1px solid #e9eec;border-radius:10px;font-size:11px;flex-shrink:0;">
         <input id="xzNVNote" placeholder="备注（可空）" style="flex:1;padding:6px;border:1px solid #e9eec;border-radius:10px;min-width:0;">
       </div>
       <div style="display:flex;gap:8px;justify-content:center;">
@@ -3621,6 +3621,22 @@ function openXzModal(){
   renderXzVotesEdit(it);
   document.getElementById("xzDelBtn").style.display = (it && isFunEditMode()) ? "" : "none";
   document.getElementById("xzModal").style.display="flex";
+  xzFitTimeInputs();
+}
+/* 时间框宽度自适应内容，不留空 */
+function xzFitTimeInputs(){
+  const fit=el=>{
+    if(!el) return;
+    const span=document.createElement("span");
+    span.style.cssText="position:absolute;visibility:hidden;white-space:pre;font:10px monospace;";
+    span.textContent = el.value || " ";
+    document.body.appendChild(span);
+    const w=span.offsetWidth;
+    document.body.removeChild(span);
+    el.style.width = Math.max(40, w + 8) + "px";
+  };
+  document.querySelectorAll("#xzVotesEdit input[data-oi]").forEach(fit);
+  fit(document.getElementById("xzNVTime"));
 }
 function renderXzVotesEdit(it){
   const box=document.getElementById("xzVotesEdit");
@@ -3670,6 +3686,7 @@ function xzEditTime(inp){
   const it = list.find(x=>x.id===xzEditId); if(!it) return;
   const oi=+inp.dataset.oi;
   if(it.votes && it.votes[oi]){ it.votes[oi].time=inp.value; saveXinze(list); }
+  xzFitTimeInputs();
 }
 function xzDelVote(oi){
   const list = loadXinze();
