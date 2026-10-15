@@ -3383,18 +3383,15 @@ function xzRender(){
     }
   });
 }
-/* 手动触摸滚动：暂停自动轮播，并根据可视位置更新当前条目 */
+/* 手动触摸滚动：只负责浏览；暂停由点按行触发 */
 function xzBindTouchScroll(){
   const stage=document.getElementById("xzStage");
   if(!stage || stage._xzTouchBound) return; stage._xzTouchBound=true;
-  let st=null;
-  stage.addEventListener("touchstart", e=>{ st={y:e.touches[0].clientY, t:Date.now()}; xzPauseManual(); }, {passive:true});
-  stage.addEventListener("wheel", ()=> xzPauseManual(), {passive:true});
   stage.addEventListener("scroll", ()=>{
     if(!xzPaused) return;
-    // 停止滚动后找中间那行
-    clearTimeout(st._timer);
-    st._timer = setTimeout(()=> xzRecenter(), 180);
+    // 暂停状态下用户手动滑了，停稳后把中间那条设为当前
+    clearTimeout(stage._xzTimer);
+    stage._xzTimer = setTimeout(()=> xzRecenter(), 180);
   }, {passive:true});
 }
 function xzPauseManual(){
@@ -3499,33 +3496,39 @@ function renderXzVotesEdit(it){
   }).join("");
 }
 function xzEditVoteField(oi, field){
-  const it = loadXinze().find(x=>x.id===xzEditId); if(!it||!it.votes[oi]) return;
+  const list = loadXinze();
+  const it = list.find(x=>x.id===xzEditId); if(!it||!it.votes[oi]) return;
   const cur = it.votes[oi][field]||"";
   const nv = prompt(field==="avatar" ? "输入头像 emoji：" : "输入名字：", cur);
   if(nv===null) return;
   it.votes[oi][field] = nv.trim() || (field==="avatar"?"🙂":"");
-  saveXinze(loadXinze()); renderXzVotesEdit(it); xzRender();
+  saveXinze(list); renderXzVotesEdit(it); xzRender();
 }
 function xzToggleChoice(oi){
-  const it = loadXinze().find(x=>x.id===xzEditId); if(!it||!it.votes[oi]) return;
+  const list = loadXinze();
+  const it = list.find(x=>x.id===xzEditId); if(!it||!it.votes[oi]) return;
   it.votes[oi].choice = it.votes[oi].choice===1 ? -1 : 1;
-  saveXinze(loadXinze()); renderXzVotesEdit(it); xzRender();
+  saveXinze(list); renderXzVotesEdit(it); xzRender();
 }
 function xzViewNote(oi){
-  const it = loadXinze().find(x=>x.id===xzEditId); if(!it||!it.votes[oi]) return;
+  const list = loadXinze();
+  const it = list.find(x=>x.id===xzEditId); if(!it||!it.votes[oi]) return;
   const nv = prompt("备注：", it.votes[oi].note||"");
   if(nv===null) return;
   it.votes[oi].note = nv;
-  saveXinze(loadXinze()); renderXzVotesEdit(it); xzRender();
+  saveXinze(list); renderXzVotesEdit(it); xzRender();
 }
 function xzEditTime(inp){
-  const it = loadXinze().find(x=>x.id===xzEditId); if(!it) return;
+  const list = loadXinze();
+  const it = list.find(x=>x.id===xzEditId); if(!it) return;
   const oi=+inp.dataset.oi;
-  if(it.votes && it.votes[oi]) it.votes[oi].time=inp.value;
+  if(it.votes && it.votes[oi]){ it.votes[oi].time=inp.value; saveXinze(list); }
 }
 function xzDelVote(oi){
-  const it = loadXinze().find(x=>x.id===xzEditId); if(!it) return;
-  it.votes.splice(oi,1); saveXinze([...loadXinze()]);
+  const list = loadXinze();
+  const it = list.find(x=>x.id===xzEditId); if(!it) return;
+  it.votes.splice(oi,1);
+  saveXinze(list);
   renderXzVotesEdit(it); xzRender();
 }
 /* 添加一条投票记录（任意模式） */
