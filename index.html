@@ -744,6 +744,7 @@ button{border-radius:12px;}
           <option value="-1">不喜欢 ✕</option>
         </select>
       </div>
+      <div id="xzNVQuick" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
         <input id="xzNVTime" placeholder="时间" oninput="xzFitTimeInputs()" style="width:73px;padding:6px 3px;border:1px solid #e9eec;border-radius:10px;font-size:13px;flex:0 0 auto;min-width:0;font-family:monospace;">
         <input id="xzNVNote" placeholder="备注（可空）" style="flex:1;padding:6px;border:1px solid #e9eec;border-radius:10px;min-width:0;font-size:13px;">
@@ -3675,6 +3676,18 @@ function closeXzUserPop(){
   const p=document.getElementById("xzUserPop"); if(p) p.style.display="none";
   const m=document.getElementById("xzUserPopMask"); if(m) m.remove();
 }
+/* 添加选择时：最近用过的用户快捷点按（点选填入头像/名字，长按删除） */
+function xzRenderNVQuick(){
+  const box=document.getElementById("xzNVQuick");
+  if(!box) return;
+  const quick=thQuickList();
+  box.innerHTML = quick.length ? quick.map((u,i)=>`<span onclick="xzPickNVUser(${i})" oncontextmenu="event.preventDefault();xzDelQuickUser(${i});xzRenderNVQuick();" onpointerdown="xzQPressStart(event,${i})" onpointerup="xzQPressEnd();xzRenderNVQuick();" onpointerleave="xzQPressEnd()" style="background:#fff0f6;border:1px solid #ffd6e2;color:#c2567f;font-size:12px;padding:3px 10px;border-radius:12px;cursor:pointer;user-select:none;-webkit-user-select:none;">${escapeHtml(u.avatar||"🙂")} ${escapeHtml(u.name||"")}</span>`).join("") : '<span style="font-size:11px;color:#bbb;">暂无最近用户</span>';
+}
+function xzPickNVUser(i){
+  const u=thQuickList()[i]; if(!u) return;
+  document.getElementById("xzNVAvatar").value = u.avatar||"🙂";
+  document.getElementById("xzNVName").value = u.name||"";
+}
 let _xzQPTimer=null;
 function xzQPressStart(e, i){
   if(e.pointerType==="mouse") return;  // 桌面用右键
@@ -3713,6 +3726,7 @@ function openXzModal(){
   document.getElementById("xzDelBtn").style.display = (it && isFunEditMode()) ? "" : "none";
   document.getElementById("xzModal").style.display="flex";
   xzFitTimeInputs();
+  xzRenderNVQuick();
 }
 /* 时间框宽度自适应内容，不留空（直接改输入框宽度，与输入框字体一致测量） */
 function xzFitTimeInputs(){
