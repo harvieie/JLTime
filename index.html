@@ -161,6 +161,39 @@ body.dark .th-tools::after{background:#8a8f9a;}
 .th-quick .th-q-hint{color:#bbb;border-color:transparent;background:transparent;cursor:default;}
 .th-search-panel{width:100%;margin-top:10px;border-top:1px dashed #e8c89a;padding-top:8px;}
 .th-search-res{max-height:180px;overflow:auto;}
+
+/* ===== 心择簿 ===== */
+.xz-box{margin-top:14px;}
+.xz-stage{
+  position:relative;width:100%;height:200px;overflow:hidden;border-radius:14px;
+  background:linear-gradient(180deg,#fdeef3,#fbe0e9);border:1px solid #f3b8cc;
+}
+.xz-track{padding:14px 12px;display:flex;flex-direction:column;gap:10px;transition:transform .8s cubic-bezier(.4,0,.2,1);}
+.xz-row{
+  display:grid;grid-template-columns:54px 1fr 46px;gap:10px;align-items:center;
+  background:rgba(255,255,255,.92);border:1px solid #f6c6d6;border-radius:16px;padding:8px 10px;
+  box-shadow:0 2px 8px rgba(210,120,150,.14);transition:transform .4s,box-shadow .4s,opacity .4s;opacity:.72;transform:scale(.94);
+}
+.xz-row.xz-active{opacity:1;transform:scale(1);box-shadow:0 4px 16px rgba(210,120,150,.3);}
+.xz-icon{
+  width:50px;height:50px;border-radius:50%;background:#fff0f5;border:2px solid #f3b8cc;
+  display:flex;align-items:center;justify-content:center;font-size:26px;overflow:hidden;flex-shrink:0;
+}
+.xz-icon img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.xz-mid{display:flex;flex-direction:column;gap:4px;min-width:0;}
+.xz-votes{display:flex;align-items:center;flex-wrap:wrap;gap:4px;min-height:22px;}
+.xz-vchip{position:relative;width:22px;height:22px;border-radius:50%;background:#ffe9f0;border:1px solid #f3b8cc;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;}
+.xz-vchip .xz-mark{position:absolute;inset:-3px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;}
+.xz-vchip .xz-mark.ok{color:#3bb273;}
+.xz-vchip .xz-mark.no{color:#e0567a;}
+.xz-text{font-size:13px;color:#6b3a4d;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.xz-side{display:flex;flex-direction:column;gap:8px;align-items:center;}
+.xz-btn{width:30px;height:30px;border-radius:50%;border:1.5px solid #f3b8cc;background:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .15s;}
+.xz-btn:active{transform:scale(.88);}
+.xz-btn.no{color:#e0567a;border-color:#f0a8bc;}
+.xz-btn.ok{color:#3bb273;border-color:#a8dcc0;}
+.xz-empty{padding:24px;text-align:center;color:#c98aa0;font-size:13px;}
+
 .th-search-item{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed #f3dfc2;}
 .th-search-item .th-avatar{width:22px;height:22px;border-radius:50%;background:#ffe9c9;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .th-search-item .th-t{flex:1;min-width:0;font-size:12px;color:#555;display:flex;align-items:center;gap:8px;}
@@ -568,6 +601,23 @@ button{border-radius:12px;}
         <div class="th-search-res" id="thSearchRes"></div>
       </div>
     </div>
+
+    <!-- 心择簿：对事物/喜好的选择 -->
+    <div class="th-box xz-box" id="xinzeBox">
+      <div class="th-bar">
+        <span class="th-title" onclick="xzShuffle()" title="点击刷新一组">心择簿</span>
+        <span class="th-tools">
+          <span class="th-tool" onclick="xzOpenSearch()" title="搜索">🔍</span>
+          <span class="th-tool" onclick="xzAdd()" title="添加">＋</span>
+        </span>
+      </div>
+      <div class="xz-stage" id="xzStage"></div>
+      <div class="th-resize" id="xzResize" title="拖动调整高度"></div>
+      <div class="th-search-panel" id="xzSearchPanel" style="display:none;">
+        <input type="text" id="xzSearchInput" placeholder="搜索内容或用户" oninput="xzSearch()" style="width:100%;">
+        <div class="th-search-res" id="xzSearchRes"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -591,6 +641,41 @@ button{border-radius:12px;}
       <button class="success" id="thCloudBtn" onclick="if(saveThModal()!==false) thUploadCloud();" style="padding:6px 10px;font-size:13px;white-space:nowrap;">上传云端</button>
       <button class="btn-danger" id="thDelBtn" onclick="thDelModal()" style="display:none;padding:6px 10px;font-size:13px;white-space:nowrap;">删除</button>
       <button class="btn-sec" onclick="closeThModal()" style="padding:6px 10px;font-size:13px;white-space:nowrap;">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 心择簿：详情 / 编辑 -->
+<div class="modal-overlay" id="xzModal" onclick="if(event.target===this) closeXzModal()">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-title" id="xzModalTitle">心择簿详情</div>
+    <div style="display:flex;align-items:center;gap:10px;margin:8px 0;">
+      <div id="xzImgPrev" style="width:46px;height:46px;border-radius:50%;background:#fff0f5;border:2px solid #f3b8cc;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;"></div>
+      <input id="xzIconInput" placeholder="输入图标 emoji" maxlength="8" style="flex:1;padding:8px;border:1px solid #e9eec;border-radius:12px;outline:text-align:center;">
+      <button class="btn-sec" onclick="xzPickImg()" style="padding:6px 10px;font-size:12px;">传图</button>
+    </div>
+    <div style="text-align:left;font-size:12px;color:#888;margin:6px 0 2px;">内容（主页只显示第一行）：</div>
+    <textarea id="xzTextInput" style="width:100%;min-height:70px;resize:vertical;box-sizing:border-box;" placeholder="对这件事物的描述…"></textarea>
+    <div style="text-align:left;font-size:12px;color:#888;margin:10px 0 2px;">选择记录（同用户排在一起，时间可改）：</div>
+    <div id="xzVotesEdit" style="text-align:left;"></div>
+    <div id="xzAddVoteBox" style="display:none;margin-top:8px;border-top:1px dashed #f3dfc2;padding-top:8px;">
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input id="xzNVAvatar" placeholder="头像" maxlength="8" style="width:56px;padding:6px;border:1px solid #e9eec;border-radius:10px;text-align:center;">
+        <input id="xzNVName" placeholder="名字" maxlength="12" style="flex:1;padding:6px;border:1px solid #e9eec;border-radius:10px;">
+        <select id="xzNVChoice" style="padding:6px;border:1px solid #e9eec;border-radius:10px;">
+          <option value="1">喜欢 ✓</option>
+          <option value="-1">不喜欢 ✕</option>
+        </select>
+        <button class="btn-pri" onclick="xzSaveNewVote()" style="padding:6px 10px;font-size:12px;">添加</button>
+      </div>
+    </div>
+    <div style="text-align:left;margin:8px 0;">
+      <span onclick="xzAddVoteRow()" style="font-size:12px;color:#c2567f;cursor:pointer;">＋ 添加一条选择</span>
+    </div>
+    <div class="btn-row" style="display:flex;flex-wrap:nowrap;gap:6px;justify-content:center;margin-top:10px;">
+      <button class="btn-pri" onclick="xzSave()" style="padding:6px 12px;font-size:13px;">保存</button>
+      <button class="btn-danger" id="xzDelBtn" onclick="xzDel()" style="display:none;padding:6px 12px;font-size:13px;">删除</button>
+      <button class="btn-sec" onclick="closeXzModal()" style="padding:6px 12px;font-size:13px;">关闭</button>
     </div>
   </div>
 </div>
@@ -2028,7 +2113,8 @@ function packCloudData(){
     treehole: localStorage.getItem("jlt_treehole"),
     daynight: localStorage.getItem("jlt_daynight"),
     thQuick: localStorage.getItem("jlt_th_quick"),            // 树洞用过的人（快捷用户名）
-    thAvatars: localStorage.getItem("jlt_th_recent_avatars")   // 树洞最近用过的头像
+    thAvatars: localStorage.getItem("jlt_th_recent_avatars"), // 树洞最近用过的头像
+    xinze: localStorage.getItem("jlt_xinze")                 // 心择簿
   };
 }
 
@@ -2155,6 +2241,7 @@ function applyImportedData(imported){
     if(imported.daynight) localStorage.setItem("jlt_daynight", imported.daynight);
     if(imported.thQuick) localStorage.setItem("jlt_th_quick", typeof imported.thQuick === "string" ? imported.thQuick : JSON.stringify(imported.thQuick));
     if(imported.thAvatars) localStorage.setItem("jlt_th_recent_avatars", typeof imported.thAvatars === "string" ? imported.thAvatars : JSON.stringify(imported.thAvatars));
+    if(imported.xinze) localStorage.setItem("jlt_xinze", typeof imported.xinze === "string" ? imported.xinze : JSON.stringify(imported.xinze));
   }else{
     throw new Error("数据格式不正确：需要卡片数组，或 {title, cards} 对象");
   }
@@ -2740,7 +2827,8 @@ function switchTab(name){
   // 拾趣面板时隐藏卡片时间轴，切回筛选/编辑时恢复
   const tl = document.getElementById("timelineWrap");
   if(tl) tl.style.display = name === "fun" ? "none" : "";
-  if(name === "fun" && typeof thStart === "function") thStart();  // 切回拾趣时确保弹幕在飘
+  if(name === "fun" && typeof thStart === "function"){ thStart(); xzStart(); }  // 切回拾趣时确保弹幕/心择簿在动
+  else if(typeof xzStop === "function") xzStop();
 }
 /* 页面空白处左右滑切换选项卡：左滑下一个，右滑上一个（访客模式无编辑，自动跳过） */
 (function(){
@@ -3096,6 +3184,225 @@ function thSaveQuick(avatar, name){
   q.push({ avatar: avatar, name: name });
   localStorage.setItem("jlt_th_quick", JSON.stringify(q.slice(-12)));
 }
+
+/* ================= 心择簿 ================= */
+function loadXinze(){
+  try{ const a = JSON.parse(localStorage.getItem("jlt_xinze")); if(Array.isArray(a)) return a; }catch(e){}
+  return [];
+}
+function saveXinze(list){
+  localStorage.setItem("jlt_xinze", JSON.stringify(list));
+  if(typeof markDirty === "function") markDirty("xinze");
+}
+function xzNowStr(){
+  const d=new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+}
+function xzSeed(){
+  const now=xzNowStr().slice(0,10);
+  return [
+    { id:"x1", icon:"🍲", isImg:false, text:"爱吃火锅", votes:[{avatar:"😀",name:"伟行",choice:1,time:now+" 20:00"},{avatar:"🐰",name:"晓琳",choice:1,time:now+" 20:05"}] },
+    { id:"x2", icon:"🎬", isImg:false, text:"周末看电影", votes:[{avatar:"😀",name:"伟行",choice:1,time:now+" 21:00"}] },
+    { id:"x3", icon:"🌧", isImg:false, text:"阴雨天", votes:[{avatar:"😀",name:"伟行",choice:-1,time:now+" 19:30"}] }
+  ];
+}
+let xzIdx = 0, xzTimer = null, xzVoteRowId = null, xzVoteChoice = 0, xzEditId = null;
+function xzEnsureSeed(){ if(!localStorage.getItem("jlt_xinze")) saveXinze(xzSeed()); }
+/* 组内投票：相同用户排一起；一行重复头像只显示最新一次 */
+function xzVisibleVotes(votes){
+  const sorted=[...votes].sort((a,b)=> (a.time||"").localeCompare(b.time||""));
+  const groups={};
+  sorted.forEach(v=>{ const k=(v.avatar||"🙂")+"|"+(v.name||""); (groups[k]=groups[k]||[]).push(v); });
+  return Object.keys(groups).sort((a,b)=> groups[a][0].time.localeCompare(groups[b][0].time)).map(k=> groups[k][groups[k].length-1]);
+}
+function xzChipHTML(v){
+  const mark = v.choice===1 ? '<span class="xz-mark ok">✓</span>' : '<span class="xz-mark no">✕</span>';
+  return `<span class="xz-vchip" title="${escapeHtml(v.name||'')}"><span>${escapeHtml(v.avatar||"🙂")}</span>${mark}</span>`;
+}
+function xzIconHTML(it){
+  if(it.isImg && it.icon){ return `<div class="xz-icon"><img src="${it.icon}" alt=""></div>`; }
+  return `<div class="xz-icon">${escapeHtml(it.icon||"❓")}</div>`;
+}
+function xzRowHTML(it, active){
+  const votes = xzVisibleVotes(it.votes||[]);
+  const vbox = votes.length ? votes.map(xzChipHTML).join("") : '<span style="font-size:11px;color:#c99ab0;">待选择</span>';
+  const firstLine = (it.text||"").split("\n")[0];
+  return `<div class="xz-row${active?" xz-active":""}" onclick="xzOpenDetail('${it.id}')">
+    ${xzIconHTML(it)}
+    <div class="xz-mid">
+      <div class="xz-votes">${vbox}</div>
+      <div class="xz-text">${escapeHtml(firstLine)}</div>
+    </div>
+    <div class="xz-side">
+      <div class="xz-btn no" onclick="event.stopPropagation();xzPickUser('${it.id}',-1)" title="不喜欢">✕</div>
+      <div class="xz-btn ok" onclick="event.stopPropagation();xzPickUser('${it.id}',1)" title="喜欢">✓</div>
+    </div>
+  </div>`;
+}
+function xzRender(){
+  xzEnsureSeed();
+  const list=loadXinze();
+  const stage=document.getElementById("xzStage");
+  if(!stage) return;
+  if(!list.length){ stage.innerHTML='<div class="xz-empty">还没有条目，点 ＋ 添加第一条吧</div>'; return; }
+  const n=list.length;
+  const win=[((xzIdx-1)%n+n)%n, xzIdx%n, (xzIdx+1)%n];
+  stage.innerHTML = '<div class="xz-track">'+ win.map((li,i)=> xzRowHTML(list[li], i===1)).join("") +'</div>';
+}
+function xzStart(){
+  if(xzTimer) clearInterval(xzTimer);
+  xzIdx = Math.floor(Math.random()*Math.max(1,loadXinze().length));
+  xzRender();
+  xzTimer = setInterval(()=>{
+    const n=loadXinze().length;
+    if(n>1){ xzIdx=(xzIdx+1)%n; xzRender(); }
+  }, 4200);
+}
+function xzStop(){ if(xzTimer){ clearInterval(xzTimer); xzTimer=null; } }
+function xzShuffle(){ xzStart(); }
+/* 投票：弹出历史用户选择 */
+function xzPickUser(id, choice){
+  xzVoteRowId=id; xzVoteChoice=choice;
+  const quick=thQuickList();
+  let pop=document.getElementById("xzUserPop");
+  if(!pop){
+    pop=document.createElement("div");
+    pop.id="xzUserPop";
+    pop.style.cssText="position:fixed;left:50%;bottom:120px;transform:translateX(-50%);background:#fff;border:1px solid #f3b8cc;border-radius:14px;padding:12px;box-shadow:0 6px 24px rgba(210,120,150,.3);z-index:99999;max-width:90vw;";
+    document.body.appendChild(pop);
+  }
+  pop.innerHTML='<div style="font-size:13px;font-weight:700;color:#c2567f;margin-bottom:8px;">选择一位用户'+(choice===1?"：喜欢 ✓":"：不喜欢 ✕")+'</div>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:6px;max-width:260px;">'
+    +(quick.length? quick.map((u,i)=>`<span onclick="xzDoVote(${i})" style="background:#fff0f6;border:1px solid #ffd6e2;border-radius:14px;padding:5px 10px;font-size:13px;cursor:pointer;">${escapeHtml(u.avatar||"🙂")} ${escapeHtml(u.name||"")}</span>`).join("") : '<span style="font-size:12px;color:#999;">暂无历史用户，可在详情里添加</span>')
+    +'</div><div style="text-align:center;margin-top:8px;"><span onclick="document.getElementById(\'xzUserPop\').style.display=\'none\'" style="font-size:12px;color:#999;cursor:pointer;">取消</span></div>';
+  pop.style.display="block";
+}
+function xzDoVote(ui){
+  const u=thQuickList()[ui]; if(!u) return;
+  const list=loadXinze();
+  const it=list.find(x=>x.id===xzVoteRowId);
+  if(it){ (it.votes=it.votes||[]).push({avatar:u.avatar||"🙂", name:u.name||"", choice:xzVoteChoice, time:xzNowStr()}); saveXinze(list); }
+  document.getElementById("xzUserPop").style.display="none";
+  xzRender();
+}
+/* 详情 / 编辑弹窗 */
+function xzAdd(){ xzEditId=null; openXzModal(); }
+function xzOpenDetail(id){ xzEditId=id; openXzModal(); }
+function openXzModal(){
+  xzEnsureSeed();
+  const it = xzEditId ? loadXinze().find(x=>x.id===xzEditId) : null;
+  document.getElementById("xzModalTitle").textContent = it ? "心择簿详情" : "添加条目";
+  document.getElementById("xzIconInput").value = it ? (it.isImg?"":(it.icon||"")) : "";
+  document.getElementById("xzTextInput").value = it ? (it.text||"") : "";
+  document.getElementById("xzImgPrev").innerHTML = it && it.isImg && it.icon ? `<img src="${it.icon}" style="width:46px;height:46px;border-radius:50%;object-fit:cover;">` : "";
+  renderXzVotesEdit(it);
+  document.getElementById("xzDelBtn").style.display = (it && isFunEditMode()) ? "" : "none";
+  document.getElementById("xzModal").style.display="flex";
+}
+function renderXzVotesEdit(it){
+  const box=document.getElementById("xzVotesEdit");
+  const votes=(it&&it.votes)||[];
+  if(!votes.length){ box.innerHTML='<div style="font-size:12px;color:#999;padding:6px 0;">还没有选择记录</div>'; return; }
+  const sorted=[...votes].sort((a,b)=>(a.time||"").localeCompare(b.time||""));
+  box.innerHTML = sorted.map((v,i)=>`
+    <div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px dashed #f3dfc2;font-size:12px;">
+      <span style="font-size:15px;">${escapeHtml(v.avatar||"🙂")}</span>
+      <span style="flex:1;color:#555;">${escapeHtml(v.name||"")}</span>
+      <span style="color:${v.choice===1?"#3bb273":"#e0567a"};font-weight:700;">${v.choice===1?"✓":"✕"}</span>
+      <input type="text" value="${escapeHtml(v.time||"")}" data-vi="${i}" oninput="xzEditTime(this)" style="width:120px;padding:3px 5px;border:1px solid #e9eec;border-radius:6px;font-size:11px;">
+      ${isFunEditMode()?`<span onclick="xzDelVote(${i})" style="color:#e0567a;cursor:pointer;padding:0 4px;">✕</span>`:""}
+    </div>`).join("");
+}
+function xzEditTime(inp){
+  const it = loadXinze().find(x=>x.id===xzEditId); if(!it) return;
+  const i=+inp.dataset.vi;
+  if(it.votes && it.votes[i]) it.votes[i].time=inp.value;
+}
+function xzDelVote(i){
+  const it = loadXinze().find(x=>x.id===xzEditId); if(!it) return;
+  it.votes.splice(i,1); saveXinze([...loadXinze()]);
+  renderXzVotesEdit(it); xzRender();
+}
+/* 添加一条投票记录（任意模式） */
+function xzAddVoteRow(){
+  document.getElementById("xzAddVoteBox").style.display="";
+}
+function xzSaveNewVote(){
+  const avatar=document.getElementById("xzNVAvatar").value.trim()||"🙂";
+  const name=document.getElementById("xzNVName").value.trim();
+  const choice=+document.getElementById("xzNVChoice").value;
+  if(!name){ alert("请填写名字"); return; }
+  const it=loadXinze().find(x=>x.id===xzEditId);
+  if(it){ (it.votes=it.votes||[]).push({avatar,name,choice,time:xzNowStr()}); saveXinze(loadXinze()); thSaveQuick(avatar,name); }
+  document.getElementById("xzNVAvatar").value="";document.getElementById("xzNVName").value="";
+  renderXzVotesEdit(it); xzRender();
+}
+function xzSave(){
+  const icon = document.getElementById("xzIconInput").value.trim();
+  const text = document.getElementById("xzTextInput").value.trim();
+  const prev = document.getElementById("xzImgPrev").querySelector("img");
+  const isImg = !!prev;
+  const useIcon = isImg ? prev.src : (icon||"❓");
+  let list=loadXinze();
+  if(xzEditId){
+    const it=list.find(x=>x.id===xzEditId);
+    if(it){ it.icon=useIcon; it.isImg=isImg; it.text=text; }
+  }else{
+    list.push({ id:"x"+Date.now(), icon:useIcon, isImg, text, votes:[] });
+  }
+  saveXinze(list);
+  closeXzModal(); xzRender();
+}
+function xzDel(){
+  if(!xzEditId || !isFunEditMode()) return;
+  if(!confirm("删除这条心择簿条目？")) return;
+  saveXinze(loadXinze().filter(x=>x.id!==xzEditId));
+  closeXzModal(); xzRender();
+}
+function closeXzModal(){ document.getElementById("xzModal").style.display="none"; }
+function xzPickImg(){
+  const inp=document.createElement("input");
+  inp.type="file"; inp.accept="image/*";
+  inp.onchange=()=>{
+    const f=inp.files[0]; if(!f) return;
+    const img=new Image(); const url=URL.createObjectURL(f);
+    img.onload=()=>{
+      const c=document.createElement("canvas"); c.width=120; c.height=120;
+      const r=Math.min(img.width,img.height), sx=(img.width-r)/2, sy=(img.height-r)/2;
+      c.getContext("2d").drawImage(img,sx,sy,r,r,0,0,120,120);
+      URL.revokeObjectURL(url);
+      document.getElementById("xzImgPrev").innerHTML=`<img src="${c.toDataURL("image/jpeg",0.7)}" style="width:46px;height:46px;border-radius:50%;object-fit:cover;">`;
+      document.getElementById("xzIconInput").value="";
+    };
+    img.src=url;
+  };
+  inp.click();
+}
+function xzOpenSearch(){
+  const p=document.getElementById("xzSearchPanel");
+  p.style.display = p.style.display==="none" ? "" : "none";
+  if(p.style.display!=="none"){ document.getElementById("xzSearchInput").focus(); xzSearch(); }
+}
+function xzSearch(){
+  const q=document.getElementById("xzSearchInput").value.trim().toLowerCase();
+  const res=document.getElementById("xzSearchRes");
+  const list=loadXinze();
+  const hit=list.filter(it=>{
+    if(!q) return true;
+    if((it.text||"").toLowerCase().includes(q)) return true;
+    return (it.votes||[]).some(v=>(v.name||"").toLowerCase().includes(q)||(v.avatar||"").includes(q));
+  });
+  res.innerHTML = hit.length ? hit.map(it=>`
+    <div class="th-search-item" onclick="closeXzSearch();xzOpenDetail('${it.id}')" style="cursor:pointer;">
+      ${xzIconHTML(it)}
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;color:#6b3a4d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml((it.text||"").split("\n")[0])||"(无文字)"}</div>
+        <div style="font-size:11px;color:#c99ab0;">${(it.votes||[]).length} 条选择</div>
+      </div>
+    </div>`).join("") : '<div style="font-size:12px;color:#999;padding:8px 0;">无匹配</div>';
+}
+function closeXzSearch(){ document.getElementById("xzSearchPanel").style.display="none"; }
+
 function thAdd(){ thEditId = null; openThModal(); }
 function thEdit(id){ thEditId = id; openThModal(); }
 /* 最近用的头像（按使用先后顺序，整排参与排序） */
@@ -3441,7 +3748,7 @@ function confirmClearCache(){
   [
     STORAGE.cards, STORAGE.title, "anniversaries", "jlt_theme", "jlt_fun", "jlt_treehole",
     "jlt_daynight", "card_badges", "last_music", "cloud_loaded", "loaded_full_urls",
-    "jlt_th_quick", "jlt_th_recent_avatars", "jlt_th_first_done", "jlt_fun_edit", "jlt_captions"
+    "jlt_th_quick", "jlt_th_recent_avatars", "jlt_th_first_done", "jlt_fun_edit", "jlt_captions", "jlt_xinze"
   ].forEach(k => { try{ localStorage.removeItem(k); }catch(e){} });
   if("caches" in window){
     caches.keys().then(keys => keys.forEach(key => caches.delete(key)));
@@ -3482,7 +3789,7 @@ async function enterWithPwd(){
   [
     STORAGE.cards, STORAGE.title, "anniversaries", "jlt_theme", "jlt_fun", "jlt_treehole",
     "jlt_daynight", "card_badges", "last_music", "cloud_loaded", "loaded_full_urls",
-    "jlt_th_quick", "jlt_th_recent_avatars", "jlt_th_first_done", "jlt_fun_edit", "jlt_captions"
+    "jlt_th_quick", "jlt_th_recent_avatars", "jlt_th_first_done", "jlt_fun_edit", "jlt_captions", "jlt_xinze"
   ].forEach(k => { try{ localStorage.removeItem(k); }catch(e){} });
   // 先清掉旧版页面缓存与旧 Service Worker（下次打开自动拿最新版），再直接拉取云端数据
   try{
@@ -4164,7 +4471,7 @@ function bindFootLongPress(){
 /* ---------- 上传红点：仅编辑模式下有改动时，上传按钮显示红点 ---------- */
 /* ---------- 上传红点：本次页面打开后有改动才显示（内存标记，不跨会话残留）----------
    标记带组件类型，上传弹窗据此列出具体修改了哪些部分 */
-const DIRTY_LABEL = { cards: "卡片", title: "大标题", theme: "主题", anni: "纪念日", fun: "拾趣", music: "背景音乐", treehole: "树洞" };
+const DIRTY_LABEL = { cards: "卡片", title: "大标题", theme: "主题", anni: "纪念日", fun: "拾趣", music: "背景音乐", treehole: "树洞", xinze: "心择簿" };
 let dirtyFlags = {};
 function markDirty(type){ dirtyFlags[type] = true; updateDirtyDot(); }
 function clearDirty(){ dirtyFlags = {}; updateDirtyDot(); }
