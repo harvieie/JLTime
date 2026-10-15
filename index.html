@@ -186,8 +186,8 @@ body.dark .th-tools::after{background:#8a8f9a;}
 }
 .xz-track{padding:12px 10px;display:flex;flex-direction:column;gap:10px;will-change:transform;transform:translateY(0);}
 .xz-row{
-  display:grid;grid-template-columns:56px 1fr 44px;gap:12px;align-items:center;
-  background:#fff;border:1.5px solid #f6c6d6;border-radius:14px;padding:8px 12px;
+  display:grid;grid-template-columns:60px 1fr 44px;gap:12px;align-items:center;
+  background:#fff;border:1.5px solid #f6c6d6;border-radius:14px;padding:6px 12px;
   box-shadow:0 1px 6px rgba(210,120,150,.1);transition:transform .45s ease,box-shadow .45s,opacity .45s,border-color .45s;
   opacity:.5;transform:scale(.9);user-select:none;-webkit-user-select:none;touch-action:none;cursor:pointer;
 }
@@ -196,19 +196,19 @@ body.dark .th-tools::after{background:#8a8f9a;}
   box-shadow:0 6px 20px rgba(214,110,150,.3);
 }
 .xz-icon{
-  width:54px;height:54px;border-radius:50%;background:#fff0f5;border:2px solid #f3b8cc;
-  display:flex;align-items:center;justify-content:center;font-size:28px;overflow:hidden;flex-shrink:0;
+  width:58px;height:58px;border-radius:50%;background:#fff0f5;border:2px solid #f3b8cc;
+  display:flex;align-items:center;justify-content:center;font-size:30px;overflow:hidden;flex-shrink:0;
   margin:0 auto;
 }
 .xz-icon img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
 .xz-mid{display:flex;flex-direction:column;gap:5px;min-width:0;}
-.xz-votes{display:flex;align-items:center;flex-wrap:wrap;gap:4px;min-height:22px;}
-.xz-vchip{position:relative;width:22px;height:22px;border-radius:50%;background:#ffe9f0;border:1px solid #f3b8cc;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;}
-.xz-vchip .xz-mark{position:absolute;inset:-4px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;text-shadow:0 0 2px #fff;}
+.xz-votes{display:flex;align-items:center;flex-wrap:wrap;gap:4px;min-height:24px;}
+.xz-vchip{position:relative;width:24px;height:24px;border-radius:50%;background:#ffe9f0;border:1px solid #f3b8cc;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
+.xz-vchip .xz-mark{position:absolute;inset:-4px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;text-shadow:0 0 2px #fff;}
 .xz-vchip .xz-mark.ok{color:#3bb273;}
 .xz-vchip .xz-mark.no{color:#e0567a;}
-.xz-vhint{font-size:11px;color:#d0a3b5;}
-.xz-text{font-size:13px;color:#6b3a4d;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;}
+.xz-vhint{font-size:12px;color:#d0a3b5;}
+.xz-text{font-size:14px;color:#6b3a4d;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;}
 .xz-side{display:flex;flex-direction:column;gap:10px;align-items:center;}
 .xz-btn{width:32px;height:32px;border-radius:50%;border:1.5px solid #f3b8cc;background:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .15s;line-height:1;}
 .xz-btn:active{transform:scale(.86);}
@@ -703,7 +703,7 @@ button{border-radius:12px;}
     <div id="xzVotesEdit" style="text-align:left;"></div>
     <div id="xzAddVoteBox" style="display:none;margin-top:8px;border-top:1px dashed #f3dfc2;padding-top:8px;">
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
-        <input id="xzNVAvatar" placeholder="头像" maxlength="8" style="width:9px;padding:2px 1px;border:1px solid #e9eec;border-radius:10px;text-align:center;flex:0 0 auto;min-width:0;font-size:12px;">
+        <input id="xzNVAvatar" placeholder="头像" maxlength="8" style="width:30px;padding:2px 1px;border:1px solid #e9eec;border-radius:10px;text-align:center;flex:0 0 auto;min-width:0;font-size:12px;">
         <input id="xzNVName" placeholder="名字" maxlength="12" style="flex:1;padding:6px;border:1px solid #e9eec;border-radius:10px;min-width:0;">
         <select id="xzNVChoice" style="padding:6px;border:1px solid #e9eec;border-radius:10px;flex-shrink:0;">
           <option value="1">喜欢 ✓</option>
@@ -3421,9 +3421,9 @@ function xzPause(){ xzPaused=true; xzStop(); const s=document.getElementById("xz
 function xzResume(){
   xzPaused=false;
   const s=document.getElementById("xzStage"); if(s) s.classList.remove("xz-paused");
-  // 从暂停的本条原地等待后继续步进，不重建、不跳转
+  // 从暂停的本条原地等待后继续步进，不重建、不跳转（停留时间缩短）
   if(xzTimer){ clearTimeout(xzTimer); xzTimer=null; }
-  xzTimer=setTimeout(xzStepOnce, XZ_STEP_MS);
+  xzTimer=setTimeout(xzStepOnce, 1200);
 }
 const XZ_PAD=12, XZ_GAP=10, XZ_STEP_MS=2800;
 let xzOffset=0, xzH=[], xzN=0, xzCur=0, xzTotal=0, xzUserLock=false;
@@ -3640,6 +3640,7 @@ function openXzModal(){
   document.getElementById("xzImgPrev").innerHTML = it && it.isImg && it.icon ? `<img src="${it.icon}" style="width:46px;height:46px;border-radius:50%;object-fit:cover;">` : "";
   document.getElementById("xzImgDel").style.display = (it && it.isImg && it.icon) ? "flex" : "none";
   window._xzPendingImgCleared = false;
+  document.getElementById("xzNVTime").value = xzNowStr();
   renderXzVotesEdit(it);
   document.getElementById("xzDelBtn").style.display = (it && isFunEditMode()) ? "" : "none";
   document.getElementById("xzModal").style.display="flex";
@@ -3653,7 +3654,7 @@ function xzFitTimeInputs(){
     const span=document.createElement("span");
     span.style.cssText="position:absolute;visibility:hidden;white-space:pre;";
     span.style.font = cs.font || "10px monospace";
-    span.textContent = el.value || " ";
+    span.textContent = el.value || el.placeholder || " ";
     document.body.appendChild(span);
     const w=span.offsetWidth;
     document.body.removeChild(span);
