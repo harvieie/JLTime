@@ -3730,7 +3730,12 @@ function xzDoVote(ui){
 /* 详情 / 编辑弹窗 */
 function xzAdd(){ xzEditId=null; openXzModal(); }
 function xzOpenDetail(id){
-  xzEditId=id; xzPause(); openXzModal(); closeXzSearch();
+  window._D="1click";
+  xzEditId=id; xzPause(); openXzModal();
+  window._D+="|2afterOpen:"+document.getElementById("xzModal").style.display;
+  closeXzSearch();
+  window._D+="|3afterClose:"+document.getElementById("xzModal").style.display;
+  setTimeout(function(){ window._D+="|4@150:"+document.getElementById("xzModal").style.display; document.title=window._D; },150);
 }
 /* 详情弹窗打开后短时间内忽略背景点击，避免搜索条目点击时合成事件误关 */
 function xzBgClose(){
@@ -3931,7 +3936,7 @@ function xzDel(){
   saveXinze(loadXinze().filter(x=>x.id!==xzEditId));
   closeXzModal(); xzRender();
 }
-function closeXzModal(){ document.getElementById("xzModal").style.display="none"; }
+function closeXzModal(){ if(window._D) window._D+="|CLOSED@"+new Error().stack.split("\n")[2].trim(); document.getElementById("xzModal").style.display="none"; }
 function xzPickImg(){
   const inp=document.createElement("input");
   inp.type="file"; inp.accept="image/*";
