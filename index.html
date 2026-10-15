@@ -3347,7 +3347,7 @@ function xzRowHTML(it, active){
   const votes = xzVisibleVotes(it.votes||[]);
   const vbox = votes.length ? votes.map(xzChipHTML).join("") : '<span class="xz-vhint">待选择</span>';
   const firstLine = (it.text||"").split("\n")[0];
-  return `<div class="xz-row${active?" xz-active":""}" onclick="xzRowTap('${it.id}')">
+  return `<div class="xz-row${active?" xz-active":""}" data-id="${it.id}" onclick="xzRowTap('${it.id}')">
     <div onclick="event.stopPropagation();xzOpenDetail('${it.id}')" title="查看详情" style="cursor:pointer;">${xzIconHTML(it)}</div>
     <div class="xz-mid">
       <div class="xz-votes">${vbox}</div>
@@ -3373,13 +3373,9 @@ function xzRender(){
   const stage=document.getElementById("xzStage");
   if(!stage) return;
   if(!list.length){ stage.innerHTML='<div class="xz-empty">还没有条目，点 ＋ 添加第一条吧</div>'; return; }
-  const n=list.length;
-  // 复制两份实现无极滑动；xzIdx 可在 0..2n-1
-  if(xzIdx<0) xzIdx+=2*n;
-  if(xzIdx>=2*n) xzIdx-=n;
+  if(xzIdx<0) xzIdx=0; if(xzIdx>=list.length) xzIdx=list.length-1;
   const wasPaused = xzPaused;
-  const doubled = list.concat(list);
-  stage.innerHTML = '<div class="xz-track" id="xzTrack">'+ doubled.map((it,i)=> xzRowHTML(it, i===xzIdx)).join("") +'</div>';
+  stage.innerHTML = '<div class="xz-track" id="xzTrack">'+ list.map((it,i)=> xzRowHTML(it, i===xzIdx)).join("") +'</div>';
   stage.classList.toggle("xz-paused", wasPaused);
   requestAnimationFrame(()=>{
     const rows = stage.querySelectorAll(".xz-row");
@@ -3389,11 +3385,34 @@ function xzRender(){
     }
   });
 }
+/* 无极滑动：滚出可视区的行挪到对面，不渲染副本 */
+function xzRecycle(){
+  const stage=document.getElementById("xzStage"); if(!stage) return;
+  const track=stage.querySelector(".xz-track"); if(!track) return;
+  const rows=[...track.querySelectorAll(".xz-row")];
+  if(rows.length<3) return;
+  const sTop=stage.scrollTop, sBot=sTop+stage.clientHeight;
+  let delta=0;
+  // 从顶部滚出去的行 → 移到底部
+  for(const r of rows){
+    if(r.offsetTop + r.offsetHeight < sTop){
+      track.appendChild(r); delta -= r.offsetHeight + 10;
+    }
+  }
+  // 从底部滚出去的行 → 移回顶部
+  for(const r of [...track.querySelectorAll(".xz-row")]){
+    if(r.offsetTop > sBot){
+      track.insertBefore(r, track.firstChild); delta += r.offsetHeight + 10;
+    }
+  }
+  if(delta!==0) stage.scrollTop = stage.scrollTop + delta;
+}
 /* 手动触摸滚动：只负责浏览；暂停由点按行触发 */
 function xzBindTouchScroll(){
   const stage=document.getElementById("xzStage");
   if(!stage || stage._xzTouchBound) return; stage._xzTouchBound=true;
   stage.addEventListener("scroll", ()=>{
+    xzRecycle();
     if(!xzPaused) return;
     clearTimeout(stage._xzTimer);
     stage._xzTimer = setTimeout(()=> xzRecenter(), 180);
@@ -3410,29 +3429,28 @@ function xzRecenter(){
   const rows = stage.querySelectorAll(".xz-row");
   let best=0, bd=1e9;
   rows.forEach((r,i)=>{ const c=r.offsetTop + r.clientHeight/2; const d=Math.abs(c-mid); if(d<bd){bd=d;best=i;} });
-  xzIdx = best;  // 在 doubled 里的下标
+  // best 是当前 DOM 顺序里的下标；换算回数据顺序
+  const track=stage.querySelector(".xz-track");
+  const all=[...track.querySelectorAll(".xz-row")];
+  // 通过行 id 找数据下标
+  const cur = all[best];
+  if(cur){ const m=cur.getAttribute("data-id"); const list=loadXinze(); xzIdx = Math.max(0, list.findIndex(x=>x.id===m)); }
   xzRender();
 }
 function xzStart(){
   if(xzTimer) clearInterval(xzTimer);
   xzBindResize(); xzBindTouchScroll();
   const list = loadXinze();
-  if(!xzPaused && list.length){
-    // 起始位置放在第二份开头，方便向前循环
-    xzIdx = list.length + xzWeightedIdx(list);
-  }
+  if(!xzPaused && list.length) xzIdx = xzWeightedIdx(list);
   xzRender();
   xzTimer = setInterval(()=>{
     const n=loadXinze().length;
     if(n>1){
       let next = xzIdx+1, guard=0;
-      // 加权：跳到下一条时根据它的好感度决定是否跳过
       while(Math.random() > Math.max(0.15, 1 + xzScore(loadXinze()[next%n]).net*0.25) && guard<n){
         next++; guard++;
       }
-      xzIdx = next;
-      // 越过第二份末尾，静默减一份长度，视觉无跳变
-      if(xzIdx >= 2*n){ xzIdx -= n; }
+      xzIdx = next % n;
       xzRender();
     }
   }, 2200);
@@ -3443,7 +3461,7 @@ function xzShuffle(){
   let list = loadXinze();
   for(let i=list.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [list[i],list[j]]=[list[j],list[i]]; }
   saveXinze(list);
-  xzPaused=false; xzIdx=list.length;
+  xzPaused=false; xzIdx=0;
   const s=document.getElementById("xzStage"); if(s) s.classList.remove("xz-paused");
   xzStart();
 }
@@ -3452,9 +3470,7 @@ function xzPause(){ xzPaused=true; if(xzTimer){ clearInterval(xzTimer); xzTimer=
 }
 function xzResume(){ xzPaused=false; const s=document.getElementById("xzStage"); if(s) s.classList.remove("xz-paused");
   if(xzTimer) clearInterval(xzTimer); xzRender();
-  xzTimer = setInterval(()=>{
-    const n=loadXinze().length; if(n>1){ xzIdx++; if(xzIdx>=2*n) xzIdx-=n; xzRender(); }
-  }, 2200);
+  xzTimer = setInterval(()=>{ const n=loadXinze().length; if(n>1){ xzIdx=(xzIdx+1)%n; xzRender(); } }, 2200);
 }
 /* 投票：弹出历史用户选择 */
 function xzPickUser(id, choice){
