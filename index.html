@@ -202,7 +202,8 @@ body.dark .th-tools::after{background:#8a8f9a;}
 }
 .xz-icon img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
 .xz-mid{display:flex;flex-direction:column;gap:5px;min-width:0;}
-.xz-votes{display:flex;align-items:center;flex-wrap:wrap;gap:4px;min-height:24px;}
+.xz-votes{display:flex;align-items:center;flex-wrap:nowrap;overflow:hidden;gap:4px;min-height:24px;}
+.xz-svotes{display:flex;align-items:center;flex-wrap:wrap;overflow:visible;gap:4px;min-height:18px;}
 .xz-vchip{position:relative;width:24px;height:24px;border-radius:50%;background:#ffe9f0;border:1px solid #f3b8cc;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
 .xz-vchip .xz-mark{position:absolute;inset:-4px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;text-shadow:0 0 2px #fff;}
 .xz-vchip .xz-mark.ok{color:#3bb273;}
@@ -756,10 +757,7 @@ button{border-radius:12px;}
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
         <input id="xzNVAvatar" placeholder="头像" maxlength="8" style="width:44px;padding:6px 1px;border:1px solid #e9eec;border-radius:10px;text-align:center;flex:0 0 auto;min-width:0;font-size:13px;">
         <input id="xzNVName" placeholder="名字" maxlength="12" style="flex:1;padding:6px;border:1px solid #e9eec;border-radius:10px;min-width:0;font-size:13px;">
-        <select id="xzNVChoice" style="padding:6px;border:1px solid #e9eec;border-radius:10px;flex-shrink:0;">
-          <option value="1">喜欢 ✓</option>
-          <option value="-1">不喜欢 ✕</option>
-        </select>
+        <span id="xzNVChoiceBtn" onclick="xzToggleNVChoice()" title="点按切换 喜欢✓ / 不喜欢✕" style="width:34px;height:34px;border-radius:50%;border:none;background:#3bb273;color:#fff;font-size:17px;line-height:1;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;user-select:none;-webkit-user-select:none;box-shadow:0 1px 4px rgba(0,0,0,.15);">✓</span>
       </div>
       <div id="xzNVQuick" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
@@ -3367,13 +3365,30 @@ function xzSeed(){
 }
 let xzIdx = 0, xzTimer = null, xzVoteRowId = null, xzVoteChoice = 0, xzEditId = null;
 let _xzPendingVotes = [];  // 新建条目时暂存的选择记录，最后随条目一起保存
+let _xzChipMax = 8;        // 主页一行最多容纳的头像数（渲染后按容器实测修正）
 function xzEnsureSeed(){ if(!localStorage.getItem("jlt_xinze")) saveXinze(xzSeed()); }
-/* 组内投票：相同用户排一起；一行重复头像只显示最新一次 */
-function xzVisibleVotes(votes){
-  const sorted=[...votes].sort((a,b)=> (a.time||"").localeCompare(b.time||""));
+/* 分组：同一头像(用户)的所有选择排在一起；组间按组内最新时间降序，组内按时间降序（最新在最左） */
+function xzGroupedVotes(votes){
   const groups={};
-  sorted.forEach(v=>{ const k=(v.avatar||"🙂")+"|"+(v.name||""); (groups[k]=groups[k]||[]).push(v); });
-  return Object.keys(groups).sort((a,b)=> groups[a][0].time.localeCompare(groups[b][0].time)).map(k=> groups[k][groups[k].length-1]);
+  (votes||[]).forEach(v=>{ const k=(v.avatar||"🙂")+"|"+(v.name||""); (groups[k]=groups[k]||[]).push(v); });
+  return Object.keys(groups).map(k=> groups[k].slice().sort((a,b)=>(b.time||"").localeCompare(a.time||"")))
+    .sort((ga,gb)=>(gb[0].time||"").localeCompare(ga[0].time||""));
+}
+/* 主页一行头像：所有选择都尽量显示；放不下时先保证每个用户的最新头像，再逐轮补重复头像，
+   最旧的重复头像最先被隐藏；返回顺序仍按组相邻、组内最新在左 */
+function xzRowVotes(votes,maxN){
+  const arr=xzGroupedVotes(votes);
+  if(!arr.length) return [];
+  const maxLen=Math.max.apply(null, arr.map(g=>g.length));
+  const picked=[];
+  let remain=maxN;
+  for(let r=0;r<maxLen && remain>0;r++){
+    for(const g of arr){ if(g[r] && remain>0){ picked.push(g[r]); remain--; } }
+  }
+  const set=new Set(picked);
+  const out=[];
+  for(const g of arr){ for(const v of g){ if(set.has(v)) out.push(v); } }
+  return out;
 }
 function xzChipHTML(v){
   const mark = v.choice===1 ? '<span class="xz-mark ok">✓</span>' : '<span class="xz-mark no">✕</span>';
@@ -3446,7 +3461,7 @@ function xzWeightedIdx(list){
   return w.length-1;
 }
 function xzRowHTML(it, active){
-  const votes = xzVisibleVotes(it.votes||[]);
+  const votes = xzRowVotes(it.votes||[], _xzChipMax);
   const vbox = votes.length ? votes.map(xzChipHTML).join("") : '<span class="xz-vhint">待选择</span>';
   const firstLine = (it.text||"").split("\n")[0];
   return `<div class="xz-row${active?" xz-active":""}" data-id="${it.id}" onclick="xzRowTap('${it.id}')">
@@ -3572,6 +3587,14 @@ function xzRender(){
   xzOffset=xzCenter(xzCur);
   track.style.transform=`translateY(${-xzOffset}px)`;
   xzSetActive(xzCur);
+  requestAnimationFrame(xzMeasureChipMax);
+}
+/* 按主页头像区实际宽度，算出一行最多能放多少个头像（chip 24 + gap 4 = 28），放不下时据此隐藏旧重复头像 */
+function xzMeasureChipMax(){
+  const v=document.querySelector('#xzTrack .xz-row .xz-votes');
+  if(!v) return;
+  const n=Math.max(1, Math.floor((v.clientWidth+4)/28));
+  if(n!==_xzChipMax){ _xzChipMax=n; xzRender(); }
 }
 /* 手动滑动：拖动/滚轮自由浏览，松手后恢复自动步进（不用 pointer capture，避免劫持 click） */
 function xzBindDrag(){
@@ -3694,18 +3717,35 @@ function closeXzUserPop(){
   const p=document.getElementById("xzUserPop"); if(p) p.style.display="none";
   const m=document.getElementById("xzUserPopMask"); if(m) m.remove();
 }
-/* 添加选择时：最近用过的用户快捷点按（点选填入头像/名字，长按删除） */
+/* 添加选择时：最近用过的用户快捷点按（弹窗打开期间用快照、顺序固定，不实时重排，避免点选错位） */
+let _xzQuickSnap=[];
 function xzRenderNVQuick(){
   const box=document.getElementById("xzNVQuick");
   if(!box) return;
-  const quick=thQuickList();
-  box.innerHTML = quick.length ? quick.map((u,i)=>`<span onclick="xzPickNVUser(${i})" oncontextmenu="event.preventDefault();xzDelQuickUser(${i});xzRenderNVQuick();" onpointerdown="xzQPressStart(event,${i})" onpointerup="xzQPressEnd();xzRenderNVQuick();" onpointerleave="xzQPressEnd()" style="background:#fff0f6;border:1px solid #ffd6e2;color:#c2567f;font-size:12px;padding:3px 10px;border-radius:12px;cursor:pointer;user-select:none;-webkit-user-select:none;">${escapeHtml(u.avatar||"🙂")} ${escapeHtml(u.name||"")}</span>`).join("") : '<span style="font-size:11px;color:#bbb;">暂无最近用户</span>';
+  const quick=_xzQuickSnap;
+  box.innerHTML = quick.length ? quick.map((u,i)=>`<span onclick="xzPickNVUser(${i})" oncontextmenu="event.preventDefault();xzNVDelUser(${i})" onpointerdown="xzNVPressStart(event,${i})" onpointerup="xzNVPressEnd()" onpointerleave="xzNVPressEnd()" style="background:#fff0f6;border:1px solid #ffd6e2;color:#c2567f;font-size:12px;padding:3px 10px;border-radius:12px;cursor:pointer;user-select:none;-webkit-user-select:none;">${escapeHtml(u.avatar||"🙂")} ${escapeHtml(u.name||"")}</span>`).join("") : '<span style="font-size:11px;color:#bbb;">暂无最近用户</span>';
 }
 function xzPickNVUser(i){
-  const u=thQuickList()[i]; if(!u) return;
+  const u=_xzQuickSnap[i]; if(!u) return;
   document.getElementById("xzNVAvatar").value = u.avatar||"🙂";
   document.getElementById("xzNVName").value = u.name||"";
 }
+let _xzNVPTimer=null;
+function xzNVPressStart(e,i){
+  if(e.pointerType==="mouse") return;  // 桌面用右键
+  _xzNVPTimer=setTimeout(()=>{ if(confirm("删除历史用户「"+((_xzQuickSnap[i]||{}).name||"")+"」？")) xzNVDelUser(i); }, 600);
+}
+function xzNVPressEnd(){ if(_xzNVPTimer){ clearTimeout(_xzNVPTimer); _xzNVPTimer=null; } }
+function xzNVDelUser(i){
+  const u=_xzQuickSnap[i]; if(!u) return;
+  const a=u.avatar||"🙂", n=u.name||"";
+  _xzQuickSnap.splice(i,1);  // 先从当前快照删除
+  const q=thQuickList().filter(x=>!(x.avatar===a && x.name===n));  // 同步删除存储
+  localStorage.setItem("jlt_th_quick", JSON.stringify(q));
+  xzRenderNVQuick();
+  showToast("已删除用户", 2);
+}
+/* 主页右侧投票弹窗的长按删除（该弹窗独立，用实时列表） */
 let _xzQPTimer=null;
 function xzQPressStart(e, i){
   if(e.pointerType==="mouse") return;  // 桌面用右键
@@ -3753,6 +3793,9 @@ function openXzModal(){
   document.getElementById("xzDelBtn").style.display = (it && isFunEditMode()) ? "" : "none";
   document.getElementById("xzModal").style.display="flex";
   window._xzModalAt=Date.now();
+  document.getElementById("xzAddVoteBox").style.display="none";  // 每次打开默认收起添加表单
+  _xzQuickSnap = thQuickList();  // 弹窗打开期间固定最近用户顺序，不再实时重排
+  xzResetNVChoice();
   xzFitTimeInputs();
   xzRenderNVQuick();
 }
@@ -3870,14 +3913,26 @@ function xzDelVote(oi){
   }
 }
 /* 添加一条投票记录（任意模式） */
+let _xzNVChoice=1;  // 添加一条选择时的喜欢(1)/不喜欢(-1)，默认喜欢
+function xzResetNVChoice(){
+  _xzNVChoice=1;
+  const b=document.getElementById("xzNVChoiceBtn");
+  if(b){ b.textContent="✓"; b.style.background="#3bb273"; }
+}
+function xzToggleNVChoice(){
+  _xzNVChoice = _xzNVChoice===1 ? -1 : 1;
+  const b=document.getElementById("xzNVChoiceBtn");
+  if(b){ b.textContent = _xzNVChoice===1 ? "✓" : "✕"; b.style.background = _xzNVChoice===1 ? "#3bb273" : "#e0567a"; }
+}
 function xzAddVoteRow(){
   document.getElementById("xzAddVoteBox").style.display="";
   document.getElementById("xzNVTime").value = xzNowStr();
+  xzResetNVChoice();  // 每次打开默认勾（喜欢）
 }
 function xzSaveNewVote(){
   const avatar=document.getElementById("xzNVAvatar").value.trim()||"🙂";
   const name=document.getElementById("xzNVName").value.trim();
-  const choice=+document.getElementById("xzNVChoice").value;
+  const choice=_xzNVChoice;
   const time=document.getElementById("xzNVTime").value.trim() || xzNowStr();
   const note=document.getElementById("xzNVNote").value.trim();
   if(!name){ alert("请填写名字"); return; }
@@ -3889,6 +3944,7 @@ function xzSaveNewVote(){
   showToast("已添加选择记录", 1);
   document.getElementById("xzNVAvatar").value="";document.getElementById("xzNVName").value="";document.getElementById("xzNVNote").value="";
   renderXzVotesEdit(it); xzRender();
+  xzAddVoteRow();  // 便于连续添加：重置时间与喜欢按钮
 }
 function xzClearImg(){
   const prev = document.getElementById("xzImgPrev").querySelector("img");
@@ -4013,15 +4069,15 @@ function xzSearch(){
     if((it.text||"").toLowerCase().includes(q)) return true;
     return (it.votes||[]).some(v=>(v.name||"").toLowerCase().includes(q)||(v.avatar||"").includes(q));
   });
-  // 按修改时间排序，最新修改的贴在搜索框上方（列表最下方）
-  const ordered = hit.slice().sort((a,b)=> (b.mtime||"").localeCompare(a.mtime||"")).reverse();
+  // 按修改时间从旧到新排列，最新修改的落在列表最下方（紧贴搜索框）
+  const ordered = hit.slice().sort((a,b)=> (a.mtime||"").localeCompare(b.mtime||""));
   res.innerHTML = ordered.length ? ordered.map(it=>{
-    const votes = xzVisibleVotes(it.votes||[]);
+    const votes = [].concat.apply([], xzGroupedVotes(it.votes||[]));
     const vbox = votes.length ? votes.map(v=>`<span class="xz-vchip" style="width:17px;height:17px;font-size:9px;"><span>${escapeHtml(v.avatar||"🙂")}</span><span class="xz-mark ${v.choice===1?"ok":"no"}">${v.choice===1?"✓":"✕"}</span></span>`).join("") : '<span style="font-size:10px;color:#d0a3b5;">待选择</span>';
     return `<div class="xz-search-item" onclick="event.stopPropagation();xzOpenDetail('${it.id}');">
       <div class="xz-icon" style="width:34px;height:34px;font-size:16px;border-width:1.5px;">${it.isImg&&it.icon?`<img src="${it.icon}" alt="">`:escapeHtml(it.icon||"❓")}</div>
       <div style="flex:1;min-width:0;">
-        <div class="xz-votes" style="min-height:18px;">${vbox}</div>
+        <div class="xz-svotes" style="min-height:18px;">${vbox}</div>
         <div style="font-size:12px;color:#6b3a4d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml((it.text||"").split("\n")[0])||"(无文字)"}</div>
       </div>
     </div>`;
