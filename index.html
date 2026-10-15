@@ -3365,7 +3365,7 @@ function xzRowTap(id){
 }
 function xzPause(){ xzPaused=true; if(xzTimer){ clearInterval(xzTimer); xzTimer=null; } }
 function xzResume(){ xzPaused=false; if(xzTimer) clearInterval(xzTimer); xzRender();
-  xzTimer = setInterval(()=>{ const n=loadXinze().length; if(n>1){ xzIdx=(xzIdx+1)%n; xzRender(); } }, 4200);
+  xzTimer = setInterval(()=>{ const n=loadXinze().length; if(n>1){ xzIdx=(xzIdx+1)%n; xzRender(); } }, 2600);
 }
 function xzRender(){
   xzEnsureSeed();
@@ -3375,9 +3375,11 @@ function xzRender(){
   if(!list.length){ stage.innerHTML='<div class="xz-empty">还没有条目，点 ＋ 添加第一条吧</div>'; return; }
   if(xzIdx<0) xzIdx=0; if(xzIdx>=list.length) xzIdx=list.length-1;
   const wasPaused = xzPaused;
-  stage.innerHTML = '<div class="xz-track" id="xzTrack">'+ list.map((it,i)=> xzRowHTML(it, i===xzIdx)).join("") +'</div>';
+  // 复制一份列表，实现无极滑动
+  const doubled = list.concat(list);
+  stage.innerHTML = '<div class="xz-track" id="xzTrack">'+ doubled.map((it,i)=> xzRowHTML(it, i===xzIdx)).join("") +'</div>';
   stage.classList.toggle("xz-paused", wasPaused);
-  // 把当前条目滚到中间
+  // 把当前条目滚到中间（用第一份里的位置）
   requestAnimationFrame(()=>{
     const rows = stage.querySelectorAll(".xz-row");
     if(rows[xzIdx]){
@@ -3391,8 +3393,16 @@ function xzBindTouchScroll(){
   const stage=document.getElementById("xzStage");
   if(!stage || stage._xzTouchBound) return; stage._xzTouchBound=true;
   stage.addEventListener("scroll", ()=>{
+    const list=loadXinze(); if(!list.length) return;
+    // 无极滑动：越过第一份列表后静默跳回对应位置
+    const firstH = (stage.querySelectorAll(".xz-track .xz-row")[0] || {}).offsetTop || 0;
+    // 用首行高度估算：整份列表高度 ≈ 行数×行高
+    const oneH = stage.scrollHeight / 2;
+    if(oneH > 0){
+      if(stage.scrollTop >= oneH) stage.scrollTop = stage.scrollTop - oneH;
+      else if(stage.scrollTop < 0) stage.scrollTop = stage.scrollTop + oneH;
+    }
     if(!xzPaused) return;
-    // 暂停状态下用户手动滑了，停稳后把中间那条设为当前
     clearTimeout(stage._xzTimer);
     stage._xzTimer = setTimeout(()=> xzRecenter(), 180);
   }, {passive:true});
@@ -3408,7 +3418,7 @@ function xzRecenter(){
   const rows = stage.querySelectorAll(".xz-row");
   let best=0, bd=1e9;
   rows.forEach((r,i)=>{ const c=r.offsetTop + r.clientHeight/2; const d=Math.abs(c-mid); if(d<bd){bd=d;best=i;} });
-  xzIdx = best;
+  xzIdx = best % loadXinze().length;
   xzRender();
 }
 function xzStart(){
@@ -3427,7 +3437,7 @@ function xzStart(){
       xzIdx = next;
       xzRender();
     }
-  }, 4200);
+  }, 2600);
 }
 function xzStop(){ if(xzTimer){ clearInterval(xzTimer); xzTimer=null; } }
 function xzShuffle(){ xzPaused=false; const s=document.getElementById("xzStage"); if(s) s.classList.remove("xz-paused"); xzStart(); }
@@ -3450,7 +3460,8 @@ function xzPickUser(id, choice){
     pop.style.cssText="position:fixed;left:50%;bottom:120px;transform:translateX(-50%);background:#fff;border:1px solid #f3b8cc;border-radius:14px;padding:12px;box-shadow:0 6px 24px rgba(210,120,150,.3);z-index:99999;max-width:90vw;";
     document.body.appendChild(pop);
   }
-  pop.innerHTML='<div style="font-size:13px;font-weight:700;color:#c2567f;margin-bottom:8px;">选择一位用户'+(choice===1?"：喜欢 ✓":"：不喜欢 ✕")+'<span style="font-weight:400;color:#aaa;font-size:11px;">（长按可删除该用户）</span></div>'
+  pop.innerHTML='<div style="font-size:13px;font-weight:700;color:#c2567f;margin-bottom:4px;">选择一位用户'+(choice===1?"：喜欢 ✓":"：不喜欢 ✕")+'</div>'
+    +'<div style="font-size:11px;color:#aaa;margin-bottom:8px;">长按可删除该用户</div>'
     +'<div style="display:flex;flex-wrap:wrap;gap:6px;max-width:260px;">'
     +(quick.length? quick.map((u,i)=>`<span onclick="xzDoVote(${i})" oncontextmenu="event.preventDefault();xzDelQuickUser(${i});" onpointerdown="xzQPressStart(event,${i})" onpointerup="xzQPressEnd()" onpointerleave="xzQPressEnd()" style="background:#fff0f6;border:1px solid #ffd6e2;border-radius:14px;padding:5px 10px;font-size:13px;cursor:pointer;user-select:none;-webkit-user-select:none;">${escapeHtml(u.avatar||"🙂")} ${escapeHtml(u.name||"")}</span>`).join("") : '<span style="font-size:12px;color:#999;">暂无历史用户，可在详情里添加</span>')
     +'</div><div style="text-align:center;margin-top:8px;"><span onclick="document.getElementById(\'xzUserPop\').style.display=\'none\'" style="font-size:12px;color:#999;cursor:pointer;">取消</span></div>';
