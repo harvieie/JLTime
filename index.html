@@ -3373,13 +3373,14 @@ function xzRender(){
   const stage=document.getElementById("xzStage");
   if(!stage) return;
   if(!list.length){ stage.innerHTML='<div class="xz-empty">还没有条目，点 ＋ 添加第一条吧</div>'; return; }
-  if(xzIdx<0) xzIdx=0; if(xzIdx>=list.length) xzIdx=list.length-1;
+  const n=list.length;
+  // 复制两份实现无极滑动；xzIdx 可在 0..2n-1
+  if(xzIdx<0) xzIdx+=2*n;
+  if(xzIdx>=2*n) xzIdx-=n;
   const wasPaused = xzPaused;
-  // 复制一份列表，实现无极滑动
   const doubled = list.concat(list);
   stage.innerHTML = '<div class="xz-track" id="xzTrack">'+ doubled.map((it,i)=> xzRowHTML(it, i===xzIdx)).join("") +'</div>';
   stage.classList.toggle("xz-paused", wasPaused);
-  // 把当前条目滚到中间（用第一份里的位置）
   requestAnimationFrame(()=>{
     const rows = stage.querySelectorAll(".xz-row");
     if(rows[xzIdx]){
@@ -3393,15 +3394,6 @@ function xzBindTouchScroll(){
   const stage=document.getElementById("xzStage");
   if(!stage || stage._xzTouchBound) return; stage._xzTouchBound=true;
   stage.addEventListener("scroll", ()=>{
-    const list=loadXinze(); if(!list.length) return;
-    // 无极滑动：越过第一份列表后静默跳回对应位置
-    const firstH = (stage.querySelectorAll(".xz-track .xz-row")[0] || {}).offsetTop || 0;
-    // 用首行高度估算：整份列表高度 ≈ 行数×行高
-    const oneH = stage.scrollHeight / 2;
-    if(oneH > 0){
-      if(stage.scrollTop >= oneH) stage.scrollTop = stage.scrollTop - oneH;
-      else if(stage.scrollTop < 0) stage.scrollTop = stage.scrollTop + oneH;
-    }
     if(!xzPaused) return;
     clearTimeout(stage._xzTimer);
     stage._xzTimer = setTimeout(()=> xzRecenter(), 180);
@@ -3418,26 +3410,32 @@ function xzRecenter(){
   const rows = stage.querySelectorAll(".xz-row");
   let best=0, bd=1e9;
   rows.forEach((r,i)=>{ const c=r.offsetTop + r.clientHeight/2; const d=Math.abs(c-mid); if(d<bd){bd=d;best=i;} });
-  xzIdx = best % loadXinze().length;
+  xzIdx = best;  // 在 doubled 里的下标
   xzRender();
 }
 function xzStart(){
   if(xzTimer) clearInterval(xzTimer);
   xzBindResize(); xzBindTouchScroll();
   const list = loadXinze();
-  if(!xzPaused) xzIdx = list.length ? xzWeightedIdx(list) : 0;
+  if(!xzPaused && list.length){
+    // 起始位置放在第二份开头，方便向前循环
+    xzIdx = list.length + xzWeightedIdx(list);
+  }
   xzRender();
   xzTimer = setInterval(()=>{
     const n=loadXinze().length;
     if(n>1){
-      let next = (xzIdx+1)%n, guard=0;
-      while(Math.random() > Math.max(0.15, 1 + xzScore(loadXinze()[next]).net*0.25) && guard<n){
-        next=(next+1)%n; guard++;
+      let next = xzIdx+1, guard=0;
+      // 加权：跳到下一条时根据它的好感度决定是否跳过
+      while(Math.random() > Math.max(0.15, 1 + xzScore(loadXinze()[next%n]).net*0.25) && guard<n){
+        next++; guard++;
       }
       xzIdx = next;
+      // 越过第二份末尾，静默减一份长度，视觉无跳变
+      if(xzIdx >= 2*n){ xzIdx -= n; }
       xzRender();
     }
-  }, 2600);
+  }, 2200);
 }
 function xzStop(){ if(xzTimer){ clearInterval(xzTimer); xzTimer=null; } }
 function xzShuffle(){
@@ -3445,7 +3443,7 @@ function xzShuffle(){
   let list = loadXinze();
   for(let i=list.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [list[i],list[j]]=[list[j],list[i]]; }
   saveXinze(list);
-  xzPaused=false; xzIdx=0;
+  xzPaused=false; xzIdx=list.length;
   const s=document.getElementById("xzStage"); if(s) s.classList.remove("xz-paused");
   xzStart();
 }
@@ -3454,7 +3452,9 @@ function xzPause(){ xzPaused=true; if(xzTimer){ clearInterval(xzTimer); xzTimer=
 }
 function xzResume(){ xzPaused=false; const s=document.getElementById("xzStage"); if(s) s.classList.remove("xz-paused");
   if(xzTimer) clearInterval(xzTimer); xzRender();
-  xzTimer = setInterval(()=>{ const n=loadXinze().length; if(n>1){ xzIdx=(xzIdx+1)%n; xzRender(); } }, 4200);
+  xzTimer = setInterval(()=>{
+    const n=loadXinze().length; if(n>1){ xzIdx++; if(xzIdx>=2*n) xzIdx-=n; xzRender(); }
+  }, 2200);
 }
 /* 投票：弹出历史用户选择 */
 function xzPickUser(id, choice){
