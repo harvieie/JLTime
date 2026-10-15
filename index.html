@@ -2856,6 +2856,7 @@ function switchTab(name){
   // 拾趣面板时隐藏卡片时间轴，切回筛选/编辑时恢复
   const tl = document.getElementById("timelineWrap");
   if(tl) tl.style.display = name === "fun" ? "none" : "";
+  updateMusicFab();
   if(name === "fun" && typeof thStart === "function"){ thStart(); xzStart(); }  // 切回拾趣时确保弹幕/心择簿在动
   else if(typeof xzStop === "function") xzStop();
 }
@@ -3297,6 +3298,36 @@ function xzVisibleCount(){
   const h = stage ? stage.clientHeight : 224;
   return Math.max(2, Math.round((h-20)/XZ_ROW_H));  // 默认约3行
 }
+function xzScore(it){
+  const v = it.votes||[];
+  const like = v.filter(x=>x.choice===1).length;
+  const dislike = v.filter(x=>x.choice===-1).length;
+  return { like, dislike, net: like - dislike, total: v.length };
+}
+function xzIconHTML(it){
+  const {like, dislike, total} = xzScore(it);
+  // 喜欢越多越亮，不喜欢越多越暗
+  let bright = 1, saturate = 1;
+  if(total > 0){
+    const ratio = like / total;         // 0~1
+    bright = 0.45 + ratio * 0.85;       // 0.45(全不喜欢) ~ 1.3(全喜欢)
+    saturate = 0.5 + ratio * 0.8;
+  }
+  const style = `filter:brightness(${bright.toFixed(2)}) saturate(${saturate.toFixed(2)});`;
+  if(it.isImg && it.icon){ return `<div class="xz-icon" style="${style}"><img src="${it.icon}" alt=""></div>`; }
+  return `<div class="xz-icon" style="${style}">${escapeHtml(it.icon||"❓")}</div>`;
+}
+function xzWeightedIdx(list){
+  // 不喜欢越多权重越低；权重下限 0.15 仍偶尔刷到
+  const w = list.map(it => {
+    const {net} = xzScore(it);
+    return Math.max(0.15, 1 + net * 0.5);
+  });
+  const sum = w.reduce((a,b)=>a+b,0);
+  let r = Math.random()*sum;
+  for(let i=0;i<w.length;i++){ r -= w[i]; if(r<=0) return i; }
+  return w.length-1;
+}
 function xzRowHTML(it, active){
   const votes = xzVisibleVotes(it.votes||[]);
   const vbox = votes.length ? votes.map(xzChipHTML).join("") : '<span class="xz-vhint">待选择</span>';
@@ -3340,11 +3371,20 @@ function xzRender(){
 function xzStart(){
   if(xzTimer) clearInterval(xzTimer);
   xzBindResize();
-  if(!xzPaused) xzIdx = Math.floor(Math.random()*Math.max(1,loadXinze().length));
+  const list = loadXinze();
+  if(!xzPaused) xzIdx = list.length ? xzWeightedIdx(list) : 0;
   xzRender();
   xzTimer = setInterval(()=>{
     const n=loadXinze().length;
-    if(n>1){ xzIdx=(xzIdx+1)%n; xzRender(); }
+    if(n>1){
+      // 滚动也是加权推进：根据下一条权重决定跳过概率
+      let next = (xzIdx+1)%n, guard=0;
+      while(Math.random() > Math.max(0.15, 1 + xzScore(loadXinze()[next]).net*0.25) && guard<n){
+        next=(next+1)%n; guard++;
+      }
+      xzIdx = next;
+      xzRender();
+    }
   }, 4200);
 }
 function xzStop(){ if(xzTimer){ clearInterval(xzTimer); xzTimer=null; } }
@@ -4635,11 +4675,20 @@ async function rewindTimeline(){
 }
 
 /* ---------- 回到顶部 / 倒带 ---------- */
+function updateMusicFab(){
+  const fab = document.getElementById("musicFab");
+  if(!fab) return;
+  const locked = (typeof isCloudLocked === "function" && isCloudLocked());
+  const onTop = window.scrollY < 120;
+  const show = (currentTab === "filter") && onTop && !locked;
+  fab.style.display = show ? "flex" : "none";
+}
 function bindBackTop(){
   const btn = document.getElementById("backTopBtn");
   const btm = document.getElementById("btnBottom");
   let bottomIdleTimer = null;
   function refresh(){
+    updateMusicFab();
     const y = window.scrollY;
     const docH = document.documentElement.scrollHeight;
     const isBottom = (y + window.innerHeight) >= docH - 40;
