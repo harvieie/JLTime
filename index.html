@@ -3440,7 +3440,15 @@ function xzStart(){
   }, 2600);
 }
 function xzStop(){ if(xzTimer){ clearInterval(xzTimer); xzTimer=null; } }
-function xzShuffle(){ xzPaused=false; const s=document.getElementById("xzStage"); if(s) s.classList.remove("xz-paused"); xzStart(); }
+function xzShuffle(){
+  // 整个列表顺序随机重排并保存
+  let list = loadXinze();
+  for(let i=list.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [list[i],list[j]]=[list[j],list[i]]; }
+  saveXinze(list);
+  xzPaused=false; xzIdx=0;
+  const s=document.getElementById("xzStage"); if(s) s.classList.remove("xz-paused");
+  xzStart();
+}
 function xzPause(){ xzPaused=true; if(xzTimer){ clearInterval(xzTimer); xzTimer=null; }
   const s=document.getElementById("xzStage"); if(s) s.classList.add("xz-paused");
 }
