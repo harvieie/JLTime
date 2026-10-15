@@ -162,7 +162,7 @@ body.dark .th-tools::after{background:#8a8f9a;}
 .th-search-panel{width:100%;margin-top:10px;border-top:1px dashed #e8c89a;padding-top:8px;}
 .th-search-res{max-height:180px;overflow:auto;}
 
-/* ===== 心择簿（表单长方条） ===== */
+/* ===== 心喜簿（表单长方条） ===== */
 .xz-box{
   position:relative;z-index:30;margin-top:14px;width:100%;border-radius:18px;padding:12px 12px 8px;box-sizing:border-box;
   background:linear-gradient(180deg,#fff5f8,#ffeaf1);border:1px solid #f5c2d4;
@@ -198,8 +198,9 @@ body.dark .th-tools::after{background:#8a8f9a;}
 .xz-icon{
   width:58px;height:58px;border-radius:50%;background:#fff0f5;border:2px solid #f3b8cc;
   display:flex;align-items:center;justify-content:center;font-size:30px;overflow:hidden;flex-shrink:0;
-  margin:0 auto;
+  margin:0 auto;transition:width .35s ease,height .35s ease,font-size .35s ease;
 }
+.xz-row.xz-active .xz-icon{width:66px;height:66px;font-size:35px;}
 .xz-icon img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
 .xz-mid{display:flex;flex-direction:column;gap:5px;min-width:0;}
 .xz-votes{display:flex;align-items:center;flex-wrap:nowrap;overflow:hidden;gap:4px;min-height:24px;}
@@ -377,7 +378,7 @@ body.dark .modal-box{background:#22252c;color:#e6e6e6;border-color:#33363f;}
 body.dark .modal-title{color:#ff9ec4;}
 body.dark .empty-tip{color:#cfd3da;}
 body.dark .anni-chip{background:rgba(255,255,255,.08);}
-/* 深色模式：拾趣三功能区（网页/树洞/心择簿） */
+/* 深色模式：拾趣三功能区（网页/树洞/心喜簿） */
 body.dark .fun-box{background:#22252c;border-color:#33363f;box-shadow:0 2px 10px rgba(0,0,0,.3);}
 body.dark .fun-box-title{color:#9aa0aa;}
 body.dark .fun-chip{background:#2a2d34;border-color:#3a3e48;color:#cfd3da;}
@@ -594,12 +595,12 @@ button{border-radius:12px;}
   style="display:none;position:fixed;right:18px;bottom:80px;z-index:900;width:42px;height:42px;border-radius:50%;
   border:none;background:rgba(120,180,220,.95);color:#fff;font-size:18px;cursor:pointer;box-shadow:0 4px 12px rgba(100,150,200,.4);">↓</button>
 
-<!-- 拾趣按钮编辑弹窗 -->
+<!-- 移步链接编辑弹窗 -->
 <div class="modal-overlay" id="funModal">
   <div class="modal-box" style="max-width:360px;">
-    <div class="modal-title" id="funModalTitle">拾趣</div>
+    <div class="modal-title" id="funModalTitle">移步</div>
     <div style="text-align:left;font-size:13px;color:#888;margin:6px 0 4px;">名称：</div>
-    <input type="text" id="funNameInput" placeholder="例如：树洞 / 小事 / 喜好">
+    <input type="text" id="funNameInput" placeholder="例如：4399双人游戏 / 情侣默契测试">
     <div style="text-align:left;font-size:13px;color:#888;margin:8px 0 4px;">外部链接：</div>
     <input type="text" id="funUrlInput" placeholder="https://..." style="width:100%;">
     <div class="btn-row" style="justify-content:flex-end;margin-top:12px;">
@@ -696,9 +697,9 @@ button{border-radius:12px;}
       </div>
     </div>
 
-    <!-- 心择簿：对事物/喜好的选择（表单长方条） -->
+    <!-- 心喜簿：对事物/喜好的选择（表单长方条） -->
     <div class="xz-box" id="xinzeBox">
-      <div class="xz-head" onclick="xzShuffle()" title="点击刷新一组">心择簿</div>
+      <div class="xz-head" onclick="xzShuffle()" title="点击刷新一组">心喜簿</div>
       <div class="xz-stage" id="xzStage"></div>
       <div class="xz-resize" id="xzResize" title="拖动调整高度"></div>
       <div class="xz-search-panel" id="xzSearchPanel" style="display:none;">
@@ -737,10 +738,10 @@ button{border-radius:12px;}
   </div>
 </div>
 
-<!-- 心择簿：详情 / 编辑 -->
+<!-- 心喜簿：详情 / 编辑 -->
 <div class="modal-overlay" id="xzModal" onclick="if(event.target===this) xzBgClose()">
   <div class="modal-box" style="max-width:420px;">
-    <div class="modal-title" id="xzModalTitle">心择簿详情</div>
+    <div class="modal-title" id="xzModalTitle">心喜簿详情</div>
     <div style="display:flex;align-items:center;gap:10px;margin:8px 0;">
       <div style="position:relative;flex-shrink:0;">
         <div id="xzImgPrev" style="width:46px;height:46px;border-radius:50%;background:#fff0f5;border:2px solid #f3b8cc;display:flex;align-items:center;justify-content:center;overflow:hidden;"></div>
@@ -781,7 +782,7 @@ button{border-radius:12px;}
   </div>
 </div>
 
-<!-- 心择簿：修改选择记录的头像与用户名弹窗 -->
+<!-- 心喜簿：修改选择记录的头像与用户名弹窗 -->
 <div class="modal-overlay" id="xzUserModal" onclick="if(event.target===this) closeXzUserModal()">
   <div class="modal-box" style="max-width:320px;">
     <div class="modal-title">修改用户</div>
@@ -2230,7 +2231,7 @@ function packCloudData(){
     daynight: localStorage.getItem("jlt_daynight"),
     thQuick: localStorage.getItem("jlt_th_quick"),            // 树洞用过的人（快捷用户名）
     thAvatars: localStorage.getItem("jlt_th_recent_avatars"), // 树洞最近用过的头像
-    xinze: localStorage.getItem("jlt_xinze")                 // 心择簿
+    xinze: localStorage.getItem("jlt_xinze")                 // 心喜簿
   };
 }
 
@@ -2274,7 +2275,7 @@ async function thUploadCloud(){
   }
 }
 
-/* 心择簿上传云端：与树洞一致，把本地心择簿（含全量数据）作为云端快照保存 */
+/* 心喜簿上传云端：与树洞一致，把本地心喜簿（含全量数据）作为云端快照保存 */
 async function xzUploadCloud(){
   if(isCloudLocked()){ showToast("云端已断开：数据仅保存在本地，解锁后重试", 4); return; }
   showCloudLoading(true);
@@ -2283,9 +2284,9 @@ async function xzUploadCloud(){
     if(files.length >= GH.maxNodes){
       for(const f of files.slice(GH.maxNodes - 1)) await wdDeleteFile(f);
     }
-    const name = `jltime_${nowStamp()}_心择簿.json`;
+    const name = `jltime_${nowStamp()}_心喜簿.json`;
     await wdWriteFile(name, packCloudData());
-    showToast("心择簿已上传到云端", 2);
+    showToast("心喜簿已上传到云端", 2);
   }catch(err){
     showToast("云端同步失败：" + err.message, 4);
   }finally{
@@ -2710,9 +2711,9 @@ async function wdUpload(){
     "· 大标题：" + (getPageTitle() || "（空）"),
     "· 卡片：" + cards.length + " 张",
     "· 图片：" + imgCount + " 张",
-    "· 网页：" + loadFunItems().length + " 个",
+    "· 移步：" + loadFunItems().length + " 个",
     "· 树洞：" + loadTreehole().length + " 条",
-    "· 心择簿：" + loadXinze().length + " 条",
+    "· 心喜簿：" + loadXinze().length + " 条",
     pendings.length ? "· 待同步删除云端图：" + pendings.length + " 张（移入回收站）" : "",
     "· 云端现有节点：" + files.length + " 个" + (files.length >= GH.maxNodes ? "（将删除最旧1个）" : ""),
     "· 将保存为新节点：" + formatNodeTime(ts),
@@ -2966,7 +2967,7 @@ function switchTab(name){
   const tl = document.getElementById("timelineWrap");
   if(tl) tl.style.display = name === "fun" ? "none" : "";
   updateMusicFab();
-  if(name === "fun" && typeof thStart === "function"){ thStart(); xzStart(); }  // 切回拾趣时确保弹幕/心择簿在动
+  if(name === "fun" && typeof thStart === "function"){ thStart(); xzStart(); }  // 切回拾趣时确保弹幕/心喜簿在动
   else if(typeof xzStop === "function") xzStop();
 }
 /* 页面空白处左右滑切换选项卡：左滑下一个，右滑上一个（访客模式无编辑，自动跳过） */
@@ -3005,7 +3006,7 @@ function switchTab(name){
   document.addEventListener("touchend", () => { sx = null; }, { passive: true });
 })();
 
-/* ============ 拾趣（树洞/小事/喜好等外部链接按钮）============ */
+/* ============ 拾趣·移步（外部链接按钮）============ */
 function loadFunItems(){
   try{ return JSON.parse(localStorage.getItem("jlt_fun")) || []; }catch(e){ return []; }
 }
@@ -3337,7 +3338,7 @@ function thSaveQuick(avatar, name){
   localStorage.setItem("jlt_th_quick", JSON.stringify(q.slice(-12)));
 }
 
-/* ================= 心择簿 ================= */
+/* ================= 心喜簿 ================= */
 function loadXinze(){
   try{ const a = JSON.parse(localStorage.getItem("jlt_xinze")); if(Array.isArray(a)) return a; }catch(e){}
   return [];
@@ -3769,12 +3770,14 @@ function xzDoVote(ui){
 }
 /* 详情 / 编辑弹窗 */
 function xzAdd(){ xzEditId=null; openXzModal(); }
-let _xzSearchWasOpen=false;  // 从搜索面板进详情：关闭详情后仍回到搜索面板
+let _xzSearchWasOpen=false, _xzSearchScrollTop=0;  // 从搜索面板进详情：关闭详情后仍回到搜索面板（保持原滚动位置）
 function xzOpenDetail(id){
   const sp=document.getElementById("xzSearchPanel");
   if(sp && sp.style.display==="flex"){
-    // 详情会盖住搜索面板：先停用面板外点击拦截，避免详情内点击被当成面板外
+    // 详情会盖住搜索面板：先停用面板外点击拦截，避免详情内点击被当成面板外，并记下滚动位置
     _xzSearchWasOpen=true;
+    const res0=document.getElementById("xzSearchRes");
+    _xzSearchScrollTop = res0 ? res0.scrollTop : 0;
     document.removeEventListener("click", xzOutsideClose, true);
     document.removeEventListener("touchmove", xzOutsideTouch, {capture:true});
   }
@@ -3788,7 +3791,7 @@ function xzBgClose(){
 function openXzModal(){
   xzEnsureSeed();
   const it = xzEditId ? loadXinze().find(x=>x.id===xzEditId) : null;
-  document.getElementById("xzModalTitle").textContent = it ? "心择簿详情" : "添加条目";
+  document.getElementById("xzModalTitle").textContent = it ? "心喜簿详情" : "添加条目";
   document.getElementById("xzIconInput").value = it ? (it.isImg?"":(it.icon||"")) : "";
   document.getElementById("xzTextInput").value = it ? (it.text||"") : "";
   document.getElementById("xzImgPrev").innerHTML = it && it.isImg && it.icon ? `<img src="${it.icon}" style="width:46px;height:46px;border-radius:50%;object-fit:cover;">` : "";
@@ -3991,7 +3994,7 @@ function xzSave(){
 }
 function xzDel(){
   if(!xzEditId || !isFunEditMode()) return;
-  if(!confirm("删除这条心择簿条目？")) return;
+  if(!confirm("删除这条心喜簿条目？")) return;
   saveXinze(loadXinze().filter(x=>x.id!==xzEditId));
   closeXzModal(); xzRender();
 }
@@ -3999,10 +4002,15 @@ function closeXzModal(){
   if(window._D) window._D+="|CLOSED@"+new Error().stack.split("\n")[2].trim();
   document.getElementById("xzModal").style.display="none";
   if(_xzSearchWasOpen){
-    // 从搜索面板进的详情：关闭后回到搜索面板，刷新结果并置底
+    // 从搜索面板进的详情：关闭后回到搜索面板，刷新结果但保持原来的滚动位置（不跳回置底）
     _xzSearchWasOpen=false;
     const sp=document.getElementById("xzSearchPanel");
-    if(sp){ sp.style.display="flex"; xzSearch(true); }
+    if(sp){
+      sp.style.display="flex";
+      xzSearch(false);
+      const res1=document.getElementById("xzSearchRes");
+      if(res1) res1.scrollTop=_xzSearchScrollTop;
+    }
     setTimeout(function(){
       document.addEventListener("click", xzOutsideClose, true);
       document.addEventListener("touchmove", xzOutsideTouch, {passive:false, capture:true});
@@ -4032,7 +4040,7 @@ function xzOpenSearch(){
   const p=document.getElementById("xzSearchPanel");
   const show = p.style.display==="none" || !p.style.display;
   if(show){
-    // 面板留在心择簿容器内 absolute 定位，随容器一起随键盘上移
+    // 面板留在心喜簿容器内 absolute 定位，随容器一起随键盘上移
     const box=document.getElementById("xinzeBox");
     const resize=document.getElementById("xzResize");
     if(box&&resize){
@@ -4046,7 +4054,7 @@ function xzOpenSearch(){
       p.style.width = "auto";
       // 面板底贴在调整高度条上方
       p.style.bottom = Math.max(8, Math.round(br.bottom - rr.top + 4))+"px";
-      // 面板最高不超过心择簿上边缘（顶部留出标题行高度）
+      // 面板最高不超过心喜簿上边缘（顶部留出标题行高度）
       const head=box.querySelector(".xz-head");
       const headH=head?head.getBoundingClientRect().height:0;
       const maxTop = rr.top - (br.top + headH);
@@ -4409,7 +4417,7 @@ function bindFunClick(){
 let funEditingIndex = -1;
 function openFunModal(){
   const editing = funEditingIndex >= 0 ? loadFunItems()[funEditingIndex] : null;
-  document.getElementById("funModalTitle").textContent = editing ? "编辑拾趣" : "新增拾趣";
+  document.getElementById("funModalTitle").textContent = editing ? "编辑移步" : "新增移步";
   document.getElementById("funNameInput").value = editing ? editing.name : "";
   document.getElementById("funUrlInput").value = editing ? editing.url : "";
   document.getElementById("funModal").style.display = "flex";
@@ -5179,7 +5187,7 @@ function bindFootLongPress(){
 /* ---------- 上传红点：仅编辑模式下有改动时，上传按钮显示红点 ---------- */
 /* ---------- 上传红点：本次页面打开后有改动才显示（内存标记，不跨会话残留）----------
    标记带组件类型，上传弹窗据此列出具体修改了哪些部分 */
-const DIRTY_LABEL = { cards: "卡片", title: "大标题", theme: "主题", anni: "纪念日", fun: "拾趣", music: "背景音乐", treehole: "树洞", xinze: "心择簿" };
+const DIRTY_LABEL = { cards: "卡片", title: "大标题", theme: "主题", anni: "纪念日", fun: "移步", music: "背景音乐", treehole: "树洞", xinze: "心喜簿" };
 let dirtyFlags = {};
 function markDirty(type){ dirtyFlags[type] = true; updateDirtyDot(); }
 function clearDirty(){ dirtyFlags = {}; updateDirtyDot(); }
