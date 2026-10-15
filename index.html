@@ -681,7 +681,10 @@ button{border-radius:12px;}
   <div class="modal-box" style="max-width:420px;">
     <div class="modal-title" id="xzModalTitle">心择簿详情</div>
     <div style="display:flex;align-items:center;gap:10px;margin:8px 0;">
-      <div id="xzImgPrev" style="width:46px;height:46px;border-radius:50%;background:#fff0f5;border:2px solid #f3b8cc;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;"></div>
+      <div style="position:relative;flex-shrink:0;">
+        <div id="xzImgPrev" style="width:46px;height:46px;border-radius:50%;background:#fff0f5;border:2px solid #f3b8cc;display:flex;align-items:center;justify-content:center;overflow:hidden;"></div>
+        <span id="xzImgDel" onclick="xzClearImg()" title="删除图片（云端同步删除）" style="display:none;position:absolute;top:-4px;right:-4px;width:18px;height:18px;border-radius:50%;background:#e0567a;color:#fff;font-size:11px;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.25);">✕</span>
+      </div>
       <input id="xzIconInput" placeholder="输入图标 emoji" maxlength="8" style="flex:1;padding:8px;border:1px solid #e9eec;border-radius:12px;outline:text-align:center;">
       <button class="btn-sec" onclick="xzPickImg()" style="padding:6px 10px;font-size:12px;">传图</button>
     </div>
@@ -3447,11 +3450,24 @@ function xzPickUser(id, choice){
     pop.style.cssText="position:fixed;left:50%;bottom:120px;transform:translateX(-50%);background:#fff;border:1px solid #f3b8cc;border-radius:14px;padding:12px;box-shadow:0 6px 24px rgba(210,120,150,.3);z-index:99999;max-width:90vw;";
     document.body.appendChild(pop);
   }
-  pop.innerHTML='<div style="font-size:13px;font-weight:700;color:#c2567f;margin-bottom:8px;">选择一位用户'+(choice===1?"：喜欢 ✓":"：不喜欢 ✕")+'</div>'
+  pop.innerHTML='<div style="font-size:13px;font-weight:700;color:#c2567f;margin-bottom:8px;">选择一位用户'+(choice===1?"：喜欢 ✓":"：不喜欢 ✕")+'<span style="font-weight:400;color:#aaa;font-size:11px;">（长按可删除该用户）</span></div>'
     +'<div style="display:flex;flex-wrap:wrap;gap:6px;max-width:260px;">'
-    +(quick.length? quick.map((u,i)=>`<span onclick="xzDoVote(${i})" style="background:#fff0f6;border:1px solid #ffd6e2;border-radius:14px;padding:5px 10px;font-size:13px;cursor:pointer;">${escapeHtml(u.avatar||"🙂")} ${escapeHtml(u.name||"")}</span>`).join("") : '<span style="font-size:12px;color:#999;">暂无历史用户，可在详情里添加</span>')
+    +(quick.length? quick.map((u,i)=>`<span onclick="xzDoVote(${i})" oncontextmenu="event.preventDefault();xzDelQuickUser(${i});" onpointerdown="xzQPressStart(event,${i})" onpointerup="xzQPressEnd()" onpointerleave="xzQPressEnd()" style="background:#fff0f6;border:1px solid #ffd6e2;border-radius:14px;padding:5px 10px;font-size:13px;cursor:pointer;user-select:none;-webkit-user-select:none;">${escapeHtml(u.avatar||"🙂")} ${escapeHtml(u.name||"")}</span>`).join("") : '<span style="font-size:12px;color:#999;">暂无历史用户，可在详情里添加</span>')
     +'</div><div style="text-align:center;margin-top:8px;"><span onclick="document.getElementById(\'xzUserPop\').style.display=\'none\'" style="font-size:12px;color:#999;cursor:pointer;">取消</span></div>';
   pop.style.display="block";
+}
+let _xzQPTimer=null;
+function xzQPressStart(e, i){
+  if(e.pointerType==="mouse") return;  // 桌面用右键
+  _xzQPTimer=setTimeout(()=>{ if(confirm("删除历史用户「"+(thQuickList()[i]||{}).name+"」？")) xzDelQuickUser(i); }, 600);
+}
+function xzQPressEnd(){ if(_xzQPTimer){ clearTimeout(_xzQPTimer); _xzQPTimer=null; } }
+function xzDelQuickUser(i){
+  const q=thQuickList(); const u=q[i]; if(!u) return;
+  q.splice(i,1);
+  localStorage.setItem("jlt_th_quick", JSON.stringify(q));
+  showToast("已删除用户", 2);
+  document.getElementById("xzUserPop").style.display="none";
 }
 function xzDoVote(ui){
   const u=thQuickList()[ui]; if(!u) return;
@@ -3471,6 +3487,8 @@ function openXzModal(){
   document.getElementById("xzIconInput").value = it ? (it.isImg?"":(it.icon||"")) : "";
   document.getElementById("xzTextInput").value = it ? (it.text||"") : "";
   document.getElementById("xzImgPrev").innerHTML = it && it.isImg && it.icon ? `<img src="${it.icon}" style="width:46px;height:46px;border-radius:50%;object-fit:cover;">` : "";
+  document.getElementById("xzImgDel").style.display = (it && it.isImg && it.icon) ? "flex" : "none";
+  window._xzPendingImgCleared = false;
   renderXzVotesEdit(it);
   document.getElementById("xzDelBtn").style.display = (it && isFunEditMode()) ? "" : "none";
   document.getElementById("xzModal").style.display="flex";
@@ -3548,6 +3566,17 @@ function xzSaveNewVote(){
   document.getElementById("xzNVAvatar").value="";document.getElementById("xzNVName").value="";document.getElementById("xzNVNote").value="";
   renderXzVotesEdit(it); xzRender();
 }
+function xzClearImg(){
+  const prev = document.getElementById("xzImgPrev").querySelector("img");
+  if(prev){
+    // 识别仓库图库链接，记录待云端删除
+    const m = (prev.src||"").match(/^https:\/\/[\w.-]+\.github\.io\/[\w.-]+\/images\/([^/]+)\/([^/?#]+)$/);
+    if(m){ addPendingDelete("images/" + m[1] + "/" + m[2]); showToast("图片将在下次上传时同步移入回收站", 3); }
+  }
+  window._xzPendingImgCleared = true;
+  document.getElementById("xzImgPrev").innerHTML = "";
+  document.getElementById("xzImgDel").style.display = "none";
+}
 function xzSave(){
   const icon = document.getElementById("xzIconInput").value.trim();
   const text = document.getElementById("xzTextInput").value.trim();
@@ -3558,7 +3587,14 @@ function xzSave(){
   const now=xzNowStr();
   if(xzEditId){
     const it=list.find(x=>x.id===xzEditId);
-    if(it){ it.icon=useIcon; it.isImg=isImg; it.text=text; it.mtime=now; }
+    if(it){
+      // 原来有图、现在换成 emoji 或清空了 → 旧图加入待云端删除
+      if(it.isImg && it.icon && (!isImg || it.icon !== prev.src)){
+        const m = (it.icon||"").match(/^https:\/\/[\w.-]+\.github\.io\/[\w.-]+\/images\/([^/]+)\/([^/?#]+)$/);
+        if(m) addPendingDelete("images/" + m[1] + "/" + m[2]);
+      }
+      it.icon=useIcon; it.isImg=isImg; it.text=text; it.mtime=now;
+    }
   }else{
     list.push({ id:"x"+Date.now(), icon:useIcon, isImg, text, votes:[], mtime:now });
   }
