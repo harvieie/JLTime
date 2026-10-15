@@ -3769,8 +3769,15 @@ function xzDoVote(ui){
 }
 /* 详情 / 编辑弹窗 */
 function xzAdd(){ xzEditId=null; openXzModal(); }
+let _xzSearchWasOpen=false;  // 从搜索面板进详情：关闭详情后仍回到搜索面板
 function xzOpenDetail(id){
-  closeXzSearch();
+  const sp=document.getElementById("xzSearchPanel");
+  if(sp && sp.style.display==="flex"){
+    // 详情会盖住搜索面板：先停用面板外点击拦截，避免详情内点击被当成面板外
+    _xzSearchWasOpen=true;
+    document.removeEventListener("click", xzOutsideClose, true);
+    document.removeEventListener("touchmove", xzOutsideTouch, {capture:true});
+  }
   xzEditId=id; xzPause(); openXzModal();
 }
 /* 详情弹窗打开后短时间内忽略背景点击，避免搜索条目点击时合成事件误关 */
@@ -3988,7 +3995,20 @@ function xzDel(){
   saveXinze(loadXinze().filter(x=>x.id!==xzEditId));
   closeXzModal(); xzRender();
 }
-function closeXzModal(){ if(window._D) window._D+="|CLOSED@"+new Error().stack.split("\n")[2].trim(); document.getElementById("xzModal").style.display="none"; }
+function closeXzModal(){
+  if(window._D) window._D+="|CLOSED@"+new Error().stack.split("\n")[2].trim();
+  document.getElementById("xzModal").style.display="none";
+  if(_xzSearchWasOpen){
+    // 从搜索面板进的详情：关闭后回到搜索面板，刷新结果并置底
+    _xzSearchWasOpen=false;
+    const sp=document.getElementById("xzSearchPanel");
+    if(sp){ sp.style.display="flex"; xzSearch(true); }
+    setTimeout(function(){
+      document.addEventListener("click", xzOutsideClose, true);
+      document.addEventListener("touchmove", xzOutsideTouch, {passive:false, capture:true});
+    },0);
+  }
+}
 function xzPickImg(){
   const inp=document.createElement("input");
   inp.type="file"; inp.accept="image/*";
@@ -4036,7 +4056,7 @@ function xzOpenSearch(){
     // 面板内结果列表正常滚动，但阻止冒泡到外层
     const res=document.getElementById("xzSearchRes");
     res.ontouchmove = function(e){ e.stopPropagation(); };
-    document.getElementById("xzSearchInput").focus(); xzSearch();
+    xzSearch(true);  // 不自动聚焦、不弹键盘；仅渲染并置底到最新条目，用户点输入框才弹键盘
     // 面板外点击关闭、触摸滚动拦截：在 capture 阶段全局判断，不使用全屏遮罩元素，
     // 规避 .tab-panel 的 backdrop-filter 形成独立层叠上下文导致遮罩盖住面板、条目点不动的问题
     setTimeout(function(){
@@ -4060,7 +4080,7 @@ function xzOutsideTouch(e){
   const p=document.getElementById("xzSearchPanel");
   if(p && p.style.display==="flex" && !p.contains(e.target)){ e.preventDefault(); }
 }
-function xzSearch(){
+function xzSearch(fromOpen){
   const q=document.getElementById("xzSearchInput").value.trim().toLowerCase();
   const res=document.getElementById("xzSearchRes");
   const list=loadXinze();
@@ -4082,6 +4102,8 @@ function xzSearch(){
       </div>
     </div>`;
   }).join("") : '<div style="font-size:12px;color:#999;padding:8px 0;">无匹配</div>';
+  // 首次打开时滚到最底部，让最新修改的条目直接可见
+  if(fromOpen){ res.scrollTop = res.scrollHeight; }
 }
 function closeXzSearch(){
   document.getElementById("xzSearchPanel").style.display="none";
