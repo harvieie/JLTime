@@ -3675,7 +3675,7 @@ function renderXzVotesEdit(it){
         <span style="position:absolute;right:-3px;bottom:-3px;width:15px;height:15px;border-radius:50%;background:${v.choice===1?'#3bb273':'#e0567a'};color:#fff;font-size:10px;line-height:15px;text-align:center;border:1.5px solid #fff;">${v.choice===1?'✓':'✕'}</span>
       </span>
       <span onclick="xzEditUser(${oi})" title="点击修改头像和名字" style="flex:0 1 auto;max-width:90px;color:#555;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(v.name||"")}</span>
-      <input type="text" value="${escapeHtml(v.time||"")}" data-oi="${oi}" oninput="xzEditTime(this)" title="时间" style="width:62px;padding:2px 3px;border:1px solid #e9eec;border-radius:6px;font-size:10px;flex-shrink:0;font-family:monospace;">
+      <input type="text" value="${escapeHtml(v.time||"")}" data-oi="${oi}" oninput="xzEditTime(this)" title="时间" style="width:62px;padding:2px 3px;border:1px solid #e9eec;border-radius:6px;font-size:10px;flex:0 0 auto;min-width:0;font-family:monospace;">
       ${isFunEditMode()?`<span onclick="xzDelVote(${oi})" style="color:#e0567a;cursor:pointer;padding:0 3px;flex-shrink:0;margin-left:auto;">✕</span>`:""}
       <input type="text" value="${escapeHtml(v.note||"")}" data-oi="${oi}" oninput="xzEditNote(this)" title="备注" placeholder="备注" style="width:100%;padding:2px 3px;border:1px solid #f0d8e2;border-radius:6px;font-size:10px;box-sizing:border-box;flex:1 1 100%;">
     </div>`;
