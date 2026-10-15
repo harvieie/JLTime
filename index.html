@@ -3907,6 +3907,7 @@ function xzPickImg(){
       URL.revokeObjectURL(url);
       document.getElementById("xzImgPrev").innerHTML=`<img src="${c.toDataURL("image/jpeg",0.7)}" style="width:46px;height:46px;border-radius:50%;object-fit:cover;">`;
       document.getElementById("xzIconInput").value="";
+      document.getElementById("xzImgDel").style.display="flex";
     };
     img.src=url;
   };
