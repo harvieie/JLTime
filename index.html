@@ -3730,6 +3730,7 @@ function xzDoVote(ui){
 /* 详情 / 编辑弹窗 */
 function xzAdd(){ xzEditId=null; openXzModal(); }
 function xzOpenDetail(id){
+  alert("ITEM clicked id="+id);
   closeXzSearch();
   // 先让搜索面板/遮罩完全关闭，再于下一帧打开详情，避免同一次点击内的层叠/事件误关
   setTimeout(function(){
@@ -3990,7 +3991,7 @@ function xzOpenSearch(){
       mask=document.createElement("div");
       mask.id="xzSearchMask";
       mask.style.cssText="position:fixed;inset:0;z-index:29;touch-action:none;";
-      mask.addEventListener("click", closeXzSearch);
+      mask.addEventListener("click", function(){ alert("MASK clicked"); closeXzSearch(); });
       mask.addEventListener("touchmove", function(e){ e.preventDefault(); }, {passive:false});
       document.body.appendChild(mask);
     }
