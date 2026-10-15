@@ -731,6 +731,21 @@ button{border-radius:12px;}
   </div>
 </div>
 
+<!-- 心择簿：修改选择记录的头像与用户名弹窗 -->
+<div class="modal-overlay" id="xzUserModal" onclick="if(event.target===this) closeXzUserModal()">
+  <div class="modal-box" style="max-width:320px;">
+    <div class="modal-title">修改用户</div>
+    <div style="text-align:left;font-size:12px;color:#888;margin:4px 0;">头像（emoji / 图片）：</div>
+    <input id="xzUserAvatar" maxlength="8" style="width:100%;padding:8px;border:1px solid #e9eec;border-radius:12px;box-sizing:border-box;" placeholder="输入头像 emoji">
+    <div style="text-align:left;font-size:12px;color:#888;margin:10px 0 4px;">名字：</div>
+    <input id="xzUserName" maxlength="12" style="width:100%;padding:8px;border:1px solid #e9eec;border-radius:12px;box-sizing:border-box;" placeholder="输入名字">
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:14px;">
+      <button class="btn-pri" onclick="saveXzUser()" style="padding:6px 20px;font-size:13px;">保存</button>
+      <button class="btn-sec" onclick="closeXzUserModal()" style="padding:6px 20px;font-size:13px;">关闭</button>
+    </div>
+  </div>
+</div>
+
 <div class="timeline" id="timelineWrap">
   <div class="timeline-path" id="timelinePath">
     <svg viewBox="0 0 52 1400" preserveAspectRatio="none">
@@ -3652,19 +3667,41 @@ function renderXzVotesEdit(it){
   if(!votes.length){ box.innerHTML='<div style="font-size:12px;color:#999;padding:6px 0;">还没有选择记录</div>'; return; }
   const sorted=votes.map((v,oi)=>({v,oi})).sort((a,b)=>(a.v.time||"").localeCompare(b.v.time||""));
   box.innerHTML = sorted.map(({v,oi})=>{
-    const badge = v.choice===1
-      ? '<span style="color:#3bb273;">✓</span>'
-      : '<span style="color:#e0567a;">✕</span>';
-    const noteShort = (v.note||"").split("\n")[0];
-    return `<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px dashed #f3dfc2;font-size:12px;">
-      <span onclick="xzEditVoteField(${oi},'avatar')" title="点击改头像" style="width:26px;height:26px;border-radius:50%;background:#ffe9f0;border:1px solid #f3b8cc;display:inline-flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;flex-shrink:0;">${escapeHtml(v.avatar||"🙂")}</span>
-      <span onclick="xzEditVoteField(${oi},'name')" title="点击改名字" style="flex:0 1 auto;max-width:80px;color:#555;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(v.name||"")}</span>
-      <span onclick="event.stopPropagation();xzToggleChoice(${oi})" title="点击切换喜欢/不喜欢" style="width:26px;height:26px;border-radius:50%;border:2px solid ${v.choice===1?'#a8dcc0':'#f0a8bc'};background:${v.choice===1?'#e8f6ee':'#fdeef2'};display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;flex-shrink:0;font-weight:700;user-select:none;-webkit-user-select:none;">${badge}</span>
-      <input type="text" value="${escapeHtml(v.time||"")}" data-oi="${oi}" oninput="xzEditTime(this)" style="width:62px;padding:2px 3px;border:1px solid #e9eec;border-radius:6px;font-size:10px;flex-shrink:0;font-family:monospace;">
-      <span onclick="xzViewNote(${oi})" title="查看/编辑备注" style="flex:1;color:#b0809a;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;">${noteShort?escapeHtml(noteShort):'<span style="color:#ccc;">备注</span>'}</span>
-      ${isFunEditMode()?`<span onclick="xzDelVote(${oi})" style="color:#e0567a;cursor:pointer;padding:0 3px;flex-shrink:0;">✕</span>`:""}
+    return `<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px dashed #f3dfc2;font-size:12px;flex-wrap:wrap;">
+      <span onclick="xzToggleChoice(${oi})" title="点按切换喜欢/不喜欢" style="position:relative;width:30px;height:30px;border-radius:50%;background:#ffe9f0;border:1px solid #f3b8cc;display:inline-flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;flex-shrink:0;user-select:none;-webkit-user-select:none;">${escapeHtml(v.avatar||"🙂")}
+        <span style="position:absolute;right:-3px;bottom:-3px;width:15px;height:15px;border-radius:50%;background:${v.choice===1?'#3bb273':'#e0567a'};color:#fff;font-size:10px;line-height:15px;text-align:center;border:1.5px solid #fff;">${v.choice===1?'✓':'✕'}</span>
+      </span>
+      <span onclick="xzEditUser(${oi})" title="点击修改头像和名字" style="flex:0 1 auto;max-width:90px;color:#555;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(v.name||"")}</span>
+      <input type="text" value="${escapeHtml(v.time||"")}" data-oi="${oi}" oninput="xzEditTime(this)" title="时间" style="width:62px;padding:2px 3px;border:1px solid #e9eec;border-radius:6px;font-size:10px;flex-shrink:0;font-family:monospace;">
+      ${isFunEditMode()?`<span onclick="xzDelVote(${oi})" style="color:#e0567a;cursor:pointer;padding:0 3px;flex-shrink:0;margin-left:auto;">✕</span>`:""}
+      <input type="text" value="${escapeHtml(v.note||"")}" data-oi="${oi}" oninput="xzEditNote(this)" title="备注" placeholder="备注" style="width:100%;padding:2px 3px;border:1px solid #f0d8e2;border-radius:6px;font-size:10px;box-sizing:border-box;flex:1 1 100%;">
     </div>`;
   }).join("");
+}
+function xzEditUser(oi){
+  const list = loadXinze();
+  const it = list.find(x=>x.id===xzEditId); if(!it||!it.votes[oi]) return;
+  window._xzEditUserOi = oi;
+  document.getElementById("xzUserAvatar").value = it.votes[oi].avatar||"";
+  document.getElementById("xzUserName").value = it.votes[oi].name||"";
+  document.getElementById("xzUserModal").style.display="flex";
+}
+function closeXzUserModal(){ document.getElementById("xzUserModal").style.display="none"; }
+function saveXzUser(){
+  const list = loadXinze();
+  const it = list.find(x=>x.id===xzEditId); if(!it) return;
+  const oi = window._xzEditUserOi; if(oi==null||!it.votes[oi]) return;
+  it.votes[oi].avatar = document.getElementById("xzUserAvatar").value.trim() || "🙂";
+  it.votes[oi].name = document.getElementById("xzUserName").value.trim() || "";
+  saveXinze(list);
+  closeXzUserModal();
+  renderXzVotesEdit(it); xzRender();
+}
+function xzEditNote(inp){
+  const list = loadXinze();
+  const it = list.find(x=>x.id===xzEditId); if(!it) return;
+  const oi=+inp.dataset.oi;
+  if(it.votes && it.votes[oi]){ it.votes[oi].note=inp.value; saveXinze(list); }
 }
 function xzEditVoteField(oi, field){
   const list = loadXinze();
