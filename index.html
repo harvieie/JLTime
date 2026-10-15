@@ -173,17 +173,14 @@ body.dark .th-tools::after{background:#8a8f9a;}
   padding:2px 0 10px;cursor:pointer;user-select:none;
 }
 .xz-stage{
-  position:relative;width:100%;height:250px;overflow-y:auto;overflow-x:hidden;border-radius:14px;
+  position:relative;width:100%;height:350px;overflow-y:auto;overflow-x:hidden;border-radius:14px;
   background:rgba(255,255,255,.55);border:1px solid #fbd3e0;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;
 }
-.xz-stage.xz-paused{outline:2px solid #ffb6cf;outline-offset:-2px;}
-.xz-stage.xz-paused::after{
-  content:"⏸ 已暂停";position:sticky;float:right;top:6px;margin-right:8px;padding:2px 8px;border-radius:10px;
-  background:rgba(255,150,180,.9);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;z-index:5;
-}
-.xz-stage:not(.xz-paused)::before{
-  content:"↻ 自动滚动";position:sticky;float:left;top:6px;margin-left:8px;padding:2px 8px;border-radius:10px;
-  background:rgba(168,220,192,.85);color:#2c7a52;font-size:11px;display:flex;align-items:center;justify-content:center;z-index:5;
+.xz-stage.xz-paused .xz-row:not(.xz-active){opacity:.45;filter:grayscale(.6);}
+.xz-stage.xz-paused .xz-row.xz-active{position:relative;}
+.xz-stage.xz-paused .xz-row.xz-active::after{
+  content:"⏸";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.25);color:rgba(180,120,150,.55);font-size:22px;border-radius:14px;pointer-events:none;
 }
 .xz-track{padding:12px 10px;display:flex;flex-direction:column;gap:10px;}
 .xz-row{
