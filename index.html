@@ -724,6 +724,7 @@ button{border-radius:12px;}
     </div>
     <div class="btn-row" style="display:flex;flex-wrap:nowrap;gap:6px;justify-content:center;margin-top:10px;">
       <button class="btn-pri" onclick="xzSave()" style="padding:6px 12px;font-size:13px;">保存</button>
+      <button class="success" onclick="xzSave();xzUploadCloud()" style="padding:6px 12px;font-size:13px;">上传</button>
       <button class="btn-danger" id="xzDelBtn" onclick="xzDel()" style="display:none;padding:6px 12px;font-size:13px;">删除</button>
       <button class="btn-sec" onclick="closeXzModal()" style="padding:6px 12px;font-size:13px;">关闭</button>
     </div>
@@ -2216,6 +2217,25 @@ async function thUploadCloud(){
     const name = `jltime_${nowStamp()}_树洞.json`;
     await wdWriteFile(name, packCloudData());
     showToast("树洞弹幕已上传到云端", 2);
+  }catch(err){
+    showToast("云端同步失败：" + err.message, 4);
+  }finally{
+    showCloudLoading(false);
+  }
+}
+
+/* 心择簿上传云端：与树洞一致，把本地心择簿（含全量数据）作为云端快照保存 */
+async function xzUploadCloud(){
+  if(isCloudLocked()){ showToast("云端已断开：数据仅保存在本地，解锁后重试", 4); return; }
+  showCloudLoading(true);
+  try{
+    const files = await wdList();
+    if(files.length >= GH.maxNodes){
+      for(const f of files.slice(GH.maxNodes - 1)) await wdDeleteFile(f);
+    }
+    const name = `jltime_${nowStamp()}_心择簿.json`;
+    await wdWriteFile(name, packCloudData());
+    showToast("心择簿已上传到云端", 2);
   }catch(err){
     showToast("云端同步失败：" + err.message, 4);
   }finally{
