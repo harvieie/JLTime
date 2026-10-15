@@ -3729,17 +3729,23 @@ function xzDoVote(ui){
 }
 /* 详情 / 编辑弹窗 */
 function xzAdd(){ xzEditId=null; openXzModal(); }
+function xzDbg(msg){
+  let d=document.getElementById("xzdbg");
+  if(!d){d=document.createElement("div");d.id="xzdbg";d.style.cssText="position:fixed;top:0;left:0;right:0;z-index:999999;background:#e00;color:#fff;font-size:22px;padding:8px;text-align:center;";document.body.appendChild(d);}
+  d.textContent=msg;
+}
 function xzOpenDetail(id){
-  alert("ITEM clicked id="+id);
+  xzDbg("ITEM clicked id="+id);
   closeXzSearch();
   // 先让搜索面板/遮罩完全关闭，再于下一帧打开详情，避免同一次点击内的层叠/事件误关
   setTimeout(function(){
     try{
       xzEditId=id; xzPause(); openXzModal();
+      xzDbg("MODAL opened "+document.getElementById("xzModal").style.display);
     }catch(err){
-      alert("XZOPEN ERR: "+err.message+" || stack: "+(err.stack||"").split("\n").slice(0,3).join(" <= "));
+      xzDbg("ERR: "+err.message);
     }
-  }, 40);
+  }, 60);
 }
 /* 详情弹窗打开后短时间内忽略背景点击，避免搜索条目点击时合成事件误关 */
 function xzBgClose(){
@@ -3991,7 +3997,7 @@ function xzOpenSearch(){
       mask=document.createElement("div");
       mask.id="xzSearchMask";
       mask.style.cssText="position:fixed;inset:0;z-index:29;touch-action:none;";
-      mask.addEventListener("click", function(){ alert("MASK clicked"); closeXzSearch(); });
+      mask.addEventListener("click", function(){ xzDbg("MASK clicked target="+(event.target&&event.target.className)); closeXzSearch(); });
       mask.addEventListener("touchmove", function(e){ e.preventDefault(); }, {passive:false});
       document.body.appendChild(mask);
     }
