@@ -3858,7 +3858,8 @@ function xzSaveNewVote(){
   if(!name){ alert("请填写名字"); return; }
   const list=loadXinze();
   const it=list.find(x=>x.id===xzEditId);
-  if(it){ (it.votes=it.votes||[]).push({avatar,name,choice,time,note}); saveXinze(list); thSaveQuick(avatar,name); }
+  if(it){ (it.votes=it.votes||[]).push({avatar,name,choice,time,note}); saveXinze(list); thSaveQuick(avatar,name); showToast("已添加选择记录", 1); }
+  else { showToast("未找到对应条目，请先点保存", 3); }
   document.getElementById("xzNVAvatar").value="";document.getElementById("xzNVName").value="";document.getElementById("xzNVNote").value="";
   renderXzVotesEdit(it); xzRender();
 }
