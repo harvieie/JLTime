@@ -509,8 +509,8 @@ button{border-radius:12px;}
 
 <div class="topbar">
   <div class="tab-bar" id="tabBar">
-    <button type="button" class="tab-btn active" id="tabFilter" onclick="switchTab('filter')">时迹</button>
     <button type="button" class="tab-btn" id="tabEdit" onclick="switchTab('edit')">简驭</button>
+    <button type="button" class="tab-btn active" id="tabFilter" onclick="switchTab('filter')">时迹</button>
     <button type="button" class="tab-btn" id="tabFun" onclick="switchTab('fun')">拾趣</button>
   </div>
 
@@ -699,11 +699,11 @@ button{border-radius:12px;}
   <div class="modal-box">
     <div class="modal-title">背景音乐</div>
     <div id="musicList" style="max-height:40vh;overflow:auto;text-align:left;margin:10px 0;"></div>
-    <div class="btn-row">
-      <button class="btn-sec" onclick="musicPrev()" title="上一首">◀ 上一首</button>
-      <button class="btn-sec" onclick="musicNext()" title="下一首">下一首 ▶</button>
-      <button class="btn-pri" onclick="pickMusicFile()" title="上传音乐">⬆ 上传</button>
-      <button class="btn-sec" onclick="closeMusicModal()" title="关闭">✕ 关闭</button>
+    <div class="btn-row" style="justify-content:center;flex-wrap:nowrap;">
+      <button class="btn-sec" onclick="musicPrev()" title="上一首" style="width:42px;padding:8px 0;text-align:center;">◀</button>
+      <button class="btn-sec" onclick="musicNext()" title="下一首" style="width:42px;padding:8px 0;text-align:center;">▶</button>
+      <button class="btn-pri" onclick="pickMusicFile()" title="上传音乐" style="width:42px;padding:8px 0;text-align:center;">⬆</button>
+      <button class="btn-sec" onclick="closeMusicModal()" title="关闭" style="width:42px;padding:8px 0;text-align:center;">✕</button>
     </div>
   </div>
 </div>
