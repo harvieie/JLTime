@@ -187,11 +187,11 @@ body.dark .th-tools::after{background:#8a8f9a;}
   display:grid;grid-template-columns:56px 1fr 44px;gap:12px;align-items:center;
   background:#fff;border:1.5px solid #f6c6d6;border-radius:14px;padding:8px 12px;
   box-shadow:0 1px 6px rgba(210,120,150,.1);transition:transform .45s ease,box-shadow .45s,opacity .45s,border-color .45s;
-  opacity:.55;transform:scale(.92);
+  opacity:.5;transform:scale(.9);
 }
 .xz-row.xz-active{
-  opacity:1;transform:scale(1);border-color:#ff9dbf;
-  box-shadow:0 5px 18px rgba(214,110,150,.28);
+  opacity:1;transform:scale(1.06);border-color:#ff9dbf;
+  box-shadow:0 6px 20px rgba(214,110,150,.3);
 }
 .xz-icon{
   width:54px;height:54px;border-radius:50%;background:#fff0f5;border:2px solid #f3b8cc;
@@ -3370,7 +3370,7 @@ function xzRowTap(id){
 }
 function xzPause(){ xzPaused=true; const s=document.getElementById("xzStage"); if(s) s.classList.add("xz-paused"); }
 function xzResume(){ xzPaused=false; const s=document.getElementById("xzStage"); if(s) s.classList.remove("xz-paused"); }
-const XZ_PAD=12, XZ_GAP=10, XZ_SPEED=0.55;
+const XZ_PAD=12, XZ_GAP=10, XZ_SPEED=0.95;
 let xzOffset=0, xzDragLock=false, _xzLastMark=0;
 function xzRender(){
   xzEnsureSeed();
