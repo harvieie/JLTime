@@ -737,7 +737,7 @@ button{border-radius:12px;}
 </div>
 
 <!-- 心择簿：详情 / 编辑 -->
-<div class="modal-overlay" id="xzModal" onclick="if(event.target===this) closeXzModal()">
+<div class="modal-overlay" id="xzModal" onclick="if(event.target===this) xzBgClose()">
   <div class="modal-box" style="max-width:420px;">
     <div class="modal-title" id="xzModalTitle">心择簿详情</div>
     <div style="display:flex;align-items:center;gap:10px;margin:8px 0;">
@@ -3730,10 +3730,12 @@ function xzDoVote(ui){
 /* 详情 / 编辑弹窗 */
 function xzAdd(){ xzEditId=null; openXzModal(); }
 function xzOpenDetail(id){
-  try {
-    xzEditId=id; xzPause(); openXzModal();
-  } catch(e){ alert("详情打开失败: "+e.message); }
-  closeXzSearch();
+  xzEditId=id; xzPause(); openXzModal(); closeXzSearch();
+}
+/* 详情弹窗打开后短时间内忽略背景点击，避免搜索条目点击时合成事件误关 */
+function xzBgClose(){
+  if(window._xzModalAt && Date.now()-window._xzModalAt<350) return;
+  closeXzModal();
 }
 function openXzModal(){
   xzEnsureSeed();
@@ -3749,6 +3751,7 @@ function openXzModal(){
   renderXzVotesEdit(it);
   document.getElementById("xzDelBtn").style.display = (it && isFunEditMode()) ? "" : "none";
   document.getElementById("xzModal").style.display="flex";
+  window._xzModalAt=Date.now();
   xzFitTimeInputs();
   xzRenderNVQuick();
 }
