@@ -228,7 +228,7 @@ body.dark .th-tools::after{background:#8a8f9a;}
 .xz-search-res{flex:1;min-height:0;overflow:auto;width:100%;}
 .xz-search-res .xz-search-item{white-space:normal;word-break:break-word;}
 .xz-search-res .xz-icon{width:36px;height:36px;font-size:18px;border-width:1.5px;}
-.xz-search-item{display:flex;align-items:center;gap:10px;padding:7px 2px;border-bottom:1px dashed #f8dce6;cursor:pointer;}
+.xz-search-item{display:flex;align-items:center;gap:10px;padding:5px 2px;border-bottom:1px dashed #f8dce6;cursor:pointer;}
 .xz-foot{display:flex;justify-content:space-between;align-items:center;padding:10px 6px 2px;}
 .xz-foot-btn{
   width:34px;height:34px;border-radius:50%;border:1.5px solid #f5c2d4;background:#fff;color:#d35d86;
@@ -3822,6 +3822,9 @@ function xzOpenSearch(){
   const show = p.style.display==="none" || !p.style.display;
   if(show){
     p.style.display="flex";
+    // 顶部与调整高度条对齐
+    const resize=document.getElementById("xzResize");
+    if(resize) p.style.top = resize.offsetTop + "px";
     // 全屏遮罩：点面板外任何地方只负责关闭搜索，不误触下层按钮
     let mask=document.getElementById("xzSearchMask");
     if(!mask){
