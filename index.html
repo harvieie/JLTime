@@ -3729,23 +3729,9 @@ function xzDoVote(ui){
 }
 /* 详情 / 编辑弹窗 */
 function xzAdd(){ xzEditId=null; openXzModal(); }
-function xzDbg(msg){
-  let d=document.getElementById("xzdbg");
-  if(!d){d=document.createElement("div");d.id="xzdbg";d.style.cssText="position:fixed;top:0;left:0;right:0;z-index:999999;background:#e00;color:#fff;font-size:22px;padding:8px;text-align:center;";document.body.appendChild(d);}
-  d.textContent=msg;
-}
 function xzOpenDetail(id){
-  xzDbg("ITEM clicked id="+id);
   closeXzSearch();
-  // 先让搜索面板/遮罩完全关闭，再于下一帧打开详情，避免同一次点击内的层叠/事件误关
-  setTimeout(function(){
-    try{
-      xzEditId=id; xzPause(); openXzModal();
-      xzDbg("MODAL opened "+document.getElementById("xzModal").style.display);
-    }catch(err){
-      xzDbg("ERR: "+err.message);
-    }
-  }, 60);
+  xzEditId=id; xzPause(); openXzModal();
 }
 /* 详情弹窗打开后短时间内忽略背景点击，避免搜索条目点击时合成事件误关 */
 function xzBgClose(){
@@ -3991,23 +3977,32 @@ function xzOpenSearch(){
       p.style.maxHeight = Math.max(120, Math.round(maxTop - 4))+"px";
     }
     p.style.display="flex";
-    // 全屏遮罩：点面板外任何地方只负责关闭搜索，不误触下层按钮；同时阻止面板外触摸滚动穿透
-    let mask=document.getElementById("xzSearchMask");
-    if(!mask){
-      mask=document.createElement("div");
-      mask.id="xzSearchMask";
-      mask.style.cssText="position:fixed;inset:0;z-index:29;touch-action:none;";
-      mask.addEventListener("click", function(){ xzDbg("MASK clicked target="+(event.target&&event.target.className)); closeXzSearch(); });
-      mask.addEventListener("touchmove", function(e){ e.preventDefault(); }, {passive:false});
-      document.body.appendChild(mask);
-    }
     // 面板内结果列表正常滚动，但阻止冒泡到外层
     const res=document.getElementById("xzSearchRes");
     res.ontouchmove = function(e){ e.stopPropagation(); };
     document.getElementById("xzSearchInput").focus(); xzSearch();
+    // 面板外点击关闭、触摸滚动拦截：在 capture 阶段全局判断，不使用全屏遮罩元素，
+    // 规避 .tab-panel 的 backdrop-filter 形成独立层叠上下文导致遮罩盖住面板、条目点不动的问题
+    setTimeout(function(){
+      document.addEventListener("click", xzOutsideClose, true);
+      document.addEventListener("touchmove", xzOutsideTouch, {passive:false, capture:true});
+    }, 0);
   }else{
     closeXzSearch();
   }
+}
+/* 点击落在搜索面板外：关闭面板并拦截，避免误触下层按钮 */
+function xzOutsideClose(e){
+  const p=document.getElementById("xzSearchPanel");
+  if(p && p.style.display==="flex" && !p.contains(e.target)){
+    e.preventDefault(); e.stopPropagation();
+    closeXzSearch();
+  }
+}
+/* 面板外的触摸滚动拦截，防止穿透到下层页面 */
+function xzOutsideTouch(e){
+  const p=document.getElementById("xzSearchPanel");
+  if(p && p.style.display==="flex" && !p.contains(e.target)){ e.preventDefault(); }
 }
 function xzSearch(){
   const q=document.getElementById("xzSearchInput").value.trim().toLowerCase();
@@ -4034,7 +4029,8 @@ function xzSearch(){
 }
 function closeXzSearch(){
   document.getElementById("xzSearchPanel").style.display="none";
-  const m=document.getElementById("xzSearchMask"); if(m) m.remove();
+  document.removeEventListener("click", xzOutsideClose, true);
+  document.removeEventListener("touchmove", xzOutsideTouch, {capture:true});
 }
 
 function thAdd(){ thEditId = null; openThModal(); }
