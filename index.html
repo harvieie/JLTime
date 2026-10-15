@@ -3952,12 +3952,14 @@ function xzOpenSearch(){
     const resize=document.getElementById("xzResize");
     if(box&&resize){
       const br=box.getBoundingClientRect(), rr=resize.getBoundingClientRect();
+      // 左右缘与底部搜索/添加按钮对齐（box padding 12 + foot padding 6 = 18）
       p.style.left = "18px";
-      p.style.right = "12px";
-      p.style.bottom = Math.max(8, Math.round(br.bottom - rr.bottom + 8))+"px";
-      p.style.width = Math.min(380, Math.round(br.width-24))+"px";
-      // 面板高度不超过心择簿上边缘（从 resize 顶到 box 顶的距离）
-      p.style.maxHeight = Math.max(120, Math.round(rr.top - br.top - 16))+"px";
+      p.style.right = "18px";
+      p.style.width = "auto";
+      // 面板底贴在调整高度条上方
+      p.style.bottom = Math.max(8, Math.round(br.bottom - rr.top + 4))+"px";
+      // 面板高：从调整高度条顶到心择簿上边缘，留 12px 给标题
+      p.style.maxHeight = Math.max(120, Math.round(rr.top - br.top - 12))+"px";
     }
     p.style.display="flex";
     // 全屏遮罩：点面板外任何地方只负责关闭搜索，不误触下层按钮；同时阻止面板外触摸滚动穿透
