@@ -410,6 +410,16 @@ body.dark .xz-btn{background:#2a2d34;border-color:#5a5060;color:#cfd3da;}
 body.dark .xz-search-panel{background:#22252c;border-color:#3a3e48;}
 body.dark .xz-search-res .xz-text,body.dark .xz-search-res div{color:#d8d2d8;}
 body.dark #xzUserPop{background:#22252c;border-color:#3a3e48;}
+.xz-upop-title{font-size:13px;font-weight:700;color:#c2567f;margin-bottom:4px;}
+.xz-upop-hint{font-size:11px;color:#aaa;margin-bottom:8px;}
+.xz-upop-list{display:flex;flex-wrap:wrap;gap:6px;max-width:260px;max-height:40vh;overflow:auto;overscroll-behavior:contain;}
+.xz-user-chip{background:#fff0f6;border:1px solid #ffd6e2;border-radius:14px;padding:5px 10px;font-size:13px;cursor:pointer;user-select:none;-webkit-user-select:none;}
+.xz-upop-empty{font-size:12px;color:#999;}
+.xz-upop-cancel{text-align:center;margin-top:8px;font-size:12px;color:#999;}
+body.dark .xz-upop-title{color:#ff9ec4;}
+body.dark .xz-upop-hint{color:#9aa0aa;}
+body.dark .xz-user-chip{background:#2a2d34;border-color:#3a3e48;color:#ff9ec4;}
+body.dark .xz-upop-empty,body.dark .xz-upop-cancel{color:#9aa0aa;}
 /* 深色模式：选项卡按钮与面板、大标题 */
 body.dark .page-title{-webkit-text-stroke:1px #ff9ec4;}
 body.dark .tab-btn{background:#2a2d34;color:#cfd3da;border-color:#3a3e48;}
@@ -3662,11 +3672,11 @@ function xzPickUser(id, choice){
     pop.style.cssText="position:fixed;left:50%;bottom:120px;transform:translateX(-50%);background:#fff;border:1px solid #f3b8cc;border-radius:14px;padding:12px;box-shadow:0 6px 24px rgba(210,120,150,.3);z-index:99999;max-width:90vw;";
     document.body.appendChild(pop);
   }
-  pop.innerHTML='<div style="font-size:13px;font-weight:700;color:#c2567f;margin-bottom:4px;">选择一位用户'+(choice===1?"：喜欢 ✓":"：不喜欢 ✕")+'</div>'
-    +'<div style="font-size:11px;color:#aaa;margin-bottom:8px;">长按可删除该用户</div>'
-    +'<div style="display:flex;flex-wrap:wrap;gap:6px;max-width:260px;max-height:40vh;overflow:auto;overscroll-behavior:contain;">'
-    +(quick.length? quick.map((u,i)=>`<span onclick="xzDoVote(${i})" oncontextmenu="event.preventDefault();xzDelQuickUser(${i});" onpointerdown="xzQPressStart(event,${i})" onpointerup="xzQPressEnd()" onpointerleave="xzQPressEnd()" style="background:#fff0f6;border:1px solid #ffd6e2;border-radius:14px;padding:5px 10px;font-size:13px;cursor:pointer;user-select:none;-webkit-user-select:none;">${escapeHtml(u.avatar||"🙂")} ${escapeHtml(u.name||"")}</span>`).join("") : '<span style="font-size:12px;color:#999;">暂无历史用户，可在详情里添加</span>')
-    +'</div><div style="text-align:center;margin-top:8px;"><span onclick="closeXzUserPop()" style="font-size:12px;color:#999;cursor:pointer;">取消</span></div>';
+  pop.innerHTML='<div class="xz-upop-title">选择一位用户'+(choice===1?"：喜欢 ✓":"：不喜欢 ✕")+'</div>'
+    +'<div class="xz-upop-hint">长按可删除该用户</div>'
+    +'<div class="xz-upop-list">'
+    +(quick.length? quick.map((u,i)=>`<span class="xz-user-chip" onclick="xzDoVote(${i})" oncontextmenu="event.preventDefault();xzDelQuickUser(${i});" onpointerdown="xzQPressStart(event,${i})" onpointerup="xzQPressEnd()" onpointerleave="xzQPressEnd()">${escapeHtml(u.avatar||"🙂")} ${escapeHtml(u.name||"")}</span>`).join("") : '<span class="xz-upop-empty">暂无历史用户，可在详情里添加</span>')
+    +'</div><div class="xz-upop-cancel"><span onclick="closeXzUserPop()" style="cursor:pointer;">取消</span></div>';
   pop.style.display="block";
   // 遮罩：点空白关闭，拦截后层滚动/点击
   let mask=document.getElementById("xzUserPopMask");
