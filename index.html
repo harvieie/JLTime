@@ -218,10 +218,9 @@ body.dark .th-tools::after{background:#8a8f9a;}
 .xz-resize{height:12px;cursor:ns-resize;touch-action:none;background:linear-gradient(180deg,transparent,rgba(214,110,150,.25));border-radius:0 0 10px 10px;margin-top:2px;position:relative;}
 .xz-resize::after{content:"⋯";position:absolute;left:50%;top:0;transform:translateX(-50%);color:#e79fb8;font-size:13px;letter-spacing:2px;}
 .xz-search-panel{
-  position:absolute;left:18px;bottom:10px;
-  width:min(86%,380px);
-  max-height:calc(100% - 26px);background:#fff;border:1px solid #f3b8cc;border-radius:12px;
-  box-shadow:0 8px 26px rgba(214,110,150,.35);z-index:30;display:flex;flex-direction:column-reverse;
+  position:fixed;z-index:40;width:min(86%,380px);max-height:70vh;
+  background:#fff;border:1px solid #f3b8cc;border-radius:12px;
+  box-shadow:0 8px 26px rgba(214,110,150,.35);display:flex;flex-direction:column-reverse;
   overflow:hidden;padding:8px;box-sizing:border-box;
 }
 .xz-search-panel input{width:100%;box-sizing:border-box;}
@@ -3826,15 +3825,18 @@ function xzOpenSearch(){
   const p=document.getElementById("xzSearchPanel");
   const show = p.style.display==="none" || !p.style.display;
   if(show){
-    p.style.display="flex";
-    // 面板底部与调整高度条底部对齐
+    // 面板移到 body 下与遮罩同级，避免被 fixed 遮罩盖住
+    if(p.parentElement!==document.body) document.body.appendChild(p);
     const box=document.getElementById("xinzeBox");
     const resize=document.getElementById("xzResize");
     if(box&&resize){
       const br=box.getBoundingClientRect(), rr=resize.getBoundingClientRect();
-      p.style.top="auto";
-      p.style.bottom = Math.max(8, Math.round(br.bottom - rr.bottom)) + "px";
+      p.style.left = Math.round(br.left+18)+"px";
+      p.style.bottom = Math.max(8, Math.round(window.innerHeight - rr.bottom))+"px";
+      p.style.width = Math.min(380, Math.round(br.width-24))+"px";
+      p.style.maxHeight = Math.max(120, Math.round(rr.bottom - br.top - 40))+"px";
     }
+    p.style.display="flex";
     // 全屏遮罩：点面板外任何地方只负责关闭搜索，不误触下层按钮
     let mask=document.getElementById("xzSearchMask");
     if(!mask){
