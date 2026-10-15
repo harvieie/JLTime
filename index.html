@@ -694,7 +694,7 @@ button{border-radius:12px;}
     <div id="xzVotesEdit" style="text-align:left;"></div>
     <div id="xzAddVoteBox" style="display:none;margin-top:8px;border-top:1px dashed #f3dfc2;padding-top:8px;">
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
-        <input id="xzNVAvatar" placeholder="头像" maxlength="8" style="width:46px;padding:6px;border:1px solid #e9eec;border-radius:10px;text-align:center;flex-shrink:0;">
+        <input id="xzNVAvatar" placeholder="头像" maxlength="8" style="width:26px;padding:6px 2px;border:1px solid #e9eec;border-radius:10px;text-align:center;flex-shrink:0;">
         <input id="xzNVName" placeholder="名字" maxlength="12" style="flex:1;padding:6px;border:1px solid #e9eec;border-radius:10px;min-width:0;">
         <select id="xzNVChoice" style="padding:6px;border:1px solid #e9eec;border-radius:10px;flex-shrink:0;">
           <option value="1">喜欢 ✓</option>
@@ -702,7 +702,7 @@ button{border-radius:12px;}
         </select>
       </div>
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
-        <input id="xzNVTime" placeholder="时间" style="width:110px;padding:6px;border:1px solid #e9eec;border-radius:10px;font-size:11px;flex-shrink:0;">
+        <input id="xzNVTime" placeholder="时间" style="width:73px;padding:6px;border:1px solid #e9eec;border-radius:10px;font-size:11px;flex-shrink:0;">
         <input id="xzNVNote" placeholder="备注（可空）" style="flex:1;padding:6px;border:1px solid #e9eec;border-radius:10px;min-width:0;">
       </div>
       <div style="display:flex;gap:8px;justify-content:center;">
@@ -3261,7 +3261,12 @@ function xzSeed(){
   return [
     { id:"x1", icon:"🍲", isImg:false, text:"爱吃火锅", votes:[{avatar:"😀",name:"伟行",choice:1,time:now+" 20:00"},{avatar:"🐰",name:"晓琳",choice:1,time:now+" 20:05"}] },
     { id:"x2", icon:"🎬", isImg:false, text:"周末看电影", votes:[{avatar:"😀",name:"伟行",choice:1,time:now+" 21:00"}] },
-    { id:"x3", icon:"🌧", isImg:false, text:"阴雨天", votes:[{avatar:"😀",name:"伟行",choice:-1,time:now+" 19:30"}] }
+    { id:"x3", icon:"🌧", isImg:false, text:"阴雨天", votes:[{avatar:"😀",name:"伟行",choice:-1,time:now+" 19:30"}] },
+    { id:"x4", icon:"☕", isImg:false, text:"早起喝咖啡", votes:[{avatar:"🐰",name:"晓琳",choice:1,time:now+" 09:00"}] },
+    { id:"x5", icon:"🐱", isImg:false, text:"养猫", votes:[{avatar:"😀",name:"伟行",choice:1,time:now+" 10:00"},{avatar:"🐰",name:"晓琳",choice:-1,time:now+" 10:10"}] },
+    { id:"x6", icon:"🏔", isImg:false, text:"爬山", votes:[{avatar:"😀",name:"伟行",choice:-1,time:now+" 08:00"}] },
+    { id:"x7", icon:"🍜", isImg:false, text:"深夜拉面", votes:[{avatar:"🐰",name:"晓琳",choice:1,time:now+" 23:00"},{avatar:"😀",name:"伟行",choice:1,time:now+" 23:05"}] },
+    { id:"x8", icon:"📚", isImg:false, text:"睡前看书", votes:[] }
   ];
 }
 let xzIdx = 0, xzTimer = null, xzVoteRowId = null, xzVoteChoice = 0, xzEditId = null;
@@ -3542,7 +3547,7 @@ function renderXzVotesEdit(it){
       <span onclick="xzEditVoteField(${oi},'avatar')" title="点击改头像" style="width:26px;height:26px;border-radius:50%;background:#ffe9f0;border:1px solid #f3b8cc;display:inline-flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;flex-shrink:0;">${escapeHtml(v.avatar||"🙂")}</span>
       <span onclick="xzEditVoteField(${oi},'name')" title="点击改名字" style="flex:0 1 auto;max-width:80px;color:#555;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(v.name||"")}</span>
       <span onclick="event.stopPropagation();xzToggleChoice(${oi})" title="点击切换喜欢/不喜欢" style="width:26px;height:26px;border-radius:50%;border:2px solid ${v.choice===1?'#a8dcc0':'#f0a8bc'};background:${v.choice===1?'#e8f6ee':'#fdeef2'};display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;flex-shrink:0;font-weight:700;user-select:none;-webkit-user-select:none;">${badge}</span>
-      <input type="text" value="${escapeHtml(v.time||"")}" data-oi="${oi}" oninput="xzEditTime(this)" style="width:92px;padding:2px 3px;border:1px solid #e9eec;border-radius:6px;font-size:10px;flex-shrink:0;font-family:monospace;">
+      <input type="text" value="${escapeHtml(v.time||"")}" data-oi="${oi}" oninput="xzEditTime(this)" style="width:62px;padding:2px 3px;border:1px solid #e9eec;border-radius:6px;font-size:10px;flex-shrink:0;font-family:monospace;">
       <span onclick="xzViewNote(${oi})" title="查看/编辑备注" style="flex:1;color:#b0809a;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;">${noteShort?escapeHtml(noteShort):'<span style="color:#ccc;">备注</span>'}</span>
       ${isFunEditMode()?`<span onclick="xzDelVote(${oi})" style="color:#e0567a;cursor:pointer;padding:0 3px;flex-shrink:0;">✕</span>`:""}
     </div>`;
