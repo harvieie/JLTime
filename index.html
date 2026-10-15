@@ -174,7 +174,7 @@ body.dark .th-tools::after{background:#8a8f9a;}
 }
 .xz-stage{
   position:relative;width:100%;height:300px;overflow-y:auto;overflow-x:hidden;border-radius:14px;
-  background:rgba(255,255,255,.55);border:1px solid #fbd3e0;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;
+  background:rgba(255,255,255,.55);border:1px solid #fbd3e0;-webkit-overflow-scrolling:touch;
 }
 .xz-stage.xz-paused .xz-row:not(.xz-active){opacity:.45;filter:grayscale(.6);}
 .xz-stage.xz-paused .xz-row.xz-active{position:relative;}
@@ -3368,99 +3368,102 @@ function xzRowTap(id){
   // 滚动中点按：暂停；已暂停时点按非文字区域：继续滚动
   if(xzPaused){ xzResume(); } else { xzPause(); }
 }
-function xzPause(){ xzPaused=true; if(xzTimer){ clearInterval(xzTimer); xzTimer=null; } }
-function xzResume(){ xzPaused=false; if(xzTimer) clearInterval(xzTimer); xzRender();
-  xzTimer = setInterval(()=>{ const n=loadXinze().length; if(n>1){ xzIdx=(xzIdx+1)%n; xzRender(); } }, 2600);
+function xzPause(){ xzPaused=true; if(xzTimer){ cancelAnimationFrame(xzTimer); xzTimer=null; }
+  const s=document.getElementById("xzStage"); if(s) s.classList.add("xz-paused");
 }
+function xzResume(){ xzPaused=false; const s=document.getElementById("xzStage"); if(s) s.classList.remove("xz-paused");
+  xzRender();
+  xzScrollLoop();
+}
+let _xzLastMark=0;
 function xzRender(){
   xzEnsureSeed();
   const list=loadXinze();
   const stage=document.getElementById("xzStage");
   if(!stage) return;
   if(!list.length){ stage.innerHTML='<div class="xz-empty">还没有条目，点 ＋ 添加第一条吧</div>'; return; }
-  if(xzIdx<0) xzIdx=0; if(xzIdx>=list.length) xzIdx=list.length-1;
-  const wasPaused = xzPaused;
   stage.innerHTML = '<div class="xz-track" id="xzTrack">'+ list.map((it,i)=> xzRowHTML(it, i===xzIdx)).join("") +'</div>';
-  stage.classList.toggle("xz-paused", wasPaused);
+  stage.classList.toggle("xz-paused", xzPaused);
+  // 初始把 xzIdx 那条滚到中间
   requestAnimationFrame(()=>{
     const rows = stage.querySelectorAll(".xz-row");
     if(rows[xzIdx]){
-      const target = rows[xzIdx].offsetTop - stage.clientHeight/2 + rows[xzIdx].clientHeight/2;
-      stage.scrollTo({top: Math.max(0,target), behavior: wasPaused ? "auto" : "smooth"});
+      stage.scrollTop = Math.max(0, rows[xzIdx].offsetTop - stage.clientHeight/2 + rows[xzIdx].clientHeight/2);
     }
   });
 }
-/* 无极滑动：滚出可视区的行挪到对面，不渲染副本 */
 function xzRecycle(){
   const stage=document.getElementById("xzStage"); if(!stage) return;
   const track=stage.querySelector(".xz-track"); if(!track) return;
-  const rows=[...track.querySelectorAll(".xz-row")];
-  if(rows.length<3) return;
-  const sTop=stage.scrollTop, sBot=sTop+stage.clientHeight;
   let delta=0;
   // 从顶部滚出去的行 → 移到底部
-  for(const r of rows){
-    if(r.offsetTop + r.offsetHeight < sTop){
-      track.appendChild(r); delta -= r.offsetHeight + 10;
+  for(const r of [...track.querySelectorAll(".xz-row")]){
+    if(r.offsetTop + r.offsetHeight < stage.scrollTop - 2){
+      track.appendChild(r); delta -= (r.offsetHeight + 10);
     }
   }
   // 从底部滚出去的行 → 移回顶部
   for(const r of [...track.querySelectorAll(".xz-row")]){
-    if(r.offsetTop > sBot){
-      track.insertBefore(r, track.firstChild); delta += r.offsetHeight + 10;
+    if(r.offsetTop > stage.scrollTop + stage.clientHeight + 2){
+      track.insertBefore(r, track.firstChild); delta += (r.offsetHeight + 10);
     }
   }
   if(delta!==0) stage.scrollTop = stage.scrollTop + delta;
 }
-/* 手动触摸滚动：只负责浏览；暂停由点按行触发 */
-function xzBindTouchScroll(){
-  const stage=document.getElementById("xzStage");
-  if(!stage || stage._xzTouchBound) return; stage._xzTouchBound=true;
-  stage.addEventListener("scroll", ()=>{
-    xzRecycle();
-    if(!xzPaused) return;
-    clearTimeout(stage._xzTimer);
-    stage._xzTimer = setTimeout(()=> xzRecenter(), 180);
-  }, {passive:true});
-}
-function xzPauseManual(){
-  if(!xzPaused){ xzPaused=true; if(xzTimer){ clearInterval(xzTimer); xzTimer=null; }
-    document.getElementById("xzStage").classList.add("xz-paused");
-  }
-}
-function xzRecenter(){
+function xzMarkActive(){
   const stage=document.getElementById("xzStage"); if(!stage) return;
   const mid = stage.scrollTop + stage.clientHeight/2;
   const rows = stage.querySelectorAll(".xz-row");
-  let best=0, bd=1e9;
-  rows.forEach((r,i)=>{ const c=r.offsetTop + r.clientHeight/2; const d=Math.abs(c-mid); if(d<bd){bd=d;best=i;} });
-  // best 是当前 DOM 顺序里的下标；换算回数据顺序
-  const track=stage.querySelector(".xz-track");
-  const all=[...track.querySelectorAll(".xz-row")];
-  // 通过行 id 找数据下标
-  const cur = all[best];
-  if(cur){ const m=cur.getAttribute("data-id"); const list=loadXinze(); xzIdx = Math.max(0, list.findIndex(x=>x.id===m)); }
-  xzRender();
+  let best=-1, bd=1e9;
+  rows.forEach((r,i)=>{ const c=r.offsetTop + r.offsetHeight/2; const d=Math.abs(c-mid); if(d<bd){bd=d;best=i;} });
+  rows.forEach(r=>r.classList.remove("xz-active"));
+  if(rows[best]){
+    rows[best].classList.add("xz-active");
+    const id = rows[best].getAttribute("data-id");
+    const list = loadXinze();
+    xzIdx = Math.max(0, list.findIndex(x=>x.id===id));
+  }
+}
+function xzScrollLoop(){
+  if(xzTimer) cancelAnimationFrame(xzTimer);
+  const step=()=>{
+    if(!xzPaused){
+      const stage=document.getElementById("xzStage");
+      if(stage){
+        stage.scrollTop += 0.6;  // 每帧上移 0.6px ≈ 36px/s
+        xzRecycle();
+        const now=Date.now();
+        if(now - _xzLastMark > 2200){ _xzLastMark=now; xzMarkActive(); }
+      }
+    }
+    xzTimer = requestAnimationFrame(step);
+  };
+  xzTimer = requestAnimationFrame(step);
+}
+/* 手动触摸滚动：暂停由点按行触发；触摸时也临时停一下自动滚动 */
+function xzBindTouchScroll(){
+  const stage=document.getElementById("xzStage");
+  if(!stage || stage._xzTouchBound) return; stage._xzTouchBound=true;
+  let touchLock=null;
+  stage.addEventListener("touchstart", ()=>{ touchLock=Date.now(); }, {passive:true});
+  stage.addEventListener("wheel", ()=>{ touchLock=Date.now(); }, {passive:true});
+  stage.addEventListener("scroll", ()=>{
+    xzRecycle();
+  }, {passive:true});
+}
+function xzRecenter(){
+  xzMarkActive();
 }
 function xzStart(){
-  if(xzTimer) clearInterval(xzTimer);
+  if(xzTimer) cancelAnimationFrame(xzTimer);
   xzBindResize(); xzBindTouchScroll();
   const list = loadXinze();
   if(!xzPaused && list.length) xzIdx = xzWeightedIdx(list);
+  _xzLastMark=0;
   xzRender();
-  xzTimer = setInterval(()=>{
-    const n=loadXinze().length;
-    if(n>1){
-      let next = xzIdx+1, guard=0;
-      while(Math.random() > Math.max(0.15, 1 + xzScore(loadXinze()[next%n]).net*0.25) && guard<n){
-        next++; guard++;
-      }
-      xzIdx = next % n;
-      xzRender();
-    }
-  }, 2200);
+  xzScrollLoop();
 }
-function xzStop(){ if(xzTimer){ clearInterval(xzTimer); xzTimer=null; } }
+function xzStop(){ if(xzTimer){ cancelAnimationFrame(xzTimer); xzTimer=null; } }
 function xzShuffle(){
   // 整个列表顺序随机重排并保存
   let list = loadXinze();
@@ -3469,13 +3472,6 @@ function xzShuffle(){
   xzPaused=false; xzIdx=0;
   const s=document.getElementById("xzStage"); if(s) s.classList.remove("xz-paused");
   xzStart();
-}
-function xzPause(){ xzPaused=true; if(xzTimer){ clearInterval(xzTimer); xzTimer=null; }
-  const s=document.getElementById("xzStage"); if(s) s.classList.add("xz-paused");
-}
-function xzResume(){ xzPaused=false; const s=document.getElementById("xzStage"); if(s) s.classList.remove("xz-paused");
-  if(xzTimer) clearInterval(xzTimer); xzRender();
-  xzTimer = setInterval(()=>{ const n=loadXinze().length; if(n>1){ xzIdx=(xzIdx+1)%n; xzRender(); } }, 2200);
 }
 /* 投票：弹出历史用户选择 */
 function xzPickUser(id, choice){
