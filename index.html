@@ -173,8 +173,8 @@ body.dark .th-tools::after{background:#8a8f9a;}
   padding:2px 0 10px;cursor:pointer;user-select:none;
 }
 .xz-stage{
-  position:relative;width:100%;height:300px;overflow-y:auto;overflow-x:hidden;border-radius:14px;
-  background:rgba(255,255,255,.55);border:1px solid #fbd3e0;-webkit-overflow-scrolling:touch;
+  position:relative;width:100%;height:300px;overflow:hidden;border-radius:14px;
+  background:rgba(255,255,255,.55);border:1px solid #fbd3e0;
 }
 .xz-stage.xz-paused .xz-row:not(.xz-active){opacity:.45;filter:grayscale(.6);}
 .xz-stage.xz-paused .xz-row.xz-active{position:relative;}
@@ -182,7 +182,7 @@ body.dark .th-tools::after{background:#8a8f9a;}
   content:"⏸";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   background:rgba(255,255,255,.25);color:rgba(180,120,150,.55);font-size:22px;border-radius:14px;pointer-events:none;
 }
-.xz-track{padding:12px 10px;display:flex;flex-direction:column;gap:10px;}
+.xz-track{padding:12px 10px;display:flex;flex-direction:column;gap:10px;will-change:transform;transform:translateY(0);}
 .xz-row{
   display:grid;grid-template-columns:56px 1fr 44px;gap:12px;align-items:center;
   background:#fff;border:1.5px solid #f6c6d6;border-radius:14px;padding:8px 12px;
@@ -3365,17 +3365,13 @@ function xzRowHTML(it, active){
   </div>`;
 }
 function xzRowTap(id){
-  // 滚动中点按：暂停；已暂停时点按非文字区域：继续滚动
+  // 点按行：暂停；已暂停时点按：继续滚动
   if(xzPaused){ xzResume(); } else { xzPause(); }
 }
-function xzPause(){ xzPaused=true; if(xzTimer){ cancelAnimationFrame(xzTimer); xzTimer=null; }
-  const s=document.getElementById("xzStage"); if(s) s.classList.add("xz-paused");
-}
-function xzResume(){ xzPaused=false; const s=document.getElementById("xzStage"); if(s) s.classList.remove("xz-paused");
-  xzRender();
-  xzScrollLoop();
-}
-let _xzLastMark=0;
+function xzPause(){ xzPaused=true; const s=document.getElementById("xzStage"); if(s) s.classList.add("xz-paused"); }
+function xzResume(){ xzPaused=false; const s=document.getElementById("xzStage"); if(s) s.classList.remove("xz-paused"); }
+const XZ_PAD=12, XZ_GAP=10, XZ_SPEED=0.55;
+let xzOffset=0, xzDragLock=false, _xzLastMark=0;
 function xzRender(){
   xzEnsureSeed();
   const list=loadXinze();
@@ -3384,38 +3380,50 @@ function xzRender(){
   if(!list.length){ stage.innerHTML='<div class="xz-empty">还没有条目，点 ＋ 添加第一条吧</div>'; return; }
   stage.innerHTML = '<div class="xz-track" id="xzTrack">'+ list.map((it,i)=> xzRowHTML(it, i===xzIdx)).join("") +'</div>';
   stage.classList.toggle("xz-paused", xzPaused);
-  // 初始把 xzIdx 那条滚到中间
-  requestAnimationFrame(()=>{
-    const rows = stage.querySelectorAll(".xz-row");
-    if(rows[xzIdx]){
-      stage.scrollTop = Math.max(0, rows[xzIdx].offsetTop - stage.clientHeight/2 + rows[xzIdx].clientHeight/2);
+  xzOffset=0;
+  const track=stage.querySelector(".xz-track");
+  const rows=[...track.querySelectorAll(".xz-row")];
+  // 初始把 xzIdx 那条放到视口中间
+  let acc=XZ_PAD;
+  for(let i=0;i<rows.length;i++){
+    if(i===xzIdx){
+      xzOffset = Math.max(0, acc - (stage.clientHeight - rows[i].offsetHeight)/2);
+      break;
     }
-  });
+    acc += rows[i].offsetHeight + XZ_GAP;
+  }
+  track.style.transform = `translateY(${-xzOffset}px)`;
 }
-function xzRecycle(){
-  const stage=document.getElementById("xzStage"); if(!stage) return;
-  const track=stage.querySelector(".xz-track"); if(!track) return;
-  let delta=0;
-  // 从顶部滚出去的行 → 移到底部
-  for(const r of [...track.querySelectorAll(".xz-row")]){
-    if(r.offsetTop + r.offsetHeight < stage.scrollTop - 2){
-      track.appendChild(r); delta -= (r.offsetHeight + 10);
+/* 回收：向上滚出顶部的行挪到底部；向下拖时底部的行挪回顶部 */
+function xzRecycle(stage, track, up){
+  if(!stage||!track) return;
+  if(up){
+    while(track.firstElementChild){
+      const f=track.firstElementChild, h=f.offsetHeight + XZ_GAP;
+      if(xzOffset >= h){ track.appendChild(f); xzOffset -= h; }
+      else break;
+    }
+  }else{
+    while(track.lastElementChild){
+      const l=track.lastElementChild, h=l.offsetHeight + XZ_GAP;
+      if(xzOffset < -h){ track.insertBefore(l, track.firstChild); xzOffset += h; }
+      else break;
     }
   }
-  // 从底部滚出去的行 → 移回顶部
-  for(const r of [...track.querySelectorAll(".xz-row")]){
-    if(r.offsetTop > stage.scrollTop + stage.clientHeight + 2){
-      track.insertBefore(r, track.firstChild); delta += (r.offsetHeight + 10);
-    }
-  }
-  if(delta!==0) stage.scrollTop = stage.scrollTop + delta;
 }
 function xzMarkActive(){
-  const stage=document.getElementById("xzStage"); if(!stage) return;
-  const mid = stage.scrollTop + stage.clientHeight/2;
-  const rows = stage.querySelectorAll(".xz-row");
-  let best=-1, bd=1e9;
-  rows.forEach((r,i)=>{ const c=r.offsetTop + r.offsetHeight/2; const d=Math.abs(c-mid); if(d<bd){bd=d;best=i;} });
+  const stage=document.getElementById("xzStage");
+  const track=stage?stage.querySelector(".xz-track"):null;
+  if(!stage||!track) return;
+  const mid = xzOffset + stage.clientHeight/2;
+  let acc=XZ_PAD, best=-1, bd=1e9;
+  const rows=[...track.querySelectorAll(".xz-row")];
+  rows.forEach((r,i)=>{
+    const c = acc + r.offsetHeight/2;
+    const d = Math.abs(c-mid);
+    if(d<bd){ bd=d; best=i; }
+    acc += r.offsetHeight + XZ_GAP;
+  });
   rows.forEach(r=>r.classList.remove("xz-active"));
   if(rows[best]){
     rows[best].classList.add("xz-active");
@@ -3427,37 +3435,56 @@ function xzMarkActive(){
 function xzScrollLoop(){
   if(xzTimer) cancelAnimationFrame(xzTimer);
   const step=()=>{
-    if(!xzPaused){
-      const stage=document.getElementById("xzStage");
-      if(stage){
-        stage.scrollTop += 0.6;  // 每帧上移 0.6px ≈ 36px/s
-        xzRecycle();
-        const now=Date.now();
-        if(now - _xzLastMark > 2200){ _xzLastMark=now; xzMarkActive(); }
-      }
+    const stage=document.getElementById("xzStage");
+    const track=stage?stage.querySelector(".xz-track"):null;
+    if(stage && track && !xzPaused && !xzDragLock){
+      xzOffset += XZ_SPEED;
+      xzRecycle(stage, track, true);
+      track.style.transform = `translateY(${-xzOffset}px)`;
+      const now=Date.now();
+      if(now - _xzLastMark > 2200){ _xzLastMark=now; xzMarkActive(); }
     }
     xzTimer = requestAnimationFrame(step);
   };
   xzTimer = requestAnimationFrame(step);
 }
-/* 手动触摸滚动：暂停由点按行触发；触摸时也临时停一下自动滚动 */
-function xzBindTouchScroll(){
+/* 拖动/滚轮：手指或滚轮控制，拖动时自动滚动让位 */
+function xzBindDrag(){
   const stage=document.getElementById("xzStage");
-  if(!stage || stage._xzTouchBound) return; stage._xzTouchBound=true;
-  let touchLock=null;
-  stage.addEventListener("touchstart", ()=>{ touchLock=Date.now(); }, {passive:true});
-  stage.addEventListener("wheel", ()=>{ touchLock=Date.now(); }, {passive:true});
-  stage.addEventListener("scroll", ()=>{
-    xzRecycle();
-  }, {passive:true});
-}
-function xzRecenter(){
-  xzMarkActive();
+  if(!stage || stage._xzDragBound) return; stage._xzDragBound=true;
+  let dragging=false, startY=0, startOff=0, lastMark=0;
+  const down=e=>{
+    dragging=true; startY=e.clientY; startOff=xzOffset; xzDragLock=true; lastMark=0;
+    try{ stage.setPointerCapture(e.pointerId); }catch(_){}
+  };
+  const move=e=>{
+    if(!dragging) return;
+    xzOffset = startOff + (startY - e.clientY);
+    const track=stage.querySelector(".xz-track");
+    xzRecycle(stage, track, xzOffset>=0);
+    track.style.transform = `translateY(${-xzOffset}px)`;
+    const now=Date.now();
+    if(now - lastMark > 150){ lastMark=now; xzMarkActive(); }
+  };
+  const up=()=>{ dragging=false; xzDragLock=false; };
+  stage.addEventListener("pointerdown", down);
+  stage.addEventListener("pointermove", move);
+  stage.addEventListener("pointerup", up);
+  stage.addEventListener("pointercancel", up);
+  stage.addEventListener("wheel", e=>{
+    e.preventDefault();
+    xzDragLock=true; clearTimeout(stage._xzWheelT);
+    xzOffset += (e.deltaY>0 ? 1.6 : -1.6);
+    const track=stage.querySelector(".xz-track");
+    xzRecycle(stage, track, xzOffset>=0);
+    track.style.transform = `translateY(${-xzOffset}px)`;
+    stage._xzWheelT = setTimeout(()=>{ xzDragLock=false; }, 260);
+  }, {passive:false});
 }
 function xzStart(){
   if(xzTimer) cancelAnimationFrame(xzTimer);
-  xzBindResize(); xzBindTouchScroll();
-  const list = loadXinze();
+  xzBindResize(); xzBindDrag();
+  const list=loadXinze();
   if(!xzPaused && list.length) xzIdx = xzWeightedIdx(list);
   _xzLastMark=0;
   xzRender();
