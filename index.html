@@ -3366,6 +3366,7 @@ function xzSeed(){
   ];
 }
 let xzIdx = 0, xzTimer = null, xzVoteRowId = null, xzVoteChoice = 0, xzEditId = null;
+let _xzPendingVotes = [];  // 新建条目时暂存的选择记录，最后随条目一起保存
 function xzEnsureSeed(){ if(!localStorage.getItem("jlt_xinze")) saveXinze(xzSeed()); }
 /* 组内投票：相同用户排一起；一行重复头像只显示最新一次 */
 function xzVisibleVotes(votes){
@@ -3739,6 +3740,7 @@ function openXzModal(){
   document.getElementById("xzImgDel").style.display = (it && it.isImg && it.icon) ? "flex" : "none";
   window._xzPendingImgCleared = false;
   document.getElementById("xzNVTime").value = xzNowStr();
+  if(!it) _xzPendingVotes = [];  // 新建条目时重置临时记录
   renderXzVotesEdit(it);
   document.getElementById("xzDelBtn").style.display = (it && isFunEditMode()) ? "" : "none";
   document.getElementById("xzModal").style.display="flex";
@@ -3766,7 +3768,7 @@ function xzFitTimeInputs(){
 }
 function renderXzVotesEdit(it){
   const box=document.getElementById("xzVotesEdit");
-  const votes=(it&&it.votes)||[];
+  const votes=(it&&it.votes)||_xzPendingVotes||[];
   if(!votes.length){ box.innerHTML='<div style="font-size:12px;color:#999;padding:6px 0;">还没有选择记录</div>'; return; }
   const sorted=votes.map((v,oi)=>({v,oi})).sort((a,b)=>(a.v.time||"").localeCompare(b.v.time||""));
   box.innerHTML = sorted.map(({v,oi})=>{
@@ -3802,10 +3804,12 @@ function saveXzUser(){
   renderXzVotesEdit(it); xzRender();
 }
 function xzEditNote(inp){
-  const list = loadXinze();
-  const it = list.find(x=>x.id===xzEditId); if(!it) return;
   const oi=+inp.dataset.oi;
-  if(it.votes && it.votes[oi]){ it.votes[oi].note=inp.value; saveXinze(list); }
+  if(xzEditId){
+    const list = loadXinze();
+    const it = list.find(x=>x.id===xzEditId); if(!it) return;
+    if(it.votes && it.votes[oi]){ it.votes[oi].note=inp.value; saveXinze(list); }
+  } else if(_xzPendingVotes[oi]){ _xzPendingVotes[oi].note=inp.value; }
 }
 function xzEditVoteField(oi, field){
   const list = loadXinze();
@@ -3817,10 +3821,15 @@ function xzEditVoteField(oi, field){
   saveXinze(list); renderXzVotesEdit(it); xzRender();
 }
 function xzToggleChoice(oi){
-  const list = loadXinze();
-  const it = list.find(x=>x.id===xzEditId); if(!it||!it.votes[oi]) return;
-  it.votes[oi].choice = it.votes[oi].choice===1 ? -1 : 1;
-  saveXinze(list); renderXzVotesEdit(it); xzRender();
+  if(xzEditId){
+    const list = loadXinze();
+    const it = list.find(x=>x.id===xzEditId); if(!it||!it.votes[oi]) return;
+    it.votes[oi].choice = it.votes[oi].choice===1 ? -1 : 1;
+    saveXinze(list); renderXzVotesEdit(it); xzRender();
+  } else if(_xzPendingVotes[oi]){
+    _xzPendingVotes[oi].choice = _xzPendingVotes[oi].choice===1 ? -1 : 1;
+    renderXzVotesEdit(null);
+  }
 }
 function xzViewNote(oi){
   const list = loadXinze();
@@ -3831,18 +3840,25 @@ function xzViewNote(oi){
   saveXinze(list); renderXzVotesEdit(it); xzRender();
 }
 function xzEditTime(inp){
-  const list = loadXinze();
-  const it = list.find(x=>x.id===xzEditId); if(!it) return;
   const oi=+inp.dataset.oi;
-  if(it.votes && it.votes[oi]){ it.votes[oi].time=inp.value; saveXinze(list); }
+  if(xzEditId){
+    const list = loadXinze();
+    const it = list.find(x=>x.id===xzEditId); if(!it) return;
+    if(it.votes && it.votes[oi]){ it.votes[oi].time=inp.value; saveXinze(list); }
+  } else if(_xzPendingVotes[oi]){ _xzPendingVotes[oi].time=inp.value; }
   xzFitTimeInputs();
 }
 function xzDelVote(oi){
-  const list = loadXinze();
-  const it = list.find(x=>x.id===xzEditId); if(!it) return;
-  it.votes.splice(oi,1);
-  saveXinze(list);
-  renderXzVotesEdit(it); xzRender();
+  if(xzEditId){
+    const list = loadXinze();
+    const it = list.find(x=>x.id===xzEditId); if(!it) return;
+    it.votes.splice(oi,1);
+    saveXinze(list);
+    renderXzVotesEdit(it); xzRender();
+  } else {
+    _xzPendingVotes.splice(oi,1);
+    renderXzVotesEdit(null);
+  }
 }
 /* 添加一条投票记录（任意模式） */
 function xzAddVoteRow(){
@@ -3858,8 +3874,10 @@ function xzSaveNewVote(){
   if(!name){ alert("请填写名字"); return; }
   const list=loadXinze();
   const it=list.find(x=>x.id===xzEditId);
-  if(it){ (it.votes=it.votes||[]).push({avatar,name,choice,time,note}); saveXinze(list); thSaveQuick(avatar,name); showToast("已添加选择记录", 1); }
-  else { showToast("未找到对应条目，请先点保存", 3); }
+  const rec={avatar,name,choice,time,note};
+  if(it){ (it.votes=it.votes||[]).push(rec); saveXinze(list); thSaveQuick(avatar,name); }
+  else { _xzPendingVotes.push(rec); thSaveQuick(avatar,name); }  // 新建条目：暂存，最后随条目保存
+  showToast("已添加选择记录", 1);
   document.getElementById("xzNVAvatar").value="";document.getElementById("xzNVName").value="";document.getElementById("xzNVNote").value="";
   renderXzVotesEdit(it); xzRender();
 }
@@ -3893,7 +3911,8 @@ function xzSave(){
       it.icon=useIcon; it.isImg=isImg; it.text=text; it.mtime=now;
     }
   }else{
-    list.push({ id:"x"+Date.now(), icon:useIcon, isImg, text, votes:[], mtime:now });
+    list.push({ id:"x"+Date.now(), icon:useIcon, isImg, text, votes:_xzPendingVotes.slice(), mtime:now });
+    _xzPendingVotes = [];
   }
   saveXinze(list);
   closeXzModal(); xzRender();
