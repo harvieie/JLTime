@@ -173,13 +173,17 @@ body.dark .th-tools::after{background:#8a8f9a;}
   padding:2px 0 10px;cursor:pointer;user-select:none;
 }
 .xz-stage{
-  position:relative;width:100%;height:224px;overflow-y:auto;overflow-x:hidden;border-radius:14px;
+  position:relative;width:100%;height:250px;overflow-y:auto;overflow-x:hidden;border-radius:14px;
   background:rgba(255,255,255,.55);border:1px solid #fbd3e0;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;
 }
 .xz-stage.xz-paused{outline:2px solid #ffb6cf;outline-offset:-2px;}
 .xz-stage.xz-paused::after{
-  content:"⏸";position:sticky;float:right;top:6px;margin-right:8px;width:22px;height:22px;border-radius:50%;
-  background:rgba(255,150,180,.85);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;z-index:5;
+  content:"⏸ 已暂停";position:sticky;float:right;top:6px;margin-right:8px;padding:2px 8px;border-radius:10px;
+  background:rgba(255,150,180,.9);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;z-index:5;
+}
+.xz-stage:not(.xz-paused)::before{
+  content:"↻ 自动滚动";position:sticky;float:left;top:6px;margin-left:8px;padding:2px 8px;border-radius:10px;
+  background:rgba(168,220,192,.85);color:#2c7a52;font-size:11px;display:flex;align-items:center;justify-content:center;z-index:5;
 }
 .xz-track{padding:12px 10px;display:flex;flex-direction:column;gap:10px;}
 .xz-row{
@@ -2614,6 +2618,7 @@ async function wdUpload(){
     "· 图片：" + imgCount + " 张",
     "· 网页：" + loadFunItems().length + " 个",
     "· 树洞：" + loadTreehole().length + " 条",
+    "· 心择簿：" + loadXinze().length + " 条",
     pendings.length ? "· 待同步删除云端图：" + pendings.length + " 张（移入回收站）" : "",
     "· 云端现有节点：" + files.length + " 个" + (files.length >= GH.maxNodes ? "（将删除最旧1个）" : ""),
     "· 将保存为新节点：" + formatNodeTime(ts),
@@ -3464,7 +3469,7 @@ function xzDoVote(ui){
 }
 /* 详情 / 编辑弹窗 */
 function xzAdd(){ xzEditId=null; openXzModal(); }
-function xzOpenDetail(id){ xzEditId=id; openXzModal(); }
+function xzOpenDetail(id){ xzEditId=id; xzPause(); openXzModal(); }
 function openXzModal(){
   xzEnsureSeed();
   const it = xzEditId ? loadXinze().find(x=>x.id===xzEditId) : null;
