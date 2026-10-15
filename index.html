@@ -3396,7 +3396,13 @@ function xzPauseAt(id){
   xzPause();
 }
 function xzPause(){ xzPaused=true; xzStop(); const s=document.getElementById("xzStage"); if(s) s.classList.add("xz-paused"); }
-function xzResume(){ xzPaused=false; const s=document.getElementById("xzStage"); if(s) s.classList.remove("xz-paused"); xzStart(); }
+function xzResume(){
+  xzPaused=false;
+  const s=document.getElementById("xzStage"); if(s) s.classList.remove("xz-paused");
+  // 从暂停的本条原地等待后继续步进，不重建、不跳转
+  if(xzTimer){ clearTimeout(xzTimer); xzTimer=null; }
+  xzTimer=setTimeout(xzStepOnce, XZ_STEP_MS);
+}
 const XZ_PAD=12, XZ_GAP=10, XZ_STEP_MS=2800;
 let xzOffset=0, xzH=[], xzN=0, xzCur=0, xzTotal=0, xzUserLock=false;
 function xzMeasure(){
