@@ -5111,8 +5111,8 @@ function bindBackTop(){
     const isBottom = (y + window.innerHeight) >= docH - 40;
     const onTimeline = (currentTab === "filter" || currentTab === "edit");  // 时迹/简驭页才显示
     if(!onTimeline){ btn.style.display="none"; btm.style.display="none"; return; }
-    // 倒带按钮：下滑稍一点就出现，到第三卡片位置切换为置顶
-    if(y > 150 && !isBottom){ btm.style.display = "block"; }
+    // 倒带按钮：下滑稍一点出现，滑到第三卡片(750px)位置切换为置顶
+    if(y > 150 && y < 750 && !isBottom){ btm.style.display = "block"; }
     else { btm.style.display = "none"; }
     // 置顶按钮：滑到第三卡片附近出现；划到底部停留一会儿后自动隐藏
     if(y > 750 && !isBottom){
