@@ -200,7 +200,7 @@ body.dark .th-tools::after{background:#8a8f9a;}
 .xz-vchip .xz-mark.ok{color:#3bb273;}
 .xz-vchip .xz-mark.no{color:#e0567a;}
 .xz-vhint{font-size:11px;color:#d0a3b5;}
-.xz-text{font-size:13px;color:#6b3a4d;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.xz-text{font-size:13px;color:#6b3a4d;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;}
 .xz-side{display:flex;flex-direction:column;gap:10px;align-items:center;}
 .xz-btn{width:32px;height:32px;border-radius:50%;border:1.5px solid #f3b8cc;background:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .15s;line-height:1;}
 .xz-btn:active{transform:scale(.86);}
@@ -684,13 +684,15 @@ button{border-radius:12px;}
     <div style="text-align:left;font-size:12px;color:#888;margin:10px 0 2px;">选择记录（同用户排在一起，时间可改）：</div>
     <div id="xzVotesEdit" style="text-align:left;"></div>
     <div id="xzAddVoteBox" style="display:none;margin-top:8px;border-top:1px dashed #f3dfc2;padding-top:8px;">
-      <div style="display:flex;gap:6px;align-items:center;">
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
         <input id="xzNVAvatar" placeholder="头像" maxlength="8" style="width:56px;padding:6px;border:1px solid #e9eec;border-radius:10px;text-align:center;">
-        <input id="xzNVName" placeholder="名字" maxlength="12" style="flex:1;padding:6px;border:1px solid #e9eec;border-radius:10px;">
+        <input id="xzNVName" placeholder="名字" maxlength="12" style="flex:1;min-width:70px;padding:6px;border:1px solid #e9eec;border-radius:10px;">
         <select id="xzNVChoice" style="padding:6px;border:1px solid #e9eec;border-radius:10px;">
           <option value="1">喜欢 ✓</option>
           <option value="-1">不喜欢 ✕</option>
         </select>
+        <input id="xzNVTime" placeholder="时间" style="width:128px;padding:6px;border:1px solid #e9eec;border-radius:10px;font-size:11px;">
+        <input id="xzNVNote" placeholder="备注（可空）" style="flex:1;min-width:90px;padding:6px;border:1px solid #e9eec;border-radius:10px;">
         <button class="btn-pri" onclick="xzSaveNewVote()" style="padding:6px 10px;font-size:12px;">添加</button>
       </div>
     </div>
@@ -2785,6 +2787,7 @@ function fallbackCopy(text, done){
 const VIEW_PWD = atob("MTIz");     // 访客模式（编码混淆）
 const EDIT_PWD = atob("MzI4");     // 编辑模式（编码混淆）
 let viewMode = "full";   // "full" | "view"
+let currentTab = "filter";  // 当前激活选项卡：filter(时迹) / edit(简驭) / fun(拾趣)
 function openCacheConfirm(){
   document.getElementById("cachePwd").value = "";
   document.getElementById("cacheConfirmModal").style.display = "flex";
@@ -2842,6 +2845,7 @@ function isTabActive(name){
   return b && b.classList.contains("active");
 }
 function switchTab(name){
+  currentTab = name;
   const panels = { filter: "panelFilter", edit: "panelEdit", fun: "panelFun" };
   const btns = { filter: "tabFilter", edit: "tabEdit", fun: "tabFun" };
   Object.keys(panels).forEach(k => {
@@ -3184,7 +3188,7 @@ function bindThResize(){
   const handle = document.getElementById("thResize");
   const stage = document.getElementById("thStage");
   if(!handle || !stage) return;
-  let dragging = false, sy = 0, sh = 0, raf = null;
+  let dragging = false, sy = 0, sh = 0, raf = null, pressTimer = null, armed = false;
   const move = e => {
     if(!dragging) return;
     const h = Math.max(176, Math.min(440, sh + (e.clientY - sy)));
@@ -3194,10 +3198,23 @@ function bindThResize(){
       raf = requestAnimationFrame(() => thStart());
     }
   };
-  handle.addEventListener("pointerdown", e => { dragging = true; sy = e.clientY; sh = stage.clientHeight; e.preventDefault(); });
-  window.addEventListener("pointermove", move);
-  window.addEventListener("pointerup", () => { dragging = false; if(raf){ cancelAnimationFrame(raf); raf = null; } });
-  window.addEventListener("pointercancel", () => { dragging = false; if(raf){ cancelAnimationFrame(raf); raf = null; } });
+  handle.addEventListener("pointerdown", e => {
+    armed = false;
+    sy = e.clientY; sh = stage.clientHeight;
+    pressTimer = setTimeout(()=>{ armed = true; dragging = true; }, 450);
+    e.preventDefault();
+  });
+  window.addEventListener("pointermove", e => {
+    if(!armed){
+      // 没按够时长就移动，取消长按
+      if(Math.abs(e.clientY - sy) > 8){ clearTimeout(pressTimer); armed=false; dragging=false; }
+      return;
+    }
+    move(e);
+  });
+  const release = () => { dragging=false; armed=false; clearTimeout(pressTimer); if(raf){ cancelAnimationFrame(raf); raf=null; } };
+  window.addEventListener("pointerup", release);
+  window.addEventListener("pointercancel", release);
 }
 function thQuickList(){
   try{ const q = JSON.parse(localStorage.getItem("jlt_th_quick")); if(Array.isArray(q)) return q; }catch(e){}
@@ -3248,21 +3265,61 @@ function xzIconHTML(it){
   if(it.isImg && it.icon){ return `<div class="xz-icon"><img src="${it.icon}" alt=""></div>`; }
   return `<div class="xz-icon">${escapeHtml(it.icon||"❓")}</div>`;
 }
+let xzResizeBound=false, xzPaused=false;
+const XZ_ROW_H = 74;  // 单行高度（含间距），用于按容器高度算可见行数
+function xzBindResize(){
+  if(xzResizeBound) return; xzResizeBound=true;
+  const handle=document.getElementById("xzResize");
+  const stage=document.getElementById("xzStage");
+  if(!handle||!stage) return;
+  let sy=0, sh=0, dragging=false, armed=false, pressTimer=null;
+  handle.addEventListener("pointerdown", e=>{
+    armed=false; sy=e.clientY; sh=stage.clientHeight;
+    pressTimer=setTimeout(()=>{ armed=true; dragging=true; }, 450);
+    e.preventDefault();
+  });
+  window.addEventListener("pointermove", e=>{
+    if(!armed){
+      if(Math.abs(e.clientY-sy)>8){ clearTimeout(pressTimer); armed=false; dragging=false; }
+      return;
+    }
+    if(!dragging) return;
+    const dh=e.clientY-sy;
+    stage.style.height=Math.max(150, Math.min(640, sh+dh))+"px";
+    xzRender();
+  });
+  const release=()=>{ dragging=false; armed=false; clearTimeout(pressTimer); };
+  window.addEventListener("pointerup", release);
+  window.addEventListener("pointercancel", release);
+}
+function xzVisibleCount(){
+  const stage=document.getElementById("xzStage");
+  const h = stage ? stage.clientHeight : 224;
+  return Math.max(2, Math.round((h-20)/XZ_ROW_H));  // 默认约3行
+}
 function xzRowHTML(it, active){
   const votes = xzVisibleVotes(it.votes||[]);
-  const vbox = votes.length ? votes.map(xzChipHTML).join("") : '<span style="font-size:11px;color:#c99ab0;">待选择</span>';
+  const vbox = votes.length ? votes.map(xzChipHTML).join("") : '<span class="xz-vhint">待选择</span>';
   const firstLine = (it.text||"").split("\n")[0];
-  return `<div class="xz-row${active?" xz-active":""}" onclick="xzOpenDetail('${it.id}')">
+  return `<div class="xz-row${active?" xz-active":""}" onclick="xzRowTap('${it.id}')">
     ${xzIconHTML(it)}
     <div class="xz-mid">
       <div class="xz-votes">${vbox}</div>
-      <div class="xz-text">${escapeHtml(firstLine)}</div>
+      <div class="xz-text" onclick="event.stopPropagation();xzOpenDetail('${it.id}')">${escapeHtml(firstLine)}</div>
     </div>
     <div class="xz-side">
       <div class="xz-btn no" onclick="event.stopPropagation();xzPickUser('${it.id}',-1)" title="不喜欢">✕</div>
       <div class="xz-btn ok" onclick="event.stopPropagation();xzPickUser('${it.id}',1)" title="喜欢">✓</div>
     </div>
   </div>`;
+}
+function xzRowTap(id){
+  // 滚动中点按：暂停；已暂停时点按非文字区域：继续滚动
+  if(xzPaused){ xzResume(); } else { xzPause(); }
+}
+function xzPause(){ xzPaused=true; if(xzTimer){ clearInterval(xzTimer); xzTimer=null; } }
+function xzResume(){ xzPaused=false; if(xzTimer) clearInterval(xzTimer); xzRender();
+  xzTimer = setInterval(()=>{ const n=loadXinze().length; if(n>1){ xzIdx=(xzIdx+1)%n; xzRender(); } }, 4200);
 }
 function xzRender(){
   xzEnsureSeed();
@@ -3271,28 +3328,19 @@ function xzRender(){
   if(!stage) return;
   if(!list.length){ stage.innerHTML='<div class="xz-empty">还没有条目，点 ＋ 添加第一条吧</div>'; return; }
   const n=list.length;
-  const win=[((xzIdx-1)%n+n)%n, xzIdx%n, (xzIdx+1)%n];
-  stage.innerHTML = '<div class="xz-track">'+ win.map((li,i)=> xzRowHTML(list[li], i===1)).join("") +'</div>';
-}
-let xzResizeBound=false;
-function xzBindResize(){
-  if(xzResizeBound) return; xzResizeBound=true;
-  const handle=document.getElementById("xzResize");
-  const stage=document.getElementById("xzStage");
-  if(!handle||!stage) return;
-  let sy=0, sh=0, dragging=false;
-  handle.addEventListener("pointerdown", e=>{ dragging=true; sy=e.clientY; sh=stage.clientHeight; e.preventDefault(); });
-  window.addEventListener("pointermove", e=>{
-    if(!dragging) return;
-    const dh=e.clientY-sy;
-    if(Math.abs(dh)>4){ stage.style.height=Math.max(150, Math.min(620, sh+dh))+"px"; }
-  });
-  window.addEventListener("pointerup", ()=>{ dragging=false; });
+  const cnt=Math.min(n, xzVisibleCount());
+  // 以 xzIdx 为中心，取 cnt 行窗口；窗口内中间行高亮
+  const rows=[];
+  const half=Math.floor(cnt/2);
+  for(let k=-half; k<=cnt-1-half; k++){
+    rows.push((xzIdx+k+n)%n);
+  }
+  stage.innerHTML = '<div class="xz-track">'+ rows.map((li,i)=> xzRowHTML(list[li], i===half)).join("") +'</div>';
 }
 function xzStart(){
   if(xzTimer) clearInterval(xzTimer);
   xzBindResize();
-  xzIdx = Math.floor(Math.random()*Math.max(1,loadXinze().length));
+  if(!xzPaused) xzIdx = Math.floor(Math.random()*Math.max(1,loadXinze().length));
   xzRender();
   xzTimer = setInterval(()=>{
     const n=loadXinze().length;
@@ -3300,9 +3348,10 @@ function xzStart(){
   }, 4200);
 }
 function xzStop(){ if(xzTimer){ clearInterval(xzTimer); xzTimer=null; } }
-function xzShuffle(){ xzStart(); }
+function xzShuffle(){ xzPaused=false; xzStart(); }
 /* 投票：弹出历史用户选择 */
 function xzPickUser(id, choice){
+  xzPause();  // 点右侧选择按钮先暂停滚动
   xzVoteRowId=id; xzVoteChoice=choice;
   const quick=thQuickList();
   let pop=document.getElementById("xzUserPop");
@@ -3322,7 +3371,7 @@ function xzDoVote(ui){
   const u=thQuickList()[ui]; if(!u) return;
   const list=loadXinze();
   const it=list.find(x=>x.id===xzVoteRowId);
-  if(it){ (it.votes=it.votes||[]).push({avatar:u.avatar||"🙂", name:u.name||"", choice:xzVoteChoice, time:xzNowStr()}); saveXinze(list); }
+  if(it){ (it.votes=it.votes||[]).push({avatar:u.avatar||"🙂", name:u.name||"", choice:xzVoteChoice, time:xzNowStr(), note:""}); saveXinze(list); }
   document.getElementById("xzUserPop").style.display="none";
   xzRender();
 }
@@ -3344,38 +3393,67 @@ function renderXzVotesEdit(it){
   const box=document.getElementById("xzVotesEdit");
   const votes=(it&&it.votes)||[];
   if(!votes.length){ box.innerHTML='<div style="font-size:12px;color:#999;padding:6px 0;">还没有选择记录</div>'; return; }
-  const sorted=[...votes].sort((a,b)=>(a.time||"").localeCompare(b.time||""));
-  box.innerHTML = sorted.map((v,i)=>`
-    <div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px dashed #f3dfc2;font-size:12px;">
-      <span style="font-size:15px;">${escapeHtml(v.avatar||"🙂")}</span>
-      <span style="flex:1;color:#555;">${escapeHtml(v.name||"")}</span>
-      <span style="color:${v.choice===1?"#3bb273":"#e0567a"};font-weight:700;">${v.choice===1?"✓":"✕"}</span>
-      <input type="text" value="${escapeHtml(v.time||"")}" data-vi="${i}" oninput="xzEditTime(this)" style="width:120px;padding:3px 5px;border:1px solid #e9eec;border-radius:6px;font-size:11px;">
-      ${isFunEditMode()?`<span onclick="xzDelVote(${i})" style="color:#e0567a;cursor:pointer;padding:0 4px;">✕</span>`:""}
-    </div>`).join("");
+  const sorted=votes.map((v,oi)=>({v,oi})).sort((a,b)=>(a.v.time||"").localeCompare(b.v.time||""));
+  box.innerHTML = sorted.map(({v,oi})=>{
+    const badge = v.choice===1
+      ? '<span style="color:#3bb273;">✓</span>'
+      : '<span style="color:#e0567a;">✕</span>';
+    const noteShort = (v.note||"").split("\n")[0];
+    return `<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px dashed #f3dfc2;font-size:12px;">
+      <span onclick="xzEditVoteField(${oi},'avatar')" title="点击改头像" style="width:26px;height:26px;border-radius:50%;background:#ffe9f0;border:1px solid #f3b8cc;display:inline-flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;flex-shrink:0;">${escapeHtml(v.avatar||"🙂")}</span>
+      <span onclick="xzEditVoteField(${oi},'name')" title="点击改名字" style="flex:0 1 auto;max-width:80px;color:#555;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(v.name||"")}</span>
+      <span onclick="xzToggleChoice(${oi})" title="点击切换喜欢/不喜欢" style="width:22px;height:22px;border-radius:50%;border:1.5px solid ${v.choice===1?'#a8dcc0':'#f0a8bc'};background:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;flex-shrink:0;">${badge}</span>
+      <input type="text" value="${escapeHtml(v.time||"")}" data-oi="${oi}" oninput="xzEditTime(this)" style="width:112px;padding:3px 5px;border:1px solid #e9eec;border-radius:6px;font-size:11px;flex-shrink:0;">
+      <span onclick="xzViewNote(${oi})" title="查看/编辑备注" style="flex:1;color:#b0809a;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;">${noteShort?escapeHtml(noteShort):'<span style="color:#ccc;">备注</span>'}</span>
+      ${isFunEditMode()?`<span onclick="xzDelVote(${oi})" style="color:#e0567a;cursor:pointer;padding:0 3px;flex-shrink:0;">✕</span>`:""}
+    </div>`;
+  }).join("");
+}
+function xzEditVoteField(oi, field){
+  const it = loadXinze().find(x=>x.id===xzEditId); if(!it||!it.votes[oi]) return;
+  const cur = it.votes[oi][field]||"";
+  const nv = prompt(field==="avatar" ? "输入头像 emoji：" : "输入名字：", cur);
+  if(nv===null) return;
+  it.votes[oi][field] = nv.trim() || (field==="avatar"?"🙂":"");
+  saveXinze(loadXinze()); renderXzVotesEdit(it); xzRender();
+}
+function xzToggleChoice(oi){
+  const it = loadXinze().find(x=>x.id===xzEditId); if(!it||!it.votes[oi]) return;
+  it.votes[oi].choice = it.votes[oi].choice===1 ? -1 : 1;
+  saveXinze(loadXinze()); renderXzVotesEdit(it); xzRender();
+}
+function xzViewNote(oi){
+  const it = loadXinze().find(x=>x.id===xzEditId); if(!it||!it.votes[oi]) return;
+  const nv = prompt("备注：", it.votes[oi].note||"");
+  if(nv===null) return;
+  it.votes[oi].note = nv;
+  saveXinze(loadXinze()); renderXzVotesEdit(it); xzRender();
 }
 function xzEditTime(inp){
   const it = loadXinze().find(x=>x.id===xzEditId); if(!it) return;
-  const i=+inp.dataset.vi;
-  if(it.votes && it.votes[i]) it.votes[i].time=inp.value;
+  const oi=+inp.dataset.oi;
+  if(it.votes && it.votes[oi]) it.votes[oi].time=inp.value;
 }
-function xzDelVote(i){
+function xzDelVote(oi){
   const it = loadXinze().find(x=>x.id===xzEditId); if(!it) return;
-  it.votes.splice(i,1); saveXinze([...loadXinze()]);
+  it.votes.splice(oi,1); saveXinze([...loadXinze()]);
   renderXzVotesEdit(it); xzRender();
 }
 /* 添加一条投票记录（任意模式） */
 function xzAddVoteRow(){
   document.getElementById("xzAddVoteBox").style.display="";
+  document.getElementById("xzNVTime").value = xzNowStr();
 }
 function xzSaveNewVote(){
   const avatar=document.getElementById("xzNVAvatar").value.trim()||"🙂";
   const name=document.getElementById("xzNVName").value.trim();
   const choice=+document.getElementById("xzNVChoice").value;
+  const time=document.getElementById("xzNVTime").value.trim() || xzNowStr();
+  const note=document.getElementById("xzNVNote").value.trim();
   if(!name){ alert("请填写名字"); return; }
   const it=loadXinze().find(x=>x.id===xzEditId);
-  if(it){ (it.votes=it.votes||[]).push({avatar,name,choice,time:xzNowStr()}); saveXinze(loadXinze()); thSaveQuick(avatar,name); }
-  document.getElementById("xzNVAvatar").value="";document.getElementById("xzNVName").value="";
+  if(it){ (it.votes=it.votes||[]).push({avatar,name,choice,time,note}); saveXinze(loadXinze()); thSaveQuick(avatar,name); }
+  document.getElementById("xzNVAvatar").value="";document.getElementById("xzNVName").value="";document.getElementById("xzNVNote").value="";
   renderXzVotesEdit(it); xzRender();
 }
 function xzSave(){
@@ -3385,11 +3463,12 @@ function xzSave(){
   const isImg = !!prev;
   const useIcon = isImg ? prev.src : (icon||"❓");
   let list=loadXinze();
+  const now=xzNowStr();
   if(xzEditId){
     const it=list.find(x=>x.id===xzEditId);
-    if(it){ it.icon=useIcon; it.isImg=isImg; it.text=text; }
+    if(it){ it.icon=useIcon; it.isImg=isImg; it.text=text; it.mtime=now; }
   }else{
-    list.push({ id:"x"+Date.now(), icon:useIcon, isImg, text, votes:[] });
+    list.push({ id:"x"+Date.now(), icon:useIcon, isImg, text, votes:[], mtime:now });
   }
   saveXinze(list);
   closeXzModal(); xzRender();
@@ -3433,14 +3512,19 @@ function xzSearch(){
     if((it.text||"").toLowerCase().includes(q)) return true;
     return (it.votes||[]).some(v=>(v.name||"").toLowerCase().includes(q)||(v.avatar||"").includes(q));
   });
-  res.innerHTML = hit.length ? hit.map(it=>`
-    <div class="xz-search-item" onclick="closeXzSearch();xzOpenDetail('${it.id}')">
-      ${xzIconHTML(it)}
+  // 按修改时间从新到旧排列
+  const ordered = hit.slice().sort((a,b)=> (b.mtime||"").localeCompare(a.mtime||""));
+  res.innerHTML = ordered.length ? ordered.map(it=>{
+    const votes = xzVisibleVotes(it.votes||[]);
+    const vbox = votes.length ? votes.map(v=>`<span class="xz-vchip" style="width:17px;height:17px;font-size:9px;"><span>${escapeHtml(v.avatar||"🙂")}</span><span class="xz-mark ${v.choice===1?"ok":"no"}">${v.choice===1?"✓":"✕"}</span></span>`).join("") : '<span style="font-size:10px;color:#d0a3b5;">待选择</span>';
+    return `<div class="xz-search-item" onclick="closeXzSearch();xzOpenDetail('${it.id}')">
+      <div class="xz-icon" style="width:34px;height:34px;font-size:16px;border-width:1.5px;">${it.isImg&&it.icon?`<img src="${it.icon}" alt="">`:escapeHtml(it.icon||"❓")}</div>
       <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;color:#6b3a4d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml((it.text||"").split("\n")[0])||"(无文字)"}</div>
-        <div style="font-size:11px;color:#c99ab0;">${(it.votes||[]).length} 条选择</div>
+        <div class="xz-votes" style="min-height:18px;">${vbox}</div>
+        <div style="font-size:12px;color:#6b3a4d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml((it.text||"").split("\n")[0])||"(无文字)"}</div>
       </div>
-    </div>`).join("") : '<div style="font-size:12px;color:#999;padding:8px 0;">无匹配</div>';
+    </div>`;
+  }).join("") : '<div style="font-size:12px;color:#999;padding:8px 0;">无匹配</div>';
 }
 function closeXzSearch(){ document.getElementById("xzSearchPanel").style.display="none"; }
 
@@ -4550,23 +4634,37 @@ async function rewindTimeline(){
   rewinding = false;
 }
 
-/* ---------- 回到顶部 ---------- */
+/* ---------- 回到顶部 / 倒带 ---------- */
 function bindBackTop(){
   const btn = document.getElementById("backTopBtn");
   const btm = document.getElementById("btnBottom");
-  window.addEventListener("scroll", () => {
+  let bottomIdleTimer = null;
+  function refresh(){
     const y = window.scrollY;
-    if(y > 600){
+    const docH = document.documentElement.scrollHeight;
+    const isBottom = (y + window.innerHeight) >= docH - 40;
+    const onTimeline = (currentTab === "filter" || currentTab === "edit");  // 时迹/简驭页才显示
+    if(!onTimeline){ btn.style.display="none"; btm.style.display="none"; return; }
+    // 倒带按钮：仅在时迹/简驭页、页面已下滑一段时出现
+    if(y > 250 && !isBottom){ btm.style.display = "block"; }
+    else { btm.style.display = "none"; }
+    // 置顶按钮：下滑出现；划到底部停留一会儿后自动隐藏
+    if(y > 600 && !isBottom){
       btn.style.display = "block";
-      btm.style.display = "none";
-    }else if(y > 250){
-      btn.style.display = "none";
-      btm.style.display = "block";
+      if(bottomIdleTimer){ clearTimeout(bottomIdleTimer); bottomIdleTimer=null; }
+    }else if(isBottom){
+      if(!bottomIdleTimer){
+        bottomIdleTimer = setTimeout(()=>{
+          btn.style.display="none";
+          bottomIdleTimer=null;
+        }, 1500);
+      }
     }else{
-      btn.style.display = "none";
-      btm.style.display = "none";
+      btn.style.display="none";
+      if(bottomIdleTimer){ clearTimeout(bottomIdleTimer); bottomIdleTimer=null; }
     }
-  }, { passive: true });
+  }
+  window.addEventListener("scroll", refresh, { passive: true });
 }
 
 /* ---------- 主题色/背景 ---------- */
