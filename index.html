@@ -754,7 +754,7 @@ button{border-radius:12px;}
     <div class="modal-title" id="xzModalTitle">心喜簿详情</div>
     <div style="display:flex;align-items:center;gap:10px;margin:8px 0;">
       <div style="position:relative;flex-shrink:0;">
-        <div id="xzImgPrev" style="width:46px;height:46px;border-radius:50%;background:#fff0f5;border:2px solid #f3b8cc;display:flex;align-items:center;justify-content:center;overflow:hidden;"></div>
+        <div id="xzImgPrev" onclick="xzPickImg()" title="点击替换图片" style="width:46px;height:46px;border-radius:50%;background:#fff0f5;border:2px solid #f3b8cc;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;"></div>
         <span id="xzImgDel" onclick="xzClearImg()" title="删除图片（云端同步删除）" style="display:none;position:absolute;top:-4px;right:-4px;width:18px;height:18px;border-radius:50%;background:#e0567a;color:#fff;font-size:11px;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.25);">✕</span>
       </div>
       <input id="xzIconInput" placeholder="输入图标 emoji" maxlength="8" style="flex:1;padding:8px;border:1px solid #e9eec;border-radius:12px;outline:text-align:center;">
@@ -891,8 +891,8 @@ button{border-radius:12px;}
       <input id="anniLabel" placeholder="名称，如：在一起 / 求婚" style="width:100%;padding:8px;margin-bottom:8px;border:1px solid #e9ecef;border-radius:10px;box-sizing:border-box;outline:none;">
       <input type="date" id="anniDate" style="width:100%;padding:8px;margin-bottom:8px;border:1px solid #e9ecef;border-radius:10px;box-sizing:border-box;outline:none;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-        <input id="anniIconInput" placeholder="图标" oninput="pickAnniIconInput()" style="width:56px;flex:none;padding:8px;border:1px solid #e9ecef;border-radius:16px;box-sizing:border-box;outline:none;text-align:center;font-size:16px;">
-        <div id="anniIconPick" style="display:flex;gap:6px;flex-wrap:wrap;font-size:20px;flex:1;"></div>
+        <input id="anniIconInput" placeholder="✍" title="可输入自定义图标" oninput="pickAnniIconInput()" style="width:46px;flex:none;padding:8px 4px;border:1px solid #e9ecef;border-radius:16px;box-sizing:border-box;outline:none;text-align:center;font-size:16px;">
+        <div id="anniIconPick" style="display:flex;gap:4px;flex-wrap:nowrap;justify-content:space-between;font-size:20px;flex:1;"></div>
       </div>
       <div style="display:flex;gap:8px;justify-content:center;margin-bottom:12px;">
         <button class="btn-pri" onclick="saveAnni()">保存</button>
@@ -925,8 +925,8 @@ button{border-radius:12px;}
   <div class="modal-box" style="max-width:360px;">
     <div class="modal-title">给脚印加个标记</div>
     <div style="display:flex;align-items:center;gap:10px;margin:12px 0;white-space:nowrap;">
-      <input id="footIconInput" placeholder="图标" oninput="footIconLive()" onkeydown="if(event.key==='Enter'){saveFootBadge();}" style="width:52px;flex:none;padding:8px;border:1px solid #e9ecef;border-radius:14px;box-sizing:border-box;outline:none;text-align:center;font-size:15px;">
-      <div id="footIconGrid" style="display:flex;gap:10px;flex-wrap:nowrap;justify-content:flex-start;align-items:center;font-size:20px;flex:1;"></div>
+      <input id="footIconInput" placeholder="✍" title="可输入自定义图标" oninput="footIconLive()" onkeydown="if(event.key==='Enter'){saveFootBadge();}" style="width:46px;flex:none;padding:8px 4px;border:1px solid #e9ecef;border-radius:14px;box-sizing:border-box;outline:none;text-align:center;font-size:15px;">
+      <div id="footIconGrid" style="display:flex;gap:6px;flex-wrap:nowrap;justify-content:space-between;align-items:center;font-size:20px;flex:1;"></div>
     </div>
     <div style="display:flex;gap:8px;justify-content:center;margin-bottom:4px;">
       <button class="btn-danger" onclick="clearFootBadge()">清除</button>
@@ -2719,6 +2719,7 @@ async function wdUpload(){
     "确认上传云端数据？",
     modified.length ? "· 本次修改部位：" + modified.join("、") : "· 本次修改部位：无（将按当前内容新建备份）",
     "· 大标题：" + (getPageTitle() || "（空）"),
+    "· 纪念日：" + loadAnniversaries().length + " 个",
     "· 卡片：" + cards.length + " 张",
     "· 图片：" + imgCount + " 张",
     "· 移步：" + loadFunItems().length + " 个",
@@ -4931,20 +4932,36 @@ function moveAnni(id, dir){
   renderAnniChips();
   renderAnniList();
 }
+function loadAnniIconHist(){
+  try{ const h=JSON.parse(localStorage.getItem("jlt_anni_icons")||"[]"); if(Array.isArray(h)) return h.filter(Boolean); }catch(e){}
+  return [];
+}
+function pushAnniIconHist(ic){
+  if(!ic) return;
+  let h=loadAnniIconHist().filter(x=>x!==ic);
+  h.unshift(ic);
+  localStorage.setItem("jlt_anni_icons", JSON.stringify(h.slice(0,16)));
+}
+/* 候选图标：历史最近使用在最左，当前图标保证在列，右侧水平放 4 个，不足用预选补 */
+function anniIconOrder(cur){
+  let hist=loadAnniIconHist();
+  if(!hist.length) hist=loadAnniversaries().map(x=>x.icon).filter(Boolean);
+  hist=[...new Set(hist)].filter(x=>x!==cur);
+  let order=[cur, ...hist];
+  ANNI_ICONS.forEach(p=>{ if(order.length<4 && !order.includes(p)) order.push(p); });
+  return order.slice(0,4);
+}
 function openAnniEditor(id){
   editingAnniId = id || null;
   const a = id ? loadAnniversaries().find(x => x.id === id) : null;
   document.getElementById("anniLabel").value = a ? (a.label || "") : "";
   document.getElementById("anniDate").value = a ? a.date : "";
-  // 图标顺序：最近用过的排前，预选常用补后（去重），右侧水平只放 3 个
-  const used = loadAnniversaries().map(x => x.icon).filter(Boolean);
-  const presets = ANNI_ICONS.slice(0, 6);
-  const order = [...new Set([...used, ...presets])].slice(0, 3);
+  const cur = a ? (a.icon || "💛") : "💛";
+  const order = anniIconOrder(cur);
   document.getElementById("anniIconPick").innerHTML = order.map(ic =>
-    `<span data-ic="${ic}" style="cursor:pointer;padding:2px;border-radius:6px;" onclick="pickAnniIcon(this)">${ic}</span>`).join("");
-  window._anniIcon = a ? (a.icon || "💛") : "💛";
+    `<span data-ic="${ic}" style="cursor:pointer;padding:2px 4px;border-radius:6px;${ic===cur?"background:#ffd6e4;":""}" onclick="pickAnniIcon(this)">${ic}</span>`).join("");
+  window._anniIcon = cur;
   document.getElementById("anniIconInput").value = "";
-  document.querySelectorAll("#anniIconPick span").forEach(s => s.style.background = s.dataset.ic === window._anniIcon ? "#ffd6e4" : "");
   document.getElementById("anniList").style.display = "none";
   document.getElementById("anniAddBtn").style.display = "none";
   document.getElementById("anniListCloseBtn").style.display = "none";   // 编辑页隐藏列表底部的关闭
@@ -4970,6 +4987,7 @@ function saveAnni(){
   }else{
     list.push({ id: "a" + Date.now(), label, date, icon: window._anniIcon || "💛" });
   }
+  pushAnniIconHist(window._anniIcon || "💛");
   saveAnniversaries(list);
   renderAnniChips();
   document.getElementById("anniEditBox").style.display = "none";
@@ -5141,15 +5159,32 @@ function renderFootBadges(){
 const FOOT_ICONS = ["👑","💍","❤️","💌","🌸","⭐","🎂","🌙","☕","🐾","✨","💫","🌷","🦋","🍀","🎀"];
 let footIconCardId = null;
 let _footIcon = "";
+function loadFootIconHist(){
+  try{ const h=JSON.parse(localStorage.getItem("jlt_foot_icons")||"[]"); if(Array.isArray(h)) return h.filter(Boolean); }catch(e){}
+  return [];
+}
+function pushFootIconHist(ic){
+  if(!ic) return;
+  let h=loadFootIconHist().filter(x=>x!==ic);
+  h.unshift(ic);
+  localStorage.setItem("jlt_foot_icons", JSON.stringify(h.slice(0,16)));
+}
+/* 候选：历史最近使用在最左，当前图标保证在列，右侧水平放 4 个，不足用预选补 */
+function footIconOrder(cur){
+  let hist=loadFootIconHist();
+  if(!hist.length) hist=Object.values(loadBadges());
+  hist=[...new Set(hist.map(x=>x).filter(Boolean))].filter(x=>x!==cur);
+  let order=cur?[cur,...hist]:hist;
+  FOOT_ICONS.forEach(p=>{ if(order.length<4 && !order.includes(p)) order.push(p); });
+  return order.slice(0,4);
+}
 function pickFootIcon(cardId){
   footIconCardId = cardId;
   const cur = loadBadges()[cardId] || "";
   _footIcon = cur;
-  const used = Object.values(loadBadges());
-  const presets = FOOT_ICONS.slice(0, 8);
-  const order = [...new Set([...used, ...presets])].slice(0, 3);   // 右侧水平只放 3 个（按使用先后）
+  const order = footIconOrder(cur);
   document.getElementById("footIconGrid").innerHTML = order.map(ic =>
-    `<span onclick="pickFootIconSelect('${ic}')" style="cursor:pointer;padding:3px 5px;border-radius:8px;${ic===cur?"background:#ffd6e4;":""}">${ic}</span>`).join("");
+    `<span onclick="pickFootIconSelect('${ic}')" style="cursor:pointer;padding:3px 6px;border-radius:8px;${ic===cur?"background:#ffd6e4;":""}">${ic}</span>`).join("");
   document.getElementById("footIconInput").value = "";
   document.getElementById("footIconModal").style.display = "flex";
 }
@@ -5169,13 +5204,14 @@ function saveFootBadge(){
   const badges = loadBadges();
   badges[footIconCardId] = v;
   localStorage.setItem("card_badges", JSON.stringify(badges));
+  pushFootIconHist(v);
   renderFootBadges();
   closeFootIconModal();
 }
 function setFootBadge(icon){
   if(!footIconCardId) return;
   const badges = loadBadges();
-  if(badges[footIconCardId] === icon) delete badges[footIconCardId]; else badges[footIconCardId] = icon;
+  if(badges[footIconCardId] === icon) delete badges[footIconCardId]; else { badges[footIconCardId] = icon; pushFootIconHist(icon); }
   localStorage.setItem("card_badges", JSON.stringify(badges));
   renderFootBadges();
   closeFootIconModal();
