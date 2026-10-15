@@ -224,7 +224,7 @@ body.dark .th-tools::after{background:#8a8f9a;}
   overflow:hidden;padding:8px;box-sizing:border-box;
 }
 .xz-search-panel input{width:100%;box-sizing:border-box;}
-.xz-search-res{flex:1;min-height:0;overflow:auto;width:100%;}
+.xz-search-res{flex:1;min-height:0;overflow:auto;width:100%;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
 .xz-search-res .xz-search-item{white-space:normal;word-break:break-word;}
 .xz-search-res .xz-icon{width:36px;height:36px;font-size:18px;border-width:1.5px;}
 .xz-search-item{display:flex;align-items:center;gap:10px;padding:5px 2px;border-bottom:1px dashed #f8dce6;cursor:pointer;}
@@ -3838,14 +3838,28 @@ function xzOpenSearch(){
       p.style.maxHeight = Math.max(120, Math.round(rr.bottom - br.top - 40))+"px";
     }
     p.style.display="flex";
-    // 全屏遮罩：点面板外任何地方只负责关闭搜索，不误触下层按钮
+    // 全屏遮罩：点面板外任何地方只负责关闭搜索，不误触下层按钮；同时阻止面板外触摸滚动穿透
     let mask=document.getElementById("xzSearchMask");
     if(!mask){
       mask=document.createElement("div");
       mask.id="xzSearchMask";
-      mask.style.cssText="position:fixed;inset:0;z-index:29;";
+      mask.style.cssText="position:fixed;inset:0;z-index:29;touch-action:none;";
       mask.addEventListener("click", closeXzSearch);
+      mask.addEventListener("touchmove", function(e){ e.preventDefault(); }, {passive:false});
       document.body.appendChild(mask);
+    }
+    // 面板内结果列表正常滚动，但阻止冒泡到外层
+    const res=document.getElementById("xzSearchRes");
+    res.ontouchmove = function(e){ e.stopPropagation(); };
+    // 键盘弹起时把面板顶到键盘上方，不被遮挡
+    const vv=window.visualViewport;
+    if(vv){
+      const onVV=function(){
+        if(p.style.display==="none") return;
+        p.style.bottom=Math.max(8, Math.round(window.innerHeight - vv.height - vv.offsetTop))+"px";
+      };
+      vv.addEventListener("resize", onVV);
+      window._xzVVOn=onVV;
     }
     document.getElementById("xzSearchInput").focus(); xzSearch();
   }else{
@@ -3878,6 +3892,7 @@ function xzSearch(){
 function closeXzSearch(){
   document.getElementById("xzSearchPanel").style.display="none";
   const m=document.getElementById("xzSearchMask"); if(m) m.remove();
+  if(window._xzVVOn && window.visualViewport){ window.visualViewport.removeEventListener("resize", window._xzVVOn); window._xzVVOn=null; }
 }
 
 function thAdd(){ thEditId = null; openThModal(); }
