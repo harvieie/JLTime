@@ -3975,6 +3975,7 @@ function xzOpenSearch(){
       p.style.maxHeight = Math.max(120, Math.round(rr.top - br.top - 12))+"px";
     }
     p.style.display="flex";
+    p.onclick = function(e){ document.title = "P:" + (e.target.className || e.target.tagName); };
     // 全屏遮罩：点面板外任何地方只负责关闭搜索，不误触下层按钮；同时阻止面板外触摸滚动穿透
     let mask=document.getElementById("xzSearchMask");
     if(!mask){
