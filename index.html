@@ -3845,8 +3845,9 @@ function xzSaveNewVote(){
   const time=document.getElementById("xzNVTime").value.trim() || xzNowStr();
   const note=document.getElementById("xzNVNote").value.trim();
   if(!name){ alert("请填写名字"); return; }
-  const it=loadXinze().find(x=>x.id===xzEditId);
-  if(it){ (it.votes=it.votes||[]).push({avatar,name,choice,time,note}); saveXinze(loadXinze()); thSaveQuick(avatar,name); }
+  const list=loadXinze();
+  const it=list.find(x=>x.id===xzEditId);
+  if(it){ (it.votes=it.votes||[]).push({avatar,name,choice,time,note}); saveXinze(list); thSaveQuick(avatar,name); }
   document.getElementById("xzNVAvatar").value="";document.getElementById("xzNVName").value="";document.getElementById("xzNVNote").value="";
   renderXzVotesEdit(it); xzRender();
 }
