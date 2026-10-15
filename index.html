@@ -162,37 +162,64 @@ body.dark .th-tools::after{background:#8a8f9a;}
 .th-search-panel{width:100%;margin-top:10px;border-top:1px dashed #e8c89a;padding-top:8px;}
 .th-search-res{max-height:180px;overflow:auto;}
 
-/* ===== 心择簿 ===== */
-.xz-box{margin-top:14px;}
+/* ===== 心择簿（表单长方条） ===== */
+.xz-box{
+  margin-top:14px;width:100%;border-radius:18px;padding:12px 12px 8px;box-sizing:border-box;
+  background:linear-gradient(180deg,#fff5f8,#ffeaf1);border:1px solid #f5c2d4;
+  box-shadow:0 3px 14px rgba(214,110,150,.12);
+}
+.xz-head{
+  text-align:center;font-size:16px;font-weight:700;color:#d35d86;letter-spacing:4px;
+  padding:2px 0 10px;cursor:pointer;user-select:none;
+}
 .xz-stage{
-  position:relative;width:100%;height:200px;overflow:hidden;border-radius:14px;
-  background:linear-gradient(180deg,#fdeef3,#fbe0e9);border:1px solid #f3b8cc;
+  position:relative;width:100%;height:224px;overflow:hidden;border-radius:14px;
+  background:rgba(255,255,255,.55);border:1px solid #fbd3e0;
 }
-.xz-track{padding:14px 12px;display:flex;flex-direction:column;gap:10px;transition:transform .8s cubic-bezier(.4,0,.2,1);}
+.xz-track{padding:12px 10px;display:flex;flex-direction:column;gap:10px;}
 .xz-row{
-  display:grid;grid-template-columns:54px 1fr 46px;gap:10px;align-items:center;
-  background:rgba(255,255,255,.92);border:1px solid #f6c6d6;border-radius:16px;padding:8px 10px;
-  box-shadow:0 2px 8px rgba(210,120,150,.14);transition:transform .4s,box-shadow .4s,opacity .4s;opacity:.72;transform:scale(.94);
+  display:grid;grid-template-columns:56px 1fr 44px;gap:12px;align-items:center;
+  background:#fff;border:1.5px solid #f6c6d6;border-radius:14px;padding:8px 12px;
+  box-shadow:0 1px 6px rgba(210,120,150,.1);transition:transform .45s ease,box-shadow .45s,opacity .45s,border-color .45s;
+  opacity:.55;transform:scale(.92);
 }
-.xz-row.xz-active{opacity:1;transform:scale(1);box-shadow:0 4px 16px rgba(210,120,150,.3);}
+.xz-row.xz-active{
+  opacity:1;transform:scale(1);border-color:#ff9dbf;
+  box-shadow:0 5px 18px rgba(214,110,150,.28);
+}
 .xz-icon{
-  width:50px;height:50px;border-radius:50%;background:#fff0f5;border:2px solid #f3b8cc;
-  display:flex;align-items:center;justify-content:center;font-size:26px;overflow:hidden;flex-shrink:0;
+  width:54px;height:54px;border-radius:50%;background:#fff0f5;border:2px solid #f3b8cc;
+  display:flex;align-items:center;justify-content:center;font-size:28px;overflow:hidden;flex-shrink:0;
+  margin:0 auto;
 }
 .xz-icon img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
-.xz-mid{display:flex;flex-direction:column;gap:4px;min-width:0;}
+.xz-mid{display:flex;flex-direction:column;gap:5px;min-width:0;}
 .xz-votes{display:flex;align-items:center;flex-wrap:wrap;gap:4px;min-height:22px;}
 .xz-vchip{position:relative;width:22px;height:22px;border-radius:50%;background:#ffe9f0;border:1px solid #f3b8cc;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;}
-.xz-vchip .xz-mark{position:absolute;inset:-3px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;}
+.xz-vchip .xz-mark{position:absolute;inset:-4px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;text-shadow:0 0 2px #fff;}
 .xz-vchip .xz-mark.ok{color:#3bb273;}
 .xz-vchip .xz-mark.no{color:#e0567a;}
+.xz-vhint{font-size:11px;color:#d0a3b5;}
 .xz-text{font-size:13px;color:#6b3a4d;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.xz-side{display:flex;flex-direction:column;gap:8px;align-items:center;}
-.xz-btn{width:30px;height:30px;border-radius:50%;border:1.5px solid #f3b8cc;background:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .15s;}
-.xz-btn:active{transform:scale(.88);}
+.xz-side{display:flex;flex-direction:column;gap:10px;align-items:center;}
+.xz-btn{width:32px;height:32px;border-radius:50%;border:1.5px solid #f3b8cc;background:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .15s;line-height:1;}
+.xz-btn:active{transform:scale(.86);}
 .xz-btn.no{color:#e0567a;border-color:#f0a8bc;}
 .xz-btn.ok{color:#3bb273;border-color:#a8dcc0;}
-.xz-empty{padding:24px;text-align:center;color:#c98aa0;font-size:13px;}
+.xz-empty{padding:30px 16px;text-align:center;color:#c98aa0;font-size:13px;}
+.xz-resize{height:12px;cursor:ns-resize;touch-action:none;background:linear-gradient(180deg,transparent,rgba(214,110,150,.25));border-radius:0 0 10px 10px;margin-top:2px;position:relative;}
+.xz-resize::after{content:"⋯";position:absolute;left:50%;top:0;transform:translateX(-50%);color:#e79fb8;font-size:13px;letter-spacing:2px;}
+.xz-search-panel{width:100%;margin-top:8px;border-top:1px dashed #f5c2d4;padding-top:8px;}
+.xz-search-res{max-height:180px;overflow:auto;}
+.xz-search-res .xz-icon{width:36px;height:36px;font-size:18px;border-width:1.5px;}
+.xz-search-item{display:flex;align-items:center;gap:10px;padding:7px 2px;border-bottom:1px dashed #f8dce6;cursor:pointer;}
+.xz-foot{display:flex;justify-content:space-between;align-items:center;padding:10px 6px 2px;}
+.xz-foot-btn{
+  width:34px;height:34px;border-radius:50%;border:1.5px solid #f5c2d4;background:#fff;color:#d35d86;
+  font-size:17px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;line-height:1;
+  box-shadow:0 1px 4px rgba(214,110,150,.15);transition:transform .15s;
+}
+.xz-foot-btn:active{transform:scale(.9);}
 
 .th-search-item{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed #f3dfc2;}
 .th-search-item .th-avatar{width:22px;height:22px;border-radius:50%;background:#ffe9c9;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
@@ -602,20 +629,18 @@ button{border-radius:12px;}
       </div>
     </div>
 
-    <!-- 心择簿：对事物/喜好的选择 -->
-    <div class="th-box xz-box" id="xinzeBox">
-      <div class="th-bar">
-        <span class="th-title" onclick="xzShuffle()" title="点击刷新一组">心择簿</span>
-        <span class="th-tools">
-          <span class="th-tool" onclick="xzOpenSearch()" title="搜索">🔍</span>
-          <span class="th-tool" onclick="xzAdd()" title="添加">＋</span>
-        </span>
-      </div>
+    <!-- 心择簿：对事物/喜好的选择（表单长方条） -->
+    <div class="xz-box" id="xinzeBox">
+      <div class="xz-head" onclick="xzShuffle()" title="点击刷新一组">心择簿</div>
       <div class="xz-stage" id="xzStage"></div>
-      <div class="th-resize" id="xzResize" title="拖动调整高度"></div>
-      <div class="th-search-panel" id="xzSearchPanel" style="display:none;">
-        <input type="text" id="xzSearchInput" placeholder="搜索内容或用户" oninput="xzSearch()" style="width:100%;">
-        <div class="th-search-res" id="xzSearchRes"></div>
+      <div class="xz-resize" id="xzResize" title="拖动调整高度"></div>
+      <div class="xz-search-panel" id="xzSearchPanel" style="display:none;">
+        <input type="text" id="xzSearchInput" placeholder="搜索内容或用户" oninput="xzSearch()" style="width:100%;box-sizing:border-box;">
+        <div class="xz-search-res" id="xzSearchRes"></div>
+      </div>
+      <div class="xz-foot">
+        <span class="xz-foot-btn" onclick="xzOpenSearch()" title="搜索">🔍</span>
+        <span class="xz-foot-btn" onclick="xzAdd()" title="添加">＋</span>
       </div>
     </div>
   </div>
@@ -3249,8 +3274,24 @@ function xzRender(){
   const win=[((xzIdx-1)%n+n)%n, xzIdx%n, (xzIdx+1)%n];
   stage.innerHTML = '<div class="xz-track">'+ win.map((li,i)=> xzRowHTML(list[li], i===1)).join("") +'</div>';
 }
+let xzResizeBound=false;
+function xzBindResize(){
+  if(xzResizeBound) return; xzResizeBound=true;
+  const handle=document.getElementById("xzResize");
+  const stage=document.getElementById("xzStage");
+  if(!handle||!stage) return;
+  let sy=0, sh=0, dragging=false;
+  handle.addEventListener("pointerdown", e=>{ dragging=true; sy=e.clientY; sh=stage.clientHeight; e.preventDefault(); });
+  window.addEventListener("pointermove", e=>{
+    if(!dragging) return;
+    const dh=e.clientY-sy;
+    if(Math.abs(dh)>4){ stage.style.height=Math.max(150, Math.min(620, sh+dh))+"px"; }
+  });
+  window.addEventListener("pointerup", ()=>{ dragging=false; });
+}
 function xzStart(){
   if(xzTimer) clearInterval(xzTimer);
+  xzBindResize();
   xzIdx = Math.floor(Math.random()*Math.max(1,loadXinze().length));
   xzRender();
   xzTimer = setInterval(()=>{
@@ -3393,7 +3434,7 @@ function xzSearch(){
     return (it.votes||[]).some(v=>(v.name||"").toLowerCase().includes(q)||(v.avatar||"").includes(q));
   });
   res.innerHTML = hit.length ? hit.map(it=>`
-    <div class="th-search-item" onclick="closeXzSearch();xzOpenDetail('${it.id}')" style="cursor:pointer;">
+    <div class="xz-search-item" onclick="closeXzSearch();xzOpenDetail('${it.id}')">
       ${xzIconHTML(it)}
       <div style="flex:1;min-width:0;">
         <div style="font-size:13px;color:#6b3a4d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml((it.text||"").split("\n")[0])||"(无文字)"}</div>
