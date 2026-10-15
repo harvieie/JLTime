@@ -504,6 +504,16 @@ body:has(#mosaicModal[style*="flex"]) .music-fab{opacity:.35;}
   75%{transform:translateY(-50%) rotate(-6deg);}
 }
 .title-heart.heart-shake{animation:titleHeartShake .52s ease;}
+/* 换位时不是平移，而是上下蹦跳着过去（X 由 left/right 过渡，Y 在 -50% 基线上起伏） */
+@keyframes titleHeartHop{
+  0%{transform:translateY(-50%) scale(1) rotate(0deg);}
+  18%{transform:translateY(calc(-50% - 24px)) scale(1.1) rotate(-7deg);}
+  40%{transform:translateY(calc(-50% + 2px)) scale(.96) rotate(4deg);}
+  58%{transform:translateY(calc(-50% - 15px)) scale(1.06) rotate(6deg);}
+  78%{transform:translateY(calc(-50% + 1px)) scale(.98) rotate(-3deg);}
+  100%{transform:translateY(-50%) scale(1) rotate(0deg);}
+}
+.title-heart.heart-hop{animation:titleHeartHop .92s ease;}
 @keyframes heartBeat{
   0%,100%{transform:translateY(-50%) scale(1);}
   30%{transform:translateY(-50%) scale(1.22);}
@@ -3856,6 +3866,30 @@ function renderXzVotesEdit(it){
     </div>`;
   }).join("");
   xzFitTimeInputs();
+  xzStartNoteScroll();
+}
+/* 详情记录备注过长时，在未聚焦该输入框的情况下自动往返滚动显示全文；聚焦编辑时不干预 */
+function xzStartNoteScroll(){
+  if(window._xzNoteTimer) clearInterval(window._xzNoteTimer);
+  window._xzNoteTimer=setInterval(function(){
+    document.querySelectorAll('#xzVotesEdit input[title="备注"]').forEach(function(inp){
+      if(document.activeElement===inp){ inp._wasFocus=true; return; }
+      if(inp._wasFocus){ inp._wasFocus=false; inp._ns=0; inp._dir=1; inp._hold=0; inp.scrollLeft=0; }
+      var max=inp.scrollWidth-inp.clientWidth;
+      if(max<=2){ inp._ns=0; inp.scrollLeft=0; return; }
+      if(inp._ns===undefined) inp._ns=0;
+      if(inp._dir===undefined) inp._dir=1;
+      if(inp._hold===undefined) inp._hold=0;
+      if(inp._hold>0){ inp._hold--; return; }
+      inp._ns+=inp._dir*0.6;
+      if(inp._ns>=max){ inp._ns=max; inp._dir=-1; inp._hold=26; }
+      else if(inp._ns<=0){ inp._ns=0; inp._dir=1; inp._hold=26; }
+      inp.scrollLeft=inp._ns;
+    });
+  },40);
+}
+function xzStopNoteScroll(){
+  if(window._xzNoteTimer){ clearInterval(window._xzNoteTimer); window._xzNoteTimer=null; }
 }
 function xzEditUser(oi){
   const list = loadXinze();
@@ -4011,6 +4045,7 @@ function xzDel(){
 }
 function closeXzModal(){
   if(window._D) window._D+="|CLOSED@"+new Error().stack.split("\n")[2].trim();
+  xzStopNoteScroll();
   document.getElementById("xzModal").style.display="none";
   if(_xzSearchWasOpen){
     // 从搜索面板进的详情：关闭后回到搜索面板，刷新结果但保持原来的滚动位置（不跳回置底）
@@ -4803,50 +4838,66 @@ function burstAt(x, y){
   }
 }
 
-/* 大标题两侧爱心：大部分时间一左一右，偶尔（8~14秒）跳到同一边再弹回；点击可手动触发抖动后跳到另一个心旁边 */
+/* 大标题两侧爱心：大部分时间一左一右，偶尔（8~14秒）蹦跳到同一边再弹回；点击可手动触发抖动后蹦跳到另一个心旁边 */
 let _heartAnimating=false;
-function heartToSides(){           // 默认：一左一右
-  const a=document.getElementById("titleHeartA"), b=document.getElementById("titleHeartB");
+let _heartMover=null;   // 正在横移（蹦跳）的那颗心
+function _heartGet(){
+  return { a:document.getElementById("titleHeartA"), b:document.getElementById("titleHeartB") };
+}
+/* 给横移的心播放一次上下蹦跳动画 */
+function _heartHop(el){
+  if(!el) return;
+  el.classList.remove("heart-hop");
+  void el.offsetWidth;
+  el.classList.add("heart-hop");
+  clearTimeout(el._hopT);
+  el._hopT=setTimeout(function(){ el.classList.remove("heart-hop"); }, 940);
+}
+function heartToSides(){           // 默认：一左一右，横移出去的那颗蹦跳着归位
+  const {a,b}=_heartGet();
   if(!a||!b) return;
+  if(_heartMover) _heartHop(_heartMover);
   a.style.left="-52px"; a.style.right="auto";
   b.style.right="-52px"; b.style.left="auto";
+  _heartMover=null;
 }
-/* 点击某颗心：先抖动一下，再跳到另一颗心旁边，停 2.5 秒后回到两侧 */
+/* 聚拢到某一侧：真正横移的那颗心上下蹦跳着过去（X 由 left/right 过渡，Y 由 hop 动画起伏） */
+function _heartGather(side){
+  const {a,b}=_heartGet();
+  if(!a||!b) return;
+  if(side==="L"){
+    a.style.left="-52px"; a.style.right="auto";
+    b.style.left="-12px"; b.style.right="auto";
+    _heartMover=b;
+  }else{
+    a.style.right="-12px"; a.style.left="auto";
+    b.style.right="-52px"; b.style.left="auto";
+    _heartMover=a;
+  }
+  _heartHop(_heartMover);
+}
+/* 点击某颗心：先抖动一下，再蹦跳到另一颗心旁边，停 2.5 秒后回到两侧 */
 function titleHeartTap(side){
   if(_heartAnimating) return;
-  const a=document.getElementById("titleHeartA"), b=document.getElementById("titleHeartB");
+  const {a,b}=_heartGet();
   if(!a||!b) return;
   const el=side==="A"?a:b;
   _heartAnimating=true;
   el.classList.add("heart-shake");
   setTimeout(function(){
     el.classList.remove("heart-shake");
-    if(side==="A"){      // 左心跳到右心旁边（两颗都在右边）
-      a.style.right="-12px"; a.style.left="auto";
-      b.style.right="-52px"; b.style.left="auto";
-    }else{               // 右心跳到左心旁边（两颗都在左边）
-      b.style.left="-12px"; b.style.right="auto";
-      a.style.left="-52px"; a.style.right="auto";
-    }
+    _heartGather(side==="A"?"R":"L");   // 左心跳到右边、右心跳到左边
     setTimeout(function(){ heartToSides(); _heartAnimating=false; }, 2500);
   }, 520);
 }
 function titleHeartDance(){
-  const a = document.getElementById("titleHeartA");
-  const b = document.getElementById("titleHeartB");
+  const {a,b}=_heartGet();
   if(!a || !b) return;
   a.onclick=function(e){ e.stopPropagation(); titleHeartTap("A"); };
   b.onclick=function(e){ e.stopPropagation(); titleHeartTap("B"); };
   const jump = () => {
     if(_heartAnimating){ setTimeout(jump, 1200); return; }  // 点击动画期间不打断
-    const both = (Math.random() * 2) | 0;   // 0=都去左边 1=都去右边
-    if(both === 0){
-      a.style.left = "-52px"; a.style.right = "auto";
-      b.style.left = "-12px"; b.style.right = "auto";
-    }else{
-      a.style.right = "-12px"; a.style.left = "auto";
-      b.style.right = "-52px"; b.style.left = "auto";
-    }
+    _heartGather(((Math.random()*2)|0)===0 ? "L" : "R");
     setTimeout(heartToSides, 2500);      // 停 2.5 秒后弹回两侧
     setTimeout(jump, 8000 + Math.random() * 6000);
   };
