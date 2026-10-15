@@ -218,15 +218,15 @@ body.dark .th-tools::after{background:#8a8f9a;}
 .xz-resize{height:12px;cursor:ns-resize;touch-action:none;background:linear-gradient(180deg,transparent,rgba(214,110,150,.25));border-radius:0 0 10px 10px;margin-top:2px;position:relative;}
 .xz-resize::after{content:"⋯";position:absolute;left:50%;top:0;transform:translateX(-50%);color:#e79fb8;font-size:13px;letter-spacing:2px;}
 .xz-search-panel{
-  position:absolute;left:50%;bottom:10px;transform:translateX(-50%);
-  width:auto;min-width:200px;max-width:calc(100% - 20px);
-  max-height:calc(100% - 44px);background:#fff;border:1px solid #f3b8cc;border-radius:12px;
+  position:absolute;left:18px;bottom:10px;
+  width:min(86%,380px);
+  max-height:calc(100% - 26px);background:#fff;border:1px solid #f3b8cc;border-radius:12px;
   box-shadow:0 8px 26px rgba(214,110,150,.35);z-index:30;display:flex;flex-direction:column-reverse;
   overflow:hidden;padding:8px;box-sizing:border-box;
 }
 .xz-search-panel input{width:100%;box-sizing:border-box;}
-.xz-search-res{flex:1;min-height:0;overflow:auto;width:max-content;max-width:100%;}
-.xz-search-res .xz-search-item{white-space:nowrap;}
+.xz-search-res{flex:1;min-height:0;overflow:auto;width:100%;}
+.xz-search-res .xz-search-item{white-space:normal;word-break:break-word;}
 .xz-search-res .xz-icon{width:36px;height:36px;font-size:18px;border-width:1.5px;}
 .xz-search-item{display:flex;align-items:center;gap:10px;padding:7px 2px;border-bottom:1px dashed #f8dce6;cursor:pointer;}
 .xz-foot{display:flex;justify-content:space-between;align-items:center;padding:10px 6px 2px;}
@@ -3782,8 +3782,22 @@ function xzPickImg(){
 }
 function xzOpenSearch(){
   const p=document.getElementById("xzSearchPanel");
-  p.style.display = p.style.display==="none" ? "" : "none";
-  if(p.style.display!=="none"){ document.getElementById("xzSearchInput").focus(); xzSearch(); }
+  const show = p.style.display==="none" || !p.style.display;
+  if(show){
+    p.style.display="flex";
+    // 全屏遮罩：点面板外任何地方只负责关闭搜索，不误触下层按钮
+    let mask=document.getElementById("xzSearchMask");
+    if(!mask){
+      mask=document.createElement("div");
+      mask.id="xzSearchMask";
+      mask.style.cssText="position:fixed;inset:0;z-index:29;";
+      mask.addEventListener("click", closeXzSearch);
+      document.body.appendChild(mask);
+    }
+    document.getElementById("xzSearchInput").focus(); xzSearch();
+  }else{
+    closeXzSearch();
+  }
 }
 function xzSearch(){
   const q=document.getElementById("xzSearchInput").value.trim().toLowerCase();
@@ -3808,7 +3822,10 @@ function xzSearch(){
     </div>`;
   }).join("") : '<div style="font-size:12px;color:#999;padding:8px 0;">无匹配</div>';
 }
-function closeXzSearch(){ document.getElementById("xzSearchPanel").style.display="none"; }
+function closeXzSearch(){
+  document.getElementById("xzSearchPanel").style.display="none";
+  const m=document.getElementById("xzSearchMask"); if(m) m.remove();
+}
 
 function thAdd(){ thEditId = null; openThModal(); }
 function thEdit(id){ thEditId = id; openThModal(); }
