@@ -3345,10 +3345,10 @@ function xzRowHTML(it, active){
   const vbox = votes.length ? votes.map(xzChipHTML).join("") : '<span class="xz-vhint">待选择</span>';
   const firstLine = (it.text||"").split("\n")[0];
   return `<div class="xz-row${active?" xz-active":""}" onclick="xzRowTap('${it.id}')">
-    ${xzIconHTML(it)}
+    <div onclick="event.stopPropagation();xzOpenDetail('${it.id}')" title="查看详情" style="cursor:pointer;">${xzIconHTML(it)}</div>
     <div class="xz-mid">
       <div class="xz-votes">${vbox}</div>
-      <div class="xz-text" onclick="event.stopPropagation();xzOpenDetail('${it.id}')">${escapeHtml(firstLine)}</div>
+      <div class="xz-text">${escapeHtml(firstLine)}</div>
     </div>
     <div class="xz-side">
       <div class="xz-btn no" onclick="event.stopPropagation();xzPickUser('${it.id}',-1)" title="不喜欢">✕</div>
