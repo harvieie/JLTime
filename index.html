@@ -2753,7 +2753,7 @@ function switchTab(name){
     return !!t.closest(EXCLUDE);
   }
   function swipeTab(dir){
-    const order = ["filter","edit","fun"].filter(n => {
+    const order = ["edit","filter","fun"].filter(n => {
       const b = document.getElementById(n === "filter" ? "tabFilter" : n === "edit" ? "tabEdit" : "tabFun");
       return b && b.style.display !== "none";
     });
