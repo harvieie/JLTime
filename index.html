@@ -210,7 +210,9 @@ body.dark .th-tools::after{background:#8a8f9a;}
 .xz-vchip .xz-mark.ok{color:#3bb273;}
 .xz-vchip .xz-mark.no{color:#e0567a;}
 .xz-vhint{font-size:12px;color:#d0a3b5;}
-.xz-text{font-size:14px;color:#6b3a4d;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;}
+.xz-text{font-size:14px;color:#6b3a4d;line-height:1.35;overflow:hidden;white-space:nowrap;cursor:pointer;}
+.xz-run{display:inline-block;white-space:nowrap;padding-right:28px;animation:xzRun 7s linear infinite;}
+@keyframes xzRun{0%{transform:translateX(0);}100%{transform:translateX(-100%);}}
 .xz-side{display:flex;flex-direction:column;gap:10px;align-items:center;}
 .xz-btn{width:32px;height:32px;border-radius:50%;border:1.5px solid #f3b8cc;background:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .15s;line-height:1;}
 .xz-btn:active{transform:scale(.86);}
@@ -3510,7 +3512,7 @@ function xzRowHTML(it, active){
     <div onclick="event.stopPropagation();xzOpenDetail('${it.id}')" title="查看详情" style="cursor:pointer;">${xzIconHTML(it)}</div>
     <div class="xz-mid">
       <div class="xz-votes">${vbox}</div>
-      <div class="xz-text">${escapeHtml(firstLine)}</div>
+      <div class="xz-text">${firstLine.length > 12 ? '<span class="xz-run">'+escapeHtml(firstLine)+'</span>' : escapeHtml(firstLine)}</div>
     </div>
     <div class="xz-side">
       <div class="xz-btn no" onclick="event.stopPropagation();xzPickUser('${it.id}',-1)" title="不喜欢">✕</div>
@@ -4016,7 +4018,6 @@ function xzSaveNewVote(){
   const rec={avatar,name,choice,time,note};
   if(it){ (it.votes=it.votes||[]).push(rec); saveXinze(list); thSaveQuick(avatar,name); }
   else { _xzPendingVotes.push(rec); thSaveQuick(avatar,name); }  // 新建条目：暂存，最后随条目保存
-  showToast("已添加选择记录", 1);
   document.getElementById("xzNVAvatar").value="";document.getElementById("xzNVName").value="";document.getElementById("xzNVNote").value="";
   renderXzVotesEdit(it); xzRender();
   xzAddVoteRow();  // 便于连续添加：重置时间与喜欢按钮
@@ -4607,7 +4608,7 @@ function getCloudLoadedText(){
 
 // 清除缓存后自动拉取云端最新数据覆盖（先拉取成功才覆盖本地，失败保留本地数据）
 async function cloudPullAfterClear(){
-  showCloudLoading(true, 5, "正在连接云端…");
+  showCloudLoading(true, 5);
   try{
     const files = await wdList();
     if(!files.length){
@@ -4615,14 +4616,13 @@ async function cloudPullAfterClear(){
       showToast("云端暂无备份，已保留本地数据", 3);
       return;
     }
-    setCloudProgress(25); setCloudLoadingText("正在读取云端备份…");
+    setCloudProgress(30);
     const latest = files[0];
     const imported = await wdReadFile(latest.name);   // 先成功拉取
-    setCloudProgress(65); setCloudLoadingText("正在载入数据…");
+    setCloudProgress(70);
     const count = applyImportedData(imported);         // 再覆盖本地
     setCloudProgress(100);
     setCloudLoaded(latest);
-    showToast(`已载入云端最新数据（${formatNodeTime(latest.ts)}，共 ${count} 条记录）`, 3);
     cleanTrash().catch(() => {});                        // 后台清理回收站中超过30天的图片
   }catch(err){
     showToast("云端拉取失败，已保留本地数据：" + err.message, 5);
