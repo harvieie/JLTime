@@ -558,11 +558,16 @@ button{border-radius:12px;}
 <div class="toast" id="globalToast"></div>
 
 <!-- 云端上传/下载进度圈 -->
-<div id="cloudLoading" style="display:none;position:fixed;inset:0;z-index:5000;background:rgba(30,15,25,.35);align-items:center;justify-content:center;">
-  <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
-    <div style="width:46px;height:46px;border-radius:50%;border:4px solid rgba(255,255,255,.35);border-top-color:#fff;animation:clSpin .8s linear infinite;"></div>
-    <div id="cloudLoadingText" style="color:#fff;font-size:13px;letter-spacing:.5px;text-shadow:0 1px 3px rgba(0,0,0,.4);">处理中…</div>
+<div id="cloudLoading" style="display:none;position:fixed;inset:0;z-index:5000;background:rgba(30,15,25,.4);align-items:center;justify-content:center;">
+  <div style="position:relative;width:64px;height:64px;">
+    <svg width="64" height="64" viewBox="0 0 64 64">
+      <circle cx="32" cy="32" r="27" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="5"/>
+      <circle id="cloudRing" cx="32" cy="32" r="27" fill="none" stroke="#ff8fb8" stroke-width="5" stroke-linecap="round"
+        stroke-dasharray="169.6" stroke-dashoffset="169.6" transform="rotate(-90 32 32)" style="transition:stroke-dashoffset .3s ease;"/>
+    </svg>
+    <div id="cloudPct" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.4);">0%</div>
   </div>
+  <div id="cloudLoadingText" style="margin-top:12px;color:#fff;font-size:13px;letter-spacing:.5px;text-shadow:0 1px 3px rgba(0,0,0,.4);">处理中…</div>
 </div>
 <style>@keyframes clSpin{to{transform:rotate(360deg);}}</style>
 
@@ -905,7 +910,7 @@ button{border-radius:12px;}
       <input type="date" id="anniDate" style="width:100%;padding:8px;margin-bottom:8px;border:1px solid #e9ecef;border-radius:10px;box-sizing:border-box;outline:none;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
         <input id="anniIconInput" placeholder="✍" title="可输入自定义图标" oninput="pickAnniIconInput()" style="width:46px;flex:none;padding:8px 4px;border:1px solid #e9ecef;border-radius:16px;box-sizing:border-box;outline:none;text-align:center;font-size:16px;">
-        <div id="anniIconPick" style="display:flex;gap:8px;flex-wrap:nowrap;justify-content:flex-start;align-items:center;font-size:20px;flex:1;min-width:0;overflow:hidden;"></div>
+        <div id="anniIconPick" style="display:flex;gap:8px;flex-wrap:nowrap;justify-content:space-between;align-items:center;font-size:20px;flex:1;min-width:0;overflow:hidden;"></div>
       </div>
       <div style="display:flex;gap:8px;justify-content:center;margin-bottom:12px;">
         <button class="btn-pri" onclick="saveAnni()">保存</button>
@@ -939,7 +944,7 @@ button{border-radius:12px;}
     <div class="modal-title">给脚印加个标记</div>
     <div style="display:flex;align-items:center;gap:10px;margin:12px 0;white-space:nowrap;">
       <input id="footIconInput" placeholder="✍" title="可输入自定义图标" oninput="footIconLive()" onkeydown="if(event.key==='Enter'){saveFootBadge();}" style="width:46px;flex:none;padding:8px 4px;border:1px solid #e9ecef;border-radius:14px;box-sizing:border-box;outline:none;text-align:center;font-size:15px;">
-      <div id="footIconGrid" style="display:flex;gap:8px;flex-wrap:nowrap;justify-content:flex-start;align-items:center;font-size:20px;flex:1;min-width:0;overflow:hidden;"></div>
+      <div id="footIconGrid" style="display:flex;gap:8px;flex-wrap:nowrap;justify-content:space-between;align-items:center;font-size:20px;flex:1;min-width:0;overflow:hidden;"></div>
     </div>
     <div style="display:flex;gap:8px;justify-content:center;margin-bottom:4px;">
       <button class="btn-danger" onclick="clearFootBadge()">清除</button>
@@ -2746,30 +2751,32 @@ async function wdUpload(){
   ].filter(l => l !== "");
   if(!confirm(lines.join("\n"))) return;
   if(btn){ btn.disabled = true; btn.textContent = "上传中…"; }
-  showCloudLoading(true, "正在准备上传…");
+  showCloudLoading(true, 5, "正在准备上传…");
   try{
     // 先同步删除待删的云端原图（移入回收站），失败的保留清单下次再试
     for(let i=0;i<pendings.length;i++){
       try{
+        setCloudProgress(10 + 35*(i/Math.max(1,pendings.length)));
         setCloudLoadingText("正在清理待删原图 " + (i+1) + "/" + pendings.length + "…");
         await moveToTrash(pendings[i]);
         clearPendingDelete(pendings[i]);
       }catch(e){ /* 云端删除失败：保留清单，下次上传重试 */ }
     }
     if(files.length >= GH.maxNodes){
-      setCloudLoadingText("正在删除超期旧备份…");
+      setCloudProgress(55); setCloudLoadingText("正在删除超期旧备份…");
       for(const f of files.slice(GH.maxNodes - 1)){
         await wdDeleteFile(f);
       }
     }
-    setCloudLoadingText("正在写入新备份数据…");
+    setCloudProgress(75); setCloudLoadingText("正在写入新备份数据…");
     await wdWriteFile(name, packCloudData());
+    setCloudProgress(100);
     if(typeof clearDirty === "function") clearDirty();
     alert(`已上传至云端（${formatNodeTime(ts)}），云端保留最近 ${GH.maxNodes} 个节点`);
   }catch(err){
     alert("上传失败：" + err.message);
   }finally{
-    showCloudLoading(false);
+    setTimeout(()=>showCloudLoading(false), 400);
     if(btn){ btn.disabled = false; btn.textContent = "上传"; }
   }
 }
@@ -2780,25 +2787,26 @@ async function wdDownload(){
   if(isCloudLocked()) return showToast("云端连接已断开：请点击「清缓」，输入暗号「进入」恢复", 4);
   const btn = event && event.currentTarget;
   if(btn){ btn.disabled = true; btn.textContent = "下载中…"; }
-  showCloudLoading(true, "正在获取云端备份列表…");
+  showCloudLoading(true, 10, "正在获取云端备份列表…");
   try{
     const files = await wdList();
     if(!files.length) throw new Error("云端暂无备份数据，请先点击「上传」");
     const latest = files[0];
-    setCloudLoadingText("正在读取最新备份…");
+    setCloudProgress(40); setCloudLoadingText("正在读取最新备份…");
     const imported = await wdReadFile(latest.name);
     if(!confirm(`将从云端拉取最新备份（${formatNodeTime(latest.ts)}）并覆盖本地数据，确定继续吗？`)){ showCloudLoading(false); return; }
-    setCloudLoadingText("正在清理本地缓存…");
+    setCloudProgress(70); setCloudLoadingText("正在清理本地缓存…");
     await clearLocalBrowserCache();
-    setCloudLoadingText("正在载入数据…");
+    setCloudProgress(90); setCloudLoadingText("正在载入数据…");
     const count = applyImportedData(imported);
+    setCloudProgress(100);
     setCloudLoaded(latest);
     if(typeof clearDirty === "function") clearDirty();
     alert(`下载成功，已载入 ${count} 条记录（备份时间 ${formatNodeTime(latest.ts)}）`);
   }catch(err){
     alert("下载失败：" + err.message);
   }finally{
-    showCloudLoading(false);
+    setTimeout(()=>showCloudLoading(false), 400);
     if(btn){ btn.disabled = false; btn.textContent = "下载"; }
   }
 }
@@ -2832,7 +2840,7 @@ async function wdOpenRestore(){
   document.getElementById("restoreCurrent").textContent = getCloudLoadedText();
   listEl.innerHTML = '<div class="restore-tip">加载中…</div>';
   document.getElementById("restoreModal").style.display = "flex";
-  showCloudLoading(true, "正在获取云端备份列表…");
+  showCloudLoading(true, 20, "正在获取云端备份列表…");
   try{
     const files = await wdList();
     wdRenderRestoreList(files);
@@ -2848,7 +2856,7 @@ async function wdRefreshRestore(){
   const listEl = document.getElementById("restoreList");
   document.getElementById("restoreCurrent").textContent = getCloudLoadedText();
   listEl.innerHTML = '<div class="restore-tip">刷新中…</div>';
-  showCloudLoading(true, "正在刷新云端备份列表…");
+  showCloudLoading(true, 20, "正在刷新云端备份列表…");
   try{
     const files = await wdList();
     wdRenderRestoreList(files);
@@ -2866,13 +2874,14 @@ async function wdRestoreNode(name){
   const m = name.match(/^(?:jltime|xinglin)_(\d{14})/);
   const ts = m ? m[1] : name.replace(/^(?:jltime|xinglin)_/, "").replace(".json", "");
   if(!confirm(`确定恢复到 ${formatNodeTime(ts)} 这个备份点？本地当前数据将被覆盖！`)) return;
-  showCloudLoading(true, "正在读取备份数据…");
+  showCloudLoading(true, 20, "正在读取备份数据…");
   try{
     const imported = await wdReadFile(name);
-    setCloudLoadingText("正在清理本地缓存…");
+    setCloudProgress(55); setCloudLoadingText("正在清理本地缓存…");
     await clearLocalBrowserCache();
-    setCloudLoadingText("正在恢复数据…");
+    setCloudProgress(85); setCloudLoadingText("正在恢复数据…");
     const count = applyImportedData(imported);
+    setCloudProgress(100);
     setCloudLoaded({ name, ts, label: (name.match(/^(?:jltime|xinglin)_\d{14}(?:_[^/]+)?\.json$/) && name.length > 22) ? name.replace(/^(?:jltime|xinglin)_\d{14}_/, "").slice(0, -5) : "" });
     closeRestoreModal();
     if(typeof clearDirty === "function") clearDirty();  // 恢复以备份为准，不视为本地改动
@@ -4598,23 +4607,27 @@ function getCloudLoadedText(){
 
 // 清除缓存后自动拉取云端最新数据覆盖（先拉取成功才覆盖本地，失败保留本地数据）
 async function cloudPullAfterClear(){
-  showCloudLoading(true);
+  showCloudLoading(true, 5, "正在连接云端…");
   try{
     const files = await wdList();
     if(!files.length){
+      showCloudLoading(false);
       showToast("云端暂无备份，已保留本地数据", 3);
       return;
     }
+    setCloudProgress(25); setCloudLoadingText("正在读取云端备份…");
     const latest = files[0];
     const imported = await wdReadFile(latest.name);   // 先成功拉取
+    setCloudProgress(65); setCloudLoadingText("正在载入数据…");
     const count = applyImportedData(imported);         // 再覆盖本地
+    setCloudProgress(100);
     setCloudLoaded(latest);
     showToast(`已载入云端最新数据（${formatNodeTime(latest.ts)}，共 ${count} 条记录）`, 3);
     cleanTrash().catch(() => {});                        // 后台清理回收站中超过30天的图片
   }catch(err){
     showToast("云端拉取失败，已保留本地数据：" + err.message, 5);
   }finally{
-    showCloudLoading(false);
+    setTimeout(()=>showCloudLoading(false), 400);
   }
 }
 
@@ -4628,11 +4641,20 @@ function showToast(msg, seconds){
   toastTimerId = setTimeout(() => el.classList.remove("show"), (seconds || 3) * 1000);
 }
 // 云端上传/下载进度圈：show=true 显示，false 隐藏
-function showCloudLoading(on, text){
+function showCloudLoading(on, pct, text){
   const el = document.getElementById("cloudLoading");
   if(!el) return;
   if(text) setCloudLoadingText(text);
+  if(typeof pct === "number") setCloudProgress(pct);
+  else if(on) setCloudProgress(0);
   el.style.display = on ? "flex" : "none";
+}
+function setCloudProgress(pct){
+  pct = Math.max(0, Math.min(100, pct));
+  const ring = document.getElementById("cloudRing");
+  const p = document.getElementById("cloudPct");
+  if(ring) ring.style.strokeDashoffset = (169.6 * (1 - pct/100)).toFixed(1);
+  if(p) p.textContent = Math.round(pct) + "%";
 }
 function setCloudLoadingText(msg){
   const t = document.getElementById("cloudLoadingText");
@@ -4920,10 +4942,10 @@ function titleHeartDance(){
     if(_heartAnimating){ setTimeout(jump, 1500); return; }  // 点击动画期间不打断
     _heartGather(((Math.random()*2)|0)===0 ? "L" : "R");
     setTimeout(heartToSides, 3600);      // 同边停顿后弹回两侧
-    setTimeout(jump, 22000 + Math.random() * 18000);   // 两侧停留更久、更少跳到另一边
+    setTimeout(jump, 20000 + Math.random() * 10000);   // 两侧停留更久、20~30秒才跳一次
   };
   heartToSides();
-  setTimeout(jump, 22000 + Math.random() * 18000);
+  setTimeout(jump, 20000 + Math.random() * 10000);
 }
 
 function startSurprises(){
