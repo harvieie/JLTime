@@ -489,7 +489,7 @@ body:has(#mosaicModal[style*="flex"]) .music-fab{opacity:.35;}
 .title-heart{
   position:absolute;top:50%;transform:translateY(-50%);opacity:.95;line-height:0;
   filter:drop-shadow(0 0 6px rgba(255,120,165,.6));
-  transition:left .9s cubic-bezier(.3,1.2,.4,1),right .9s cubic-bezier(.3,1.2,.4,1);
+  transition:left 1.35s cubic-bezier(.3,1.15,.4,1),right 1.35s cubic-bezier(.3,1.15,.4,1);
   animation:heartBeat 1.7s ease-in-out infinite;
   pointer-events:auto;cursor:pointer;
 }
@@ -513,7 +513,7 @@ body:has(#mosaicModal[style*="flex"]) .music-fab{opacity:.35;}
   78%{transform:translateY(calc(-50% + 1px)) scale(.98) rotate(-3deg);}
   100%{transform:translateY(-50%) scale(1) rotate(0deg);}
 }
-.title-heart.heart-hop{animation:titleHeartHop .92s ease;}
+.title-heart.heart-hop{animation:titleHeartHop 1.35s ease;}
 @keyframes heartBeat{
   0%,100%{transform:translateY(-50%) scale(1);}
   30%{transform:translateY(-50%) scale(1.22);}
@@ -559,7 +559,10 @@ button{border-radius:12px;}
 
 <!-- 云端上传/下载进度圈 -->
 <div id="cloudLoading" style="display:none;position:fixed;inset:0;z-index:5000;background:rgba(30,15,25,.35);align-items:center;justify-content:center;">
-  <div style="width:46px;height:46px;border-radius:50%;border:4px solid rgba(255,255,255,.35);border-top-color:#fff;animation:clSpin .8s linear infinite;"></div>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
+    <div style="width:46px;height:46px;border-radius:50%;border:4px solid rgba(255,255,255,.35);border-top-color:#fff;animation:clSpin .8s linear infinite;"></div>
+    <div id="cloudLoadingText" style="color:#fff;font-size:13px;letter-spacing:.5px;text-shadow:0 1px 3px rgba(0,0,0,.4);">处理中…</div>
+  </div>
 </div>
 <style>@keyframes clSpin{to{transform:rotate(360deg);}}</style>
 
@@ -902,7 +905,7 @@ button{border-radius:12px;}
       <input type="date" id="anniDate" style="width:100%;padding:8px;margin-bottom:8px;border:1px solid #e9ecef;border-radius:10px;box-sizing:border-box;outline:none;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
         <input id="anniIconInput" placeholder="✍" title="可输入自定义图标" oninput="pickAnniIconInput()" style="width:46px;flex:none;padding:8px 4px;border:1px solid #e9ecef;border-radius:16px;box-sizing:border-box;outline:none;text-align:center;font-size:16px;">
-        <div id="anniIconPick" style="display:flex;gap:4px;flex-wrap:nowrap;justify-content:space-between;font-size:20px;flex:1;"></div>
+        <div id="anniIconPick" style="display:flex;gap:8px;flex-wrap:nowrap;justify-content:flex-start;align-items:center;font-size:20px;flex:1;min-width:0;overflow:hidden;"></div>
       </div>
       <div style="display:flex;gap:8px;justify-content:center;margin-bottom:12px;">
         <button class="btn-pri" onclick="saveAnni()">保存</button>
@@ -936,7 +939,7 @@ button{border-radius:12px;}
     <div class="modal-title">给脚印加个标记</div>
     <div style="display:flex;align-items:center;gap:10px;margin:12px 0;white-space:nowrap;">
       <input id="footIconInput" placeholder="✍" title="可输入自定义图标" oninput="footIconLive()" onkeydown="if(event.key==='Enter'){saveFootBadge();}" style="width:46px;flex:none;padding:8px 4px;border:1px solid #e9ecef;border-radius:14px;box-sizing:border-box;outline:none;text-align:center;font-size:15px;">
-      <div id="footIconGrid" style="display:flex;gap:6px;flex-wrap:nowrap;justify-content:space-between;align-items:center;font-size:20px;flex:1;"></div>
+      <div id="footIconGrid" style="display:flex;gap:8px;flex-wrap:nowrap;justify-content:flex-start;align-items:center;font-size:20px;flex:1;min-width:0;overflow:hidden;"></div>
     </div>
     <div style="display:flex;gap:8px;justify-content:center;margin-bottom:4px;">
       <button class="btn-danger" onclick="clearFootBadge()">清除</button>
@@ -2743,20 +2746,23 @@ async function wdUpload(){
   ].filter(l => l !== "");
   if(!confirm(lines.join("\n"))) return;
   if(btn){ btn.disabled = true; btn.textContent = "上传中…"; }
-  showCloudLoading(true);
+  showCloudLoading(true, "正在准备上传…");
   try{
     // 先同步删除待删的云端原图（移入回收站），失败的保留清单下次再试
-    for(const p of pendings){
+    for(let i=0;i<pendings.length;i++){
       try{
-        await moveToTrash(p);
-        clearPendingDelete(p);
+        setCloudLoadingText("正在清理待删原图 " + (i+1) + "/" + pendings.length + "…");
+        await moveToTrash(pendings[i]);
+        clearPendingDelete(pendings[i]);
       }catch(e){ /* 云端删除失败：保留清单，下次上传重试 */ }
     }
     if(files.length >= GH.maxNodes){
+      setCloudLoadingText("正在删除超期旧备份…");
       for(const f of files.slice(GH.maxNodes - 1)){
         await wdDeleteFile(f);
       }
     }
+    setCloudLoadingText("正在写入新备份数据…");
     await wdWriteFile(name, packCloudData());
     if(typeof clearDirty === "function") clearDirty();
     alert(`已上传至云端（${formatNodeTime(ts)}），云端保留最近 ${GH.maxNodes} 个节点`);
@@ -2774,14 +2780,17 @@ async function wdDownload(){
   if(isCloudLocked()) return showToast("云端连接已断开：请点击「清缓」，输入暗号「进入」恢复", 4);
   const btn = event && event.currentTarget;
   if(btn){ btn.disabled = true; btn.textContent = "下载中…"; }
-  showCloudLoading(true);
+  showCloudLoading(true, "正在获取云端备份列表…");
   try{
     const files = await wdList();
     if(!files.length) throw new Error("云端暂无备份数据，请先点击「上传」");
     const latest = files[0];
+    setCloudLoadingText("正在读取最新备份…");
     const imported = await wdReadFile(latest.name);
     if(!confirm(`将从云端拉取最新备份（${formatNodeTime(latest.ts)}）并覆盖本地数据，确定继续吗？`)){ showCloudLoading(false); return; }
+    setCloudLoadingText("正在清理本地缓存…");
     await clearLocalBrowserCache();
+    setCloudLoadingText("正在载入数据…");
     const count = applyImportedData(imported);
     setCloudLoaded(latest);
     if(typeof clearDirty === "function") clearDirty();
@@ -2823,7 +2832,7 @@ async function wdOpenRestore(){
   document.getElementById("restoreCurrent").textContent = getCloudLoadedText();
   listEl.innerHTML = '<div class="restore-tip">加载中…</div>';
   document.getElementById("restoreModal").style.display = "flex";
-  showCloudLoading(true);
+  showCloudLoading(true, "正在获取云端备份列表…");
   try{
     const files = await wdList();
     wdRenderRestoreList(files);
@@ -2839,7 +2848,7 @@ async function wdRefreshRestore(){
   const listEl = document.getElementById("restoreList");
   document.getElementById("restoreCurrent").textContent = getCloudLoadedText();
   listEl.innerHTML = '<div class="restore-tip">刷新中…</div>';
-  showCloudLoading(true);
+  showCloudLoading(true, "正在刷新云端备份列表…");
   try{
     const files = await wdList();
     wdRenderRestoreList(files);
@@ -2857,10 +2866,12 @@ async function wdRestoreNode(name){
   const m = name.match(/^(?:jltime|xinglin)_(\d{14})/);
   const ts = m ? m[1] : name.replace(/^(?:jltime|xinglin)_/, "").replace(".json", "");
   if(!confirm(`确定恢复到 ${formatNodeTime(ts)} 这个备份点？本地当前数据将被覆盖！`)) return;
-  showCloudLoading(true);
+  showCloudLoading(true, "正在读取备份数据…");
   try{
     const imported = await wdReadFile(name);
+    setCloudLoadingText("正在清理本地缓存…");
     await clearLocalBrowserCache();
+    setCloudLoadingText("正在恢复数据…");
     const count = applyImportedData(imported);
     setCloudLoaded({ name, ts, label: (name.match(/^(?:jltime|xinglin)_\d{14}(?:_[^/]+)?\.json$/) && name.length > 22) ? name.replace(/^(?:jltime|xinglin)_\d{14}_/, "").slice(0, -5) : "" });
     closeRestoreModal();
@@ -4617,9 +4628,15 @@ function showToast(msg, seconds){
   toastTimerId = setTimeout(() => el.classList.remove("show"), (seconds || 3) * 1000);
 }
 // 云端上传/下载进度圈：show=true 显示，false 隐藏
-function showCloudLoading(on){
+function showCloudLoading(on, text){
   const el = document.getElementById("cloudLoading");
-  if(el) el.style.display = on ? "flex" : "none";
+  if(!el) return;
+  if(text) setCloudLoadingText(text);
+  el.style.display = on ? "flex" : "none";
+}
+function setCloudLoadingText(msg){
+  const t = document.getElementById("cloudLoadingText");
+  if(t && msg) t.textContent = msg;
 }
 
 document.getElementById("cacheOkBtn").addEventListener("click", confirmClearCache);
@@ -4838,7 +4855,7 @@ function burstAt(x, y){
   }
 }
 
-/* 大标题两侧爱心：大部分时间一左一右，偶尔（8~14秒）蹦跳到同一边再弹回；点击可手动触发抖动后蹦跳到另一个心旁边 */
+/* 大标题两侧爱心：大部分时间一左一右，很久才偶尔（22~40秒）先蹦到标题中间、再蹦到同一边，停顿后弹回两侧；点击可手动触发 */
 let _heartAnimating=false;
 let _heartMover=null;   // 正在横移（蹦跳）的那颗心
 function _heartGet(){
@@ -4851,7 +4868,7 @@ function _heartHop(el){
   void el.offsetWidth;
   el.classList.add("heart-hop");
   clearTimeout(el._hopT);
-  el._hopT=setTimeout(function(){ el.classList.remove("heart-hop"); }, 940);
+  el._hopT=setTimeout(function(){ el.classList.remove("heart-hop"); }, 1380);
 }
 function heartToSides(){           // 默认：一左一右，横移出去的那颗蹦跳着归位
   const {a,b}=_heartGet();
@@ -4861,22 +4878,26 @@ function heartToSides(){           // 默认：一左一右，横移出去的那
   b.style.right="-52px"; b.style.left="auto";
   _heartMover=null;
 }
-/* 聚拢到某一侧：真正横移的那颗心上下蹦跳着过去（X 由 left/right 过渡，Y 由 hop 动画起伏） */
+/* 聚拢到某一侧：横移的心先蹦到标题中间停一下，再蹦到另一颗心旁边（两段式，放慢更灵动） */
 function _heartGather(side){
   const {a,b}=_heartGet();
   if(!a||!b) return;
-  if(side==="L"){
-    a.style.left="-52px"; a.style.right="auto";
-    b.style.left="-12px"; b.style.right="auto";
-    _heartMover=b;
-  }else{
-    a.style.right="-12px"; a.style.left="auto";
-    b.style.right="-52px"; b.style.left="auto";
-    _heartMover=a;
-  }
-  _heartHop(_heartMover);
+  // other 先回到自己那一侧的外侧
+  if(side==="L"){ a.style.left="-52px"; a.style.right="auto"; }
+  else { b.style.right="-52px"; b.style.left="auto"; }
+  const mover = side==="L" ? b : a;
+  _heartMover=mover;
+  // 第一段：蹦到标题正中间短暂停留
+  mover.style.left="calc(50% - 13px)"; mover.style.right="auto";
+  _heartHop(mover);
+  // 第二段：从中再蹦到目标侧心旁边
+  setTimeout(function(){
+    if(side==="L"){ mover.style.left="-12px"; mover.style.right="auto"; }
+    else { mover.style.right="-12px"; mover.style.left="auto"; }
+    _heartHop(mover);
+  }, 950);
 }
-/* 点击某颗心：先抖动一下，再蹦跳到另一颗心旁边，停 2.5 秒后回到两侧 */
+/* 点击某颗心：先抖动一下，再先蹦到中间、接着蹦到另一颗心旁边，停顿后回到两侧 */
 function titleHeartTap(side){
   if(_heartAnimating) return;
   const {a,b}=_heartGet();
@@ -4887,7 +4908,7 @@ function titleHeartTap(side){
   setTimeout(function(){
     el.classList.remove("heart-shake");
     _heartGather(side==="A"?"R":"L");   // 左心跳到右边、右心跳到左边
-    setTimeout(function(){ heartToSides(); _heartAnimating=false; }, 2500);
+    setTimeout(function(){ heartToSides(); _heartAnimating=false; }, 3600);
   }, 520);
 }
 function titleHeartDance(){
@@ -4896,13 +4917,13 @@ function titleHeartDance(){
   a.onclick=function(e){ e.stopPropagation(); titleHeartTap("A"); };
   b.onclick=function(e){ e.stopPropagation(); titleHeartTap("B"); };
   const jump = () => {
-    if(_heartAnimating){ setTimeout(jump, 1200); return; }  // 点击动画期间不打断
+    if(_heartAnimating){ setTimeout(jump, 1500); return; }  // 点击动画期间不打断
     _heartGather(((Math.random()*2)|0)===0 ? "L" : "R");
-    setTimeout(heartToSides, 2500);      // 停 2.5 秒后弹回两侧
-    setTimeout(jump, 8000 + Math.random() * 6000);
+    setTimeout(heartToSides, 3600);      // 同边停顿后弹回两侧
+    setTimeout(jump, 22000 + Math.random() * 18000);   // 两侧停留更久、更少跳到另一边
   };
   heartToSides();
-  setTimeout(jump, 8000 + Math.random() * 6000);
+  setTimeout(jump, 22000 + Math.random() * 18000);
 }
 
 function startSurprises(){
