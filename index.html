@@ -912,7 +912,7 @@ button{border-radius:12px;}
       <input id="anniLabel" placeholder="名称，如：在一起 / 求婚" style="width:100%;padding:8px;margin-bottom:8px;border:1px solid #e9ecef;border-radius:10px;box-sizing:border-box;outline:none;">
       <input type="date" id="anniDate" style="width:100%;padding:8px;margin-bottom:8px;border:1px solid #e9ecef;border-radius:10px;box-sizing:border-box;outline:none;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-        <input id="anniIconInput" placeholder="图标" title="可输入自定义图标" oninput="pickAnniIconInput()" style="width:38px;flex:none;padding:8px 1px;border:1px solid #e9ecef;border-radius:12px;box-sizing:border-box;outline:none;text-align:center;font-size:12px;">
+        <input id="anniIconInput" placeholder="图标" title="可输入自定义图标" oninput="pickAnniIconInput()" style="width:38px;flex:none;min-width:0;padding:8px 1px;border:1px solid #e9ecef;border-radius:12px;box-sizing:border-box;outline:none;text-align:center;font-size:12px;">
         <div id="anniIconPick" style="display:flex;gap:8px;flex-wrap:nowrap;justify-content:space-between;align-items:center;font-size:20px;flex:1;min-width:0;overflow:hidden;"></div>
       </div>
       <div style="display:flex;gap:8px;justify-content:center;margin-bottom:12px;">
@@ -946,7 +946,7 @@ button{border-radius:12px;}
   <div class="modal-box" style="max-width:360px;">
     <div class="modal-title">给脚印加个标记</div>
     <div style="display:flex;align-items:center;gap:10px;margin:12px 0;white-space:nowrap;">
-      <input id="footIconInput" placeholder="图标" title="可输入自定义图标" oninput="footIconLive()" onkeydown="if(event.key==='Enter'){saveFootBadge();}" style="width:38px;flex:none;padding:8px 1px;border:1px solid #e9ecef;border-radius:12px;box-sizing:border-box;outline:none;text-align:center;font-size:12px;">
+      <input id="footIconInput" placeholder="图标" title="可输入自定义图标" oninput="footIconLive()" onkeydown="if(event.key==='Enter'){saveFootBadge();}" style="width:38px;flex:none;min-width:0;padding:8px 1px;border:1px solid #e9ecef;border-radius:12px;box-sizing:border-box;outline:none;text-align:center;font-size:12px;">
       <div id="footIconGrid" style="display:flex;gap:8px;flex-wrap:nowrap;justify-content:space-between;align-items:center;font-size:20px;flex:1;min-width:0;overflow:hidden;"></div>
     </div>
     <div style="display:flex;gap:8px;justify-content:center;margin-bottom:4px;">
@@ -3905,8 +3905,7 @@ function xzStartNoteScroll(){
       if(inp._hold===undefined) inp._hold=45;   // 开头先停留一会儿再开始滚
       if(inp._hold>0){ inp._hold--; return; }
       inp._ns+=inp._dir*0.6;
-      if(inp._ns>=max){ inp._ns=max; inp._dir=-1; inp._hold=30; }
-      else if(inp._ns<=0){ inp._ns=0; inp._dir=1; inp._hold=30; }
+      if(inp._ns>=max){ inp._ns=0; inp._hold=50; }   // 到末尾停留后接开头继续往左（单向循环）
       inp.scrollLeft=inp._ns;
     });
   },40);
