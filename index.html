@@ -4608,7 +4608,7 @@ function getCloudLoadedText(){
 
 // 清除缓存后自动拉取云端最新数据覆盖（先拉取成功才覆盖本地，失败保留本地数据）
 async function cloudPullAfterClear(){
-  showCloudLoading(true, 5);
+  showCloudLoading(true, 5, "爱你...");
   try{
     const files = await wdList();
     if(!files.length){
