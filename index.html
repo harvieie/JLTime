@@ -2285,38 +2285,44 @@ async function thUploadCloud(){
     showToast("云端已断开：数据仅保存在本地，解锁后重试", 4);
     return;
   }
-  showCloudLoading(true);
+  showCloudLoading(true, 8, "正在准备上传…");
   try{
     const files = await wdList();
+    showCloudLoading(true, 35, "正在清理旧节点…");
     if(files.length >= GH.maxNodes){
       for(const f of files.slice(GH.maxNodes - 1)) await wdDeleteFile(f);
     }
     const name = `jltime_${nowStamp()}_树洞.json`;
+    showCloudLoading(true, 70, "正在上传树洞…");
     await wdWriteFile(name, packCloudData());
+    showCloudLoading(true, 100, "完成");
     showToast("树洞弹幕已上传到云端", 2);
   }catch(err){
     showToast("云端同步失败：" + err.message, 4);
   }finally{
-    showCloudLoading(false);
+    setTimeout(()=>showCloudLoading(false), 400);
   }
 }
 
 /* 心喜簿上传云端：与树洞一致，把本地心喜簿（含全量数据）作为云端快照保存 */
 async function xzUploadCloud(){
   if(isCloudLocked()){ showToast("云端已断开：数据仅保存在本地，解锁后重试", 4); return; }
-  showCloudLoading(true);
+  showCloudLoading(true, 8, "正在准备上传…");
   try{
     const files = await wdList();
+    showCloudLoading(true, 35, "正在清理旧节点…");
     if(files.length >= GH.maxNodes){
       for(const f of files.slice(GH.maxNodes - 1)) await wdDeleteFile(f);
     }
     const name = `jltime_${nowStamp()}_心喜簿.json`;
+    showCloudLoading(true, 70, "正在上传心喜簿…");
     await wdWriteFile(name, packCloudData());
+    showCloudLoading(true, 100, "完成");
     showToast("心喜簿已上传到云端", 2);
   }catch(err){
     showToast("云端同步失败：" + err.message, 4);
   }finally{
-    showCloudLoading(false);
+    setTimeout(()=>showCloudLoading(false), 400);
   }
 }
 
