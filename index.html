@@ -583,7 +583,7 @@ button{border-radius:12px;}
 </div>
 
 <!-- 登录弹窗（首次打开 & 简驭登录按钮共用） -->
-<div class="modal-overlay" id="cacheConfirmModal">
+<div class="modal-overlay" id="cacheConfirmModal" onclick="if(event.target===this) closeCacheConfirm()">
   <div class="modal-box" style="text-align:center;">
     <div class="modal-title">登录</div>
     <input type="password" id="cachePwd" placeholder="般若波罗蜜" autocomplete="off" autofocus
@@ -591,7 +591,7 @@ button{border-radius:12px;}
       style="width:100%;text-align:center;letter-spacing:4px;margin:18px 0 6px;padding:10px;border:1px solid #e9ecef;border-radius:12px;box-sizing:border-box;outline:none;">
     <div style="font-size:12px;color:#b08a98;margin:4px 0 16px;">查看 / 编辑最新数据请登录云端</div>
     <div class="modal-buttons">
-      <button id="cacheOkBtn" style="background:#bbb">清空</button>
+      <button id="cacheOkBtn" style="background:#e74c3c">清空</button>
       <button id="cacheCancelBtn" style="background:#999">本地</button>
       <button id="cacheEnterBtn" class="success">云端</button>
     </div>
@@ -689,7 +689,7 @@ button{border-radius:12px;}
 
   <!-- 编辑面板 -->
   <div class="tab-panel" id="panelEdit">
-    <button onclick="openCacheConfirm()">登录</button>
+    <button style="background:#e91e63;color:#fff;font-weight:bold;" onclick="openCacheConfirm()">登录</button>
     <button class="success" onclick="openAddCardModal()">新增</button>
     <button class="checked-mode" id="multiDelBtn" onclick="toggleMultiDelete()">选删</button>
     <button class="export" onclick="openExportModal()">导出</button>
@@ -697,7 +697,7 @@ button{border-radius:12px;}
     <button class="success" id="cloudUploadBtn" onclick="wdUpload()">上传</button>
     <button onclick="wdDownload()">下载</button>
     <button class="checked-mode" onclick="wdOpenRestore()">恢复</button>
-    <button onclick="openThemeModal()" title="主题色/背景">主题</button>
+    <button onclick="openThemeModal()" title="主题色/背景" style="background:#4fc3f7;color:#fff;">主题</button>
   </div>
 
   <!-- 拾趣面板：网页框 + 树洞框 -->
