@@ -447,7 +447,7 @@ body.dark .xz-foot-btn{background:#2a2d34;border-color:#5a5060;color:#ff9ec4;}
 /* 卡片标题后的纪念图标（兜底展示） */
 .badge-inline{font-size:15px;}
 /* 地点分组字母小标题小一点 */
-select optgroup{font-size:10px;color:#d6dae0;font-style:normal;padding:2px 0;}
+select optgroup{font-size:8px;color:#dde1e7;font-style:normal;padding:1px 0;}
 select optgroup option{font-size:14px;color:#333;}
 /* 统一按钮样式 */
 .btn-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px;}
@@ -2796,7 +2796,7 @@ async function wdDownload(){
   if(btn){ btn.disabled = true; btn.textContent = "下载中…"; }
   showCloudLoading(true, 10, "正在获取云端备份列表…");
   try{
-    const files = await wdList();
+    const files = (await wdList()).filter(f => f.label !== "树洞" && f.label !== "心喜簿");
     if(!files.length) throw new Error("云端暂无备份数据，请先点击「上传」");
     const latest = files[0];
     setCloudProgress(40); setCloudLoadingText("正在读取最新备份…");
@@ -4620,7 +4620,9 @@ function getCloudLoadedText(){
 async function cloudPullAfterClear(){
   showCloudLoading(true, 5, "爱你...");
   try{
-    const files = await wdList();
+    const all = await wdList();
+    // 只拉完整主快照，排除树洞/心喜簿的独立增量文件（它们不含 cards）
+    const files = all.filter(f => f.label !== "树洞" && f.label !== "心喜簿");
     if(!files.length){
       showCloudLoading(false);
       showToast("云端暂无备份，已保留本地数据", 3);
@@ -4684,8 +4686,8 @@ document.getElementById("cacheEnterBtn").addEventListener("click", enterWithPwd)
 async function checkCloudUpdate(){
   try{
     if(isCloudLocked()) return;
-    const files = await wdList();
-    if(!files || !files.length) return;
+    const files = (await wdList()).filter(f => f.label !== "树洞" && f.label !== "心喜簿");
+    if(!files.length) return;
     const latest = files[0];
     const seen = parseFloat(localStorage.getItem("jlt_cloud_seen_ts") || "0");
     if(latest.ts && latest.ts > seen + 1){
