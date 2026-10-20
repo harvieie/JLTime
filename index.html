@@ -2261,7 +2261,7 @@ async function pushCloudSnapshot(note){
   try{
     const files = await wdList();
     if(files.length >= GH.maxNodes){
-      for(const f of files.slice(GH.maxNodes - 1)) await wdDeleteFile(f);
+      for(const f of nodesToDelete(files)) await wdDeleteFile(f);
     }
     const name = `jltime_${nowStamp()}${note ? "_" + note : ""}.json`;
     await wdWriteFile(name, packCloudData());
@@ -2280,7 +2280,7 @@ async function thUploadCloud(){
     const files = await wdList();
     showCloudLoading(true, 35, "正在清理旧节点…");
     if(files.length >= GH.maxNodes){
-      for(const f of files.slice(GH.maxNodes - 1)) await wdDeleteFile(f);
+      for(const f of nodesToDelete(files)) await wdDeleteFile(f);
     }
     const name = `jltime_${nowStamp()}_树洞.json`;
     showCloudLoading(true, 70, "正在上传树洞…");
@@ -2302,7 +2302,7 @@ async function xzUploadCloud(){
     const files = await wdList();
     showCloudLoading(true, 35, "正在清理旧节点…");
     if(files.length >= GH.maxNodes){
-      for(const f of files.slice(GH.maxNodes - 1)) await wdDeleteFile(f);
+      for(const f of nodesToDelete(files)) await wdDeleteFile(f);
     }
     const name = `jltime_${nowStamp()}_心喜簿.json`;
     showCloudLoading(true, 70, "正在上传心喜簿…");
@@ -2676,6 +2676,25 @@ async function wdList(){
   return files;
 }
 
+// 超期清理：保留最近 maxNodes 个，但至少保留一个「不同日期」的版本，
+// 防止同一天反复误操作把历史版本全覆盖掉
+function nodesToDelete(files){
+  const overflow = files.length - GH.maxNodes;
+  if(overflow <= 0) return [];
+  const today = files[0].ts.slice(0, 8);
+  const del = [];
+  for(let i = files.length - 1; i >= 1 && del.length < overflow; i--){
+    const d = files[i].ts.slice(0, 8);
+    if(d !== today){
+      // 删了它之后，剩下的全是今天的 → 它是最后一个跨日版本，保留不删
+      const rest = files.slice(0, i).concat(files.slice(i + 1));
+      if(rest.every(f => f.ts.slice(0, 8) === today)) continue;
+    }
+    del.push(files[i]);
+  }
+  return del;
+}
+
 // 读取单个备份文件内容
 async function wdReadFile(name){
   const url = ghApi() + ghPath(name) + "?ref=" + encodeURIComponent(GH.branch);
@@ -2781,7 +2800,7 @@ async function wdUpload(){
     }
     if(files.length >= GH.maxNodes){
       setCloudProgress(55); setCloudLoadingText("正在删除超期旧备份…");
-      for(const f of files.slice(GH.maxNodes - 1)){
+      for(const f of nodesToDelete(files)){
         await wdDeleteFile(f);
       }
     }
