@@ -2471,10 +2471,21 @@ function b64encode(str){
 // 粗略判断上传来源设备：恢复列表里可区分是谁/什么设备上传的
 function deviceTag(){
   const ua = navigator.userAgent || "";
-  let d = /iPhone/.test(ua) ? "iPhone" : /iPad/.test(ua) ? "iPad"
-    : /Android/.test(ua) ? "安卓手机" : /Mobile/.test(ua) ? "移动设备"
-    : /Windows/.test(ua) ? "Windows电脑" : /Macintosh|Mac OS/.test(ua) ? "Mac电脑"
-    : /Linux/.test(ua) ? "Linux电脑" : "网页端";
+  const nick = (localStorage.getItem("jlt_dev_name") || "").trim();
+  if(nick) return nick;
+  let d;
+  if(/iPhone/.test(ua)) d = "iPhone";
+  else if(/iPad/.test(ua)) d = "iPad";
+  else if(/Android/.test(ua)){
+    // UA 里提取具体型号，如 "M2012K11AC"、"HUAWEI P40"
+    const m = ua.match(/;\s*([^;]+?)\s*(?:Build|\))/);
+    d = m ? m[1].replace(/^\s+|\s+$/g,"") : "安卓手机";
+  }
+  else if(/Mobile/.test(ua)) d = "移动设备";
+  else if(/Windows/.test(ua)) d = "Windows电脑";
+  else if(/Macintosh|Mac OS/.test(ua)) d = "Mac电脑";
+  else if(/Linux/.test(ua)) d = "Linux电脑";
+  else d = "网页端";
   return d;
 }
 function b64decode(b64){
