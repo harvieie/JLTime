@@ -2468,6 +2468,15 @@ function b64encode(str){
   new TextEncoder().encode(str).forEach(b => { bin += String.fromCharCode(b); });
   return btoa(bin);
 }
+// 粗略判断上传来源设备：恢复列表里可区分是谁/什么设备上传的
+function deviceTag(){
+  const ua = navigator.userAgent || "";
+  let d = /iPhone/.test(ua) ? "iPhone" : /iPad/.test(ua) ? "iPad"
+    : /Android/.test(ua) ? "安卓手机" : /Mobile/.test(ua) ? "移动设备"
+    : /Windows/.test(ua) ? "Windows电脑" : /Macintosh|Mac OS/.test(ua) ? "Mac电脑"
+    : /Linux/.test(ua) ? "Linux电脑" : "网页端";
+  return d;
+}
 function b64decode(b64){
   const bin = atob(String(b64).replace(/\s+/g, ""));
   const bytes = new Uint8Array(bin.length);
@@ -2727,7 +2736,7 @@ async function wdUpload(){
   const cards = loadCards();
   const imgCount = cards.reduce((s, c) => s + ((c.imgs && c.imgs.length) || 0), 0);
   const pendings = getPendingDeletes();
-  const name = `jltime_${nowStamp()}.json`;
+  const name = `jltime_${nowStamp()}_${deviceTag()}.json`;
   const modified = dirtyList();
   const ts = name.slice(7, 21);  // jltime_ 后 14 位时间戳
   const lines = [
@@ -5424,17 +5433,11 @@ function bindBackTop(){
     // 倒带按钮：下滑稍一点出现，滑到第三卡片(750px)位置切换为置顶
     if(y > 150 && y < 750 && !isBottom){ btm.style.display = "block"; }
     else { btm.style.display = "none"; }
-    // 置顶按钮：滑到第三卡片附近出现；划到底部停留一会儿后自动隐藏
+    // 置顶按钮：滑到第三卡片附近出现；停止滑动几秒后自动隐藏，再滑动又出现
     if(y > 750 && !isBottom){
       btn.style.display = "block";
-      if(bottomIdleTimer){ clearTimeout(bottomIdleTimer); bottomIdleTimer=null; }
-    }else if(isBottom){
-      if(!bottomIdleTimer){
-        bottomIdleTimer = setTimeout(()=>{
-          btn.style.display="none";
-          bottomIdleTimer=null;
-        }, 1500);
-      }
+      if(bottomIdleTimer){ clearTimeout(bottomIdleTimer); }
+      bottomIdleTimer = setTimeout(()=>{ btn.style.display="none"; bottomIdleTimer=null; }, 3000);
     }else{
       btn.style.display="none";
       if(bottomIdleTimer){ clearTimeout(bottomIdleTimer); bottomIdleTimer=null; }
