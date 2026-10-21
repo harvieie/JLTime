@@ -757,7 +757,7 @@ button{border-radius:12px;}
     <div class="th-quick" id="thQuickNames"></div>
     <div class="btn-row" style="display:flex;flex-wrap:nowrap;gap:6px;justify-content:center;margin-top:12px;">
       <button class="btn-pri" id="thSaveBtn" onclick="saveThModal()" style="padding:6px 10px;font-size:13px;white-space:nowrap;">保存本地</button>
-      <button class="success" id="thCloudBtn" onclick="if(saveThModal()!==false) wdUpload();" style="padding:6px 10px;font-size:13px;white-space:nowrap;">上传云端</button>
+      <button class="success" id="thCloudBtn" onclick="if(saveThModal()!==false) wdUpload('树洞', true);" style="padding:6px 10px;font-size:13px;white-space:nowrap;">上传云端</button>
       <button class="btn-danger" id="thDelBtn" onclick="thDelModal()" style="display:none;padding:6px 10px;font-size:13px;white-space:nowrap;">删除</button>
       <button class="btn-sec" onclick="closeThModal()" style="padding:6px 10px;font-size:13px;white-space:nowrap;">关闭</button>
     </div>
@@ -801,7 +801,7 @@ button{border-radius:12px;}
     </div>
     <div class="btn-row" style="display:flex;flex-wrap:nowrap;gap:6px;justify-content:center;margin-top:10px;">
       <button class="btn-pri" onclick="xzSave()" style="padding:6px 12px;font-size:13px;">保存</button>
-      <button class="success" onclick="xzSave();wdUpload()" style="padding:6px 12px;font-size:13px;">上传</button>
+      <button class="success" onclick="xzSave();wdUpload('心喜簿', true)" style="padding:6px 12px;font-size:13px;">上传云端</button>
       <button class="btn-danger" id="xzDelBtn" onclick="xzDel()" style="display:none;padding:6px 12px;font-size:13px;">删除</button>
       <button class="btn-sec" onclick="closeXzModal()" style="padding:6px 12px;font-size:13px;">关闭</button>
     </div>
@@ -2756,7 +2756,7 @@ function nowStamp(){
 }
 
 // 上传：本地数据 → 云端新节点（保留最近 10 个，最旧自动删除）
-async function wdUpload(){
+async function wdUpload(note, silent){
   if(viewMode === "view") return;
   if(isCloudLocked()) return showToast("云端连接已断开：请点击「清缓」，输入暗号「进入」恢复", 4);
   const btn = event && event.currentTarget;
@@ -2766,26 +2766,28 @@ async function wdUpload(){
   const cards = loadCards();
   const imgCount = cards.reduce((s, c) => s + ((c.imgs && c.imgs.length) || 0), 0);
   const pendings = getPendingDeletes();
-  const name = `jltime_${nowStamp()}_${deviceTag()}.json`;
-  const modified = dirtyList();
+  const name = `jltime_${nowStamp()}_${note ? note + "_" : ""}${deviceTag()}.json`;
   const ts = name.slice(7, 21);  // jltime_ 后 14 位时间戳
-  const lines = [
-    "确认上传云端数据？",
-    modified.length ? "· 本次修改部位：" + modified.join("、") : "· 本次修改部位：无（将按当前内容新建备份）",
-    "· 大标题：" + (getPageTitle() || "（空）"),
-    "· 纪念日：" + loadAnniversaries().length + " 个",
-    "· 卡片：" + cards.length + " 张",
-    "· 图片：" + imgCount + " 张",
-    "· 移步：" + loadFunItems().length + " 个",
-    "· 树洞：" + loadTreehole().length + " 条",
-    "· 心喜簿：" + loadXinze().length + " 条",
-    pendings.length ? "· 待同步删除云端图：" + pendings.length + " 张（移入回收站）" : "",
-    "· 云端现有节点：" + files.length + " 个" + (files.length >= GH.maxNodes ? "（将删除最旧1个）" : ""),
-    "· 将保存为新节点：" + formatNodeTime(ts),
-    "",
-    "点「确定」开始上传"
-  ].filter(l => l !== "");
-  if(!confirm(lines.join("\n"))) return;
+  if(!silent){
+    const modified = dirtyList();
+    const lines = [
+      "确认上传云端数据？",
+      modified.length ? "· 本次修改部位：" + modified.join("、") : "· 本次修改部位：无（将按当前内容新建备份）",
+      "· 大标题：" + (getPageTitle() || "（空）"),
+      "· 纪念日：" + loadAnniversaries().length + " 个",
+      "· 卡片：" + cards.length + " 张",
+      "· 图片：" + imgCount + " 张",
+      "· 移步：" + loadFunItems().length + " 个",
+      "· 树洞：" + loadTreehole().length + " 条",
+      "· 心喜簿：" + loadXinze().length + " 条",
+      pendings.length ? "· 待同步删除云端图：" + pendings.length + " 张（移入回收站）" : "",
+      "· 云端现有节点：" + files.length + " 个" + (files.length >= GH.maxNodes ? "（将删除最旧1个）" : ""),
+      "· 将保存为新节点：" + formatNodeTime(ts),
+      "",
+      "点「确定」开始上传"
+    ].filter(l => l !== "");
+    if(!confirm(lines.join("\n"))) return;
+  }
   if(btn){ btn.disabled = true; btn.textContent = "上传中…"; }
   showCloudLoading(true, 5, "正在准备上传…");
   try{
@@ -2808,7 +2810,8 @@ async function wdUpload(){
     await wdWriteFile(name, packCloudData());
     setCloudProgress(100);
     if(typeof clearDirty === "function") clearDirty();
-    alert(`已上传至云端（${formatNodeTime(ts)}），云端保留最近 ${GH.maxNodes} 个节点`);
+    if(silent){ showToast("已上传云端", 2); }
+    else { alert(`已上传至云端（${formatNodeTime(ts)}），云端保留最近 ${GH.maxNodes} 个节点`); }
   }catch(err){
     alert("上传失败：" + err.message);
   }finally{
