@@ -757,7 +757,7 @@ button{border-radius:12px;}
     <div class="th-quick" id="thQuickNames"></div>
     <div class="btn-row" style="display:flex;flex-wrap:nowrap;gap:6px;justify-content:center;margin-top:12px;">
       <button class="btn-pri" id="thSaveBtn" onclick="saveThModal()" style="padding:6px 10px;font-size:13px;white-space:nowrap;">保存本地</button>
-      <button class="success" id="thCloudBtn" onclick="if(saveThModal()!==false) thUploadCloud();" style="padding:6px 10px;font-size:13px;white-space:nowrap;">上传云端</button>
+      <button class="success" id="thCloudBtn" onclick="if(saveThModal()!==false) wdUpload();" style="padding:6px 10px;font-size:13px;white-space:nowrap;">上传云端</button>
       <button class="btn-danger" id="thDelBtn" onclick="thDelModal()" style="display:none;padding:6px 10px;font-size:13px;white-space:nowrap;">删除</button>
       <button class="btn-sec" onclick="closeThModal()" style="padding:6px 10px;font-size:13px;white-space:nowrap;">关闭</button>
     </div>
@@ -801,7 +801,7 @@ button{border-radius:12px;}
     </div>
     <div class="btn-row" style="display:flex;flex-wrap:nowrap;gap:6px;justify-content:center;margin-top:10px;">
       <button class="btn-pri" onclick="xzSave()" style="padding:6px 12px;font-size:13px;">保存</button>
-      <button class="success" onclick="xzSave();xzUploadCloud()" style="padding:6px 12px;font-size:13px;">上传</button>
+      <button class="success" onclick="xzSave();wdUpload()" style="padding:6px 12px;font-size:13px;">上传</button>
       <button class="btn-danger" id="xzDelBtn" onclick="xzDel()" style="display:none;padding:6px 12px;font-size:13px;">删除</button>
       <button class="btn-sec" onclick="closeXzModal()" style="padding:6px 12px;font-size:13px;">关闭</button>
     </div>
