@@ -5159,8 +5159,22 @@ function checkAnniToday(){
   if(hit){
     sessionStorage.setItem("anni_celebrated", "1");
     setTimeout(() => launchFireworks(innerWidth/2, innerHeight*0.4, 60), 800);
-    const days = daysBetween(hit.date);
-    setTimeout(() => alert(`🎉 今天是「${hit.label}」的纪念日！\n一起走过的第 ${days} 天，要开心呀～`), 1500);
+    const sweetWords = [
+      "遇见你，是我这辈子最幸运的事。",
+      "世界那么大，能遇见你真好。",
+      "往后余生，风雪是你，平淡是你。",
+      "你是我今天想见的人，也是明天想见的人。",
+      "喜欢是乍见之欢，爱是久处不厌。",
+      "我想和你一起，把普通的日子过得浪漫。",
+      "你一笑，我的世界都亮了。",
+      "好好吃饭，好好睡觉，好好爱我。",
+      "山川湖海，不如你在身边。",
+      "今天也要元气满满地喜欢你呀。",
+      "日子温柔，你更温柔。",
+      "牵了手的手，来世还要一起走。"
+    ];
+    const line = sweetWords[Math.floor(Math.random()*sweetWords.length)];
+    setTimeout(() => alert(`🎉 今天是「${hit.label}」的纪念日！\n${line}`), 1500);
   }
 }
 
