@@ -4717,9 +4717,9 @@ function setCloudLoadingText(msg){
 
 document.getElementById("cacheOkBtn").addEventListener("click", confirmClearCache);
 document.getElementById("cacheCancelBtn").addEventListener("click", function(){
-  // 本地：不改变任何状态，仅关闭弹窗；稍后后台检测云端是否有更新数据
+  // 本地：不改变任何状态，稍后后台检测云端是否有更新数据
   closeCacheConfirm();
-  setTimeout(checkCloudUpdate, 3500);
+  setTimeout(() => { checkCloudUpdate(); startCloudWatcher(); }, 1200);
 });
 document.getElementById("cacheEnterBtn").addEventListener("click", enterWithPwd);
 
