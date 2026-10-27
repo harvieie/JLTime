@@ -2790,20 +2790,16 @@ async function wdUpload(note, silent){
   if(btn){ btn.disabled = true; btn.textContent = "上传中…"; }
   showCloudLoading(true, 5, "正在准备上传…");
   try{
-    // 先同步删除待删的云端原图（移入回收站），失败的保留清单下次再试
-    for(let i=0;i<pendings.length;i++){
-      try{
-        setCloudProgress(10 + 35*(i/Math.max(1,pendings.length)));
-        setCloudLoadingText("正在清理待删原图 " + (i+1) + "/" + pendings.length + "…");
-        await moveToTrash(pendings[i]);
-        clearPendingDelete(pendings[i]);
-      }catch(e){ /* 云端删除失败：保留清单，下次上传重试 */ }
+    // 待删云端原图并行移入回收站（最多同时 5 个，失败保留清单下次重试）
+    if(pendings.length){
+      setCloudProgress(15); setCloudLoadingText("正在清理待删原图…");
+      await Promise.all(pendings.map(async p => {
+        try{ await moveToTrash(p); clearPendingDelete(p); }catch(e){}
+      }));
     }
     if(files.length >= GH.maxNodes){
       setCloudProgress(55); setCloudLoadingText("正在删除超期旧备份…");
-      for(const f of nodesToDelete(files)){
-        await wdDeleteFile(f);
-      }
+      await Promise.all(nodesToDelete(files).map(f => wdDeleteFile(f).catch(()=>{})));
     }
     setCloudProgress(75); setCloudLoadingText("正在写入新备份数据…");
     await wdWriteFile(name, packCloudData());
@@ -4659,11 +4655,34 @@ async function cloudPullAfterClear(){
     setCloudLoaded(latest);
     if(latest && latest.ts) localStorage.setItem("jlt_cloud_seen_ts", String(latest.ts));
     cleanTrash().catch(() => {});                        // 后台清理回收站中超过30天的图片
+    startCloudWatcher();                                 // 登录后持续监控云端更新
   }catch(err){
     showToast("云端拉取失败，已保留本地数据：" + err.message, 5);
   }finally{
     setTimeout(()=>showCloudLoading(false), 400);
   }
+}
+
+/* 登录后每 30 秒轮询云端：发现新备份就提醒登录更新（只弹一次） */
+let cloudWatcherTimer = null, cloudUpdatePrompted = false;
+function startCloudWatcher(){
+  if(cloudWatcherTimer) clearInterval(cloudWatcherTimer);
+  cloudUpdatePrompted = false;
+  cloudWatcherTimer = setInterval(async () => {
+    try{
+      if(isCloudLocked()) return;
+      const all = await wdList();
+      const files = all.filter(f => !(f.label+"").startsWith("树洞") && !(f.label+"").startsWith("心喜簿"));
+      if(!files.length) return;
+      const latest = files[0];
+      const seen = parseFloat(localStorage.getItem("jlt_cloud_seen_ts") || "0");
+      if(latest.ts && latest.ts > seen + 1 && !cloudUpdatePrompted){
+        cloudUpdatePrompted = true;
+        const ok = confirm("检测到云端有新的数据，是否登录后载入最新版？");
+        if(ok) openCacheConfirm();
+      }
+    }catch(e){ /* 静默 */ }
+  }, 30000);
 }
 
 // 通用提示条：居中显示，seconds 秒后自动关闭
