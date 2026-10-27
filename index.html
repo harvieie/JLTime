@@ -2697,12 +2697,21 @@ function nodesToDelete(files){
 
 // 读取单个备份文件内容
 async function wdReadFile(name){
+  // 优先走 raw 接口（响应更小、更快），失败再回退 contents API
+  const rawUrl = "https://raw.githubusercontent.com/" + ghOwner() + "/" + ghRepo() + "/" + encodeURIComponent(GH.branch) + "/" + encodeURIComponent(GH.dir + "/" + name);
+  try{
+    const r = await ghFetch(rawUrl, { headers: ghHeaders() });
+    if(r.ok){
+      let raw = await r.text();
+      if(raw.indexOf("JLT1:") === 0){ raw = b64decode(raw.slice(5)); }
+      return JSON.parse(raw);
+    }
+  }catch(e){}
   const url = ghApi() + ghPath(name) + "?ref=" + encodeURIComponent(GH.branch);
   const res = await ghFetch(url, { headers: ghHeaders() });
   if(!res.ok) throw new Error("读取云端数据失败（" + res.status + "）");
   const meta = await res.json();
   let raw = b64decode(meta.content);
-  // 云端内容做一层混淆存储（仓库公开，直接打开 json 看不到明文）；兼容旧明文备份
   if(raw.indexOf("JLT1:") === 0){ raw = b64decode(raw.slice(5)); }
   return JSON.parse(raw);
 }
