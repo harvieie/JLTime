@@ -2715,19 +2715,25 @@ async function wdWriteFile(name, data){
     content: b64encode("JLT1:" + b64encode(JSON.stringify(data))),
     branch: GH.branch
   };
-  // 若已存在同名文件，需带 sha 才能覆盖
-  try{
-    const exist = await ghFetch(url + "?ref=" + encodeURIComponent(GH.branch), { headers: ghHeaders() });
-    if(exist.ok){
-      const meta = await exist.json();
-      payload.sha = meta.sha;
-    }
-  }catch(e){ /* 网络异常时忽略，直接尝试写入 */ }
-  const res = await ghFetch(url, {
+  // 直接 PUT（新文件名带时间戳，几乎不会重名）；若返回 422 说明已存在，再查 sha 覆盖
+  let res = await ghFetch(url, {
     method: "PUT",
     headers: Object.assign({ "Content-Type": "application/json" }, ghHeaders()),
     body: JSON.stringify(payload)
   });
+  if(res.status === 422){
+    try{
+      const exist = await ghFetch(url + "?ref=" + encodeURIComponent(GH.branch), { headers: ghHeaders() });
+      if(exist.ok){
+        payload.sha = (await exist.json()).sha;
+        res = await ghFetch(url, {
+          method: "PUT",
+          headers: Object.assign({ "Content-Type": "application/json" }, ghHeaders()),
+          body: JSON.stringify(payload)
+        });
+      }
+    }catch(e){}
+  }
   if(!res.ok){
     let detail = "";
     try{ detail = (await res.text()).slice(0, 120); }catch(e){}
@@ -2805,6 +2811,8 @@ async function wdUpload(note, silent){
     await wdWriteFile(name, packCloudData());
     setCloudProgress(100);
     if(typeof clearDirty === "function") clearDirty();
+    localStorage.setItem("jlt_cloud_seen_ts", ts);   // 自己刚传完，本页不再弹"载入新版"
+    cloudUpdatePrompted = false;
     if(silent){ showToast("已上传云端", 2); }
     else { alert(`已上传至云端（${formatNodeTime(ts)}），云端保留最近 ${GH.maxNodes} 个节点`); }
   }catch(err){
