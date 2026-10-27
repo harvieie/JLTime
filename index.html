@@ -2757,7 +2757,6 @@ function nowStamp(){
 
 // 上传：本地数据 → 云端新节点（保留最近 10 个，最旧自动删除）
 async function wdUpload(note, silent){
-  if(viewMode === "view") return;
   if(isCloudLocked()) return showToast("云端连接已断开：请点击「清缓」，输入暗号「进入」恢复", 4);
   const btn = event && event.currentTarget;
   // 上传前确认：简要列出本次将上传的内容
