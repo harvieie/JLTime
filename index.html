@@ -5116,6 +5116,7 @@ function bindAnniIconLongPress(){
       sx = p.clientX; sy = p.clientY; fired = false;
       t = setTimeout(() => {
         fired = true;
+        swallowNextClick();
         const icon = ic.dataset.icon;
         if(!icon) return;
         const badges = loadBadges();
@@ -5457,6 +5458,11 @@ function clearFootBadge(){
   closeFootIconModal();
 }
 function closeFootIconModal(){ document.getElementById("footIconModal").style.display = "none"; }
+/* 长按后拦截紧随的 click，避免冒泡误触发登录框/卡片打开 */
+function swallowNextClick(){
+  const h = e => { e.stopImmediatePropagation(); e.preventDefault(); document.removeEventListener("click", h, true); };
+  document.addEventListener("click", h, true);
+}
 /* 长按脚印 = 随机跳到一个卡片；长按卡片标题 = 修改脚印标记 */
 function bindFootLongPress(){
   // 脚印：长按随机跳
@@ -5470,6 +5476,7 @@ function bindFootLongPress(){
       sx = p.clientX; sy = p.clientY; fired = false;
       t = setTimeout(() => {
         fired = true;
+        swallowNextClick();
         const items = document.querySelectorAll(".timeline-item");
         if(items.length > 1){
           const pick = items[Math.floor(Math.random()*items.length)];
@@ -5498,6 +5505,7 @@ function bindFootLongPress(){
       sx = p.clientX; sy = p.clientY; fired = false;
       t = setTimeout(() => {
         fired = true;
+        swallowNextClick();
         const item = dt.closest(".timeline-item");
         if(item) pickFootIcon(item.dataset.cardId);
       }, 400);
