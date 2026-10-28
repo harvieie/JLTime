@@ -5059,8 +5059,9 @@ function renderAnniChips(){
   const arr = loadAnniversaries();
   box.innerHTML = arr.length ? arr.map(a => {
     const days = daysBetween(a.date);
-    return `<span class="anni-chip">${a.icon || "💛"}${days}天</span>`;
+    return `<span class="anni-chip"><span class="anni-icon" data-icon="${a.icon||""}" style="cursor:pointer;">${a.icon || "💛"}</span>${days}天</span>`;
   }).join("") : '<span class="anni-chip" style="opacity:.6">＋ 纪念日</span>';
+  bindAnniIconLongPress();
 }
 /* 首次打开预置两个默认纪念日（告白/求婚），之后用户可自由增改 */
 function seedAnniversaries(){
