@@ -5095,12 +5095,45 @@ function renderAnniList(){
         <button class="btn-icon del" onclick="delAnni('${a.id}')" title="删除">🗑</button>
       </span>`;
     return `<div class="anni-item" data-id="${a.id}" style="padding:10px 4px;border-bottom:1px dashed #ffe3ec;overflow:hidden;">
-      <span style="font-size:18px;">${a.icon||"💛"}</span>
+      <span class="anni-icon" data-icon="${a.icon||""}" style="font-size:18px;cursor:pointer;">${a.icon||"💛"}</span>
       <b>${escapeHtml(a.label||"纪念日")}</b>
       <span style="color:#888;">（${a.date}）</span>
       → <span style="color:var(--primary);font-weight:bold;">第 ${days} 天</span>${editBtn}
     </div>`;
   }).join("");
+  bindAnniIconLongPress();
+}
+/* 长按纪念日图标：跳到用相同图标的卡片 */
+function bindAnniIconLongPress(){
+  document.querySelectorAll(".anni-icon").forEach(ic => {
+    if(ic.dataset.longBound) return;
+    ic.dataset.longBound = "1";
+    let t = null, sx = 0, sy = 0, fired = false;
+    const cancel = () => { clearTimeout(t); };
+    ic.addEventListener("touchstart", e => {
+      const p = e.touches[0];
+      sx = p.clientX; sy = p.clientY; fired = false;
+      t = setTimeout(() => {
+        fired = true;
+        const icon = ic.dataset.icon;
+        if(!icon) return;
+        const badges = loadBadges();
+        const cardId = Object.keys(badges).find(k => badges[k] === icon);
+        if(!cardId){ showToast("这个图标还没有用在卡片上", 2); return; }
+        closeAnniModal();
+        requestAnimationFrame(() => {
+          const el = document.querySelector(`.timeline-item[data-card-id="${cardId}"]`);
+          if(el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+      }, 400);
+    }, { passive: true });
+    ic.addEventListener("touchmove", e => {
+      const p = e.touches[0];
+      if(Math.abs(p.clientX - sx) > 12 || Math.abs(p.clientY - sy) > 12) cancel();
+    }, { passive: true });
+    ic.addEventListener("touchend", e => { if(fired){ e.preventDefault(); e.stopPropagation(); } else cancel(); }, { passive: true });
+    ic.addEventListener("touchcancel", cancel, { passive: true });
+  });
 }
 function moveAnni(id, dir){
   const list = loadAnniversaries();
