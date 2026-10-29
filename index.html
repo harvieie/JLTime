@@ -2502,10 +2502,11 @@ function deviceTag(){
 /* 登录/操作日志：最近10条，随主数据上传云端 */
 function loadLoginLog(){ try{ return JSON.parse(localStorage.getItem("jlt_login_log")||"[]"); }catch(e){ return []; } }
 function refreshLoginCity(){
-  // 异步根据 IP 补最近一条的城市定位，失败则留空
+  // 异步根据 IP 补最近一条的城市定位（太平洋接口是 GBK 编码，需按 gbk 解码）
   fetch("https://whois.pconline.com.cn/ipJson.jsp?json=true", { cache: "no-store" })
-    .then(r => r.text())
-    .then(t => {
+    .then(r => r.arrayBuffer())
+    .then(buf => {
+      const t = new TextDecoder("gbk").decode(buf);
       const m = t && t.match(/\{.*\}/s);
       if(!m) return;
       const d = JSON.parse(m[0]);
