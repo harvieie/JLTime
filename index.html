@@ -956,9 +956,22 @@ button{border-radius:12px;}
   <div class="modal-box" style="max-width:380px;">
     <div class="modal-title">最近登录记录</div>
     <div id="loginLogList" style="max-height:50vh;overflow:auto;text-align:left;margin:10px 0;"></div>
-    <div style="text-align:center;"><button class="btn-sec" onclick="closeLoginLogModal()">关闭</button></div>
+    <div style="display:flex;gap:8px;justify-content:center;align-items:center;">
+      <button class="btn-sec" onclick="editAmapKey()">改定位Key</button>
+      <button class="btn-sec" onclick="closeLoginLogModal()">关闭</button>
+    </div>
   </div>
 </div>
+<script>
+function editAmapKey(){
+  const cur = (localStorage.getItem("jlt_amap_key") || "").trim();
+  const v = prompt("高德 Web 服务 key（留空恢复默认）", cur);
+  if(v === null) return;
+  const s = v.trim();
+  if(s) localStorage.setItem("jlt_amap_key", s); else localStorage.removeItem("jlt_amap_key");
+  showToast("已保存，下次登录生效", 2);
+}
+</script>
 
 <!-- 编辑备注 -->
 <div class="note-modal" id="noteModal">
@@ -2499,8 +2512,14 @@ function deviceTag(){
 }
 /* 登录/操作日志：最近10条，随主数据上传云端 */
 function loadLoginLog(){ try{ return JSON.parse(localStorage.getItem("jlt_login_log")||"[]"); }catch(e){ return []; } }
+/* 高德逆地理 key（混淆存储，可在登录日志弹窗里改） */
+function getAmapKey(){
+  const k = (localStorage.getItem("jlt_amap_key") || "").trim();
+  if(k) return k;
+  try{ return atob("YTU3ZjM5Yzc5OTI2MmMxZmMzNTI4MDlmMzg2NzM5NzI=").split("").reverse().join(""); }catch(e){ return ""; }
+}
 function refreshLoginCity(){
-  // 先拿 ipapi.is 的 city 兜底；再尝试 Nominatim 逆地理到区县级
+  // ipapi.is 拿经纬度 → 高德逆地理到区县级（中文）
   fetch("https://api.ipapi.is/", { cache: "no-store" })
     .then(r => r.json())
     .then(async d => {
@@ -2510,13 +2529,14 @@ function refreshLoginCity(){
         const log = loadLoginLog();
         if(log.length){ log[0].city = c; localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0,10))); syncLoginLogCloud(); }
       };
-      applyCity(fallback);   // 先兜底一个城市名
-      if(d && d.lat && d.lon){
+      applyCity(fallback);
+      const ak = getAmapKey();
+      if(ak && d && d.lat && d.lon){
         try{
-          const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${d.lat}&lon=${d.lon}&format=json&accept-language=zh-CN`);
+          const r = await fetch(`https://restapi.amap.com/v3/geocode/regeo?key=${ak}&location=${d.lon},${d.lat}&extensions=base`);
           const n = await r.json();
-          const a = (n && n.address) || {};
-          const dist = a.county || a.city_district || a.suburb || a.town || a.city || "";
+          const a = (n && n.regeocode && n.regeocode.addressComponent) || {};
+          const dist = a.district || a.city || a.province || "";
           if(dist) applyCity(dist);
         }catch(e){}
       }
