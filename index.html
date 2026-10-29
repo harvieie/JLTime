@@ -4721,6 +4721,8 @@ async function cloudPullAfterClear(){
     if(latest && latest.ts) localStorage.setItem("jlt_cloud_seen_ts", String(latest.ts));
     cleanTrash().catch(() => {});                        // 后台清理回收站中超过30天的图片
     startCloudWatcher();                                 // 登录后持续监控云端更新
+    // 登录成功后自动上传一次（等城市异步补全后，把日志/本地改动一起推上云端）
+    setTimeout(() => { wdUpload("登录", true).catch(()=>{}); }, 1800);
   }catch(err){
     showToast("云端拉取失败，已保留本地数据：" + err.message, 5);
   }finally{
