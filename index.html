@@ -2502,14 +2502,20 @@ function deviceTag(){
 /* 登录/操作日志：最近10条，随主数据上传云端 */
 function loadLoginLog(){ try{ return JSON.parse(localStorage.getItem("jlt_login_log")||"[]"); }catch(e){ return []; } }
 function refreshLoginCity(){
-  // 用支持 CORS 的 IP 接口取城市（ipapi.is 免费层）
+  // ipapi.is 拿经纬度 → Nominatim 逆地理到区县级（中文）
   fetch("https://api.ipapi.is/", { cache: "no-store" })
     .then(r => r.json())
     .then(d => {
-      const city = (d && d.city) ? d.city : "";
-      if(!city) return;
+      if(!d || !d.lat || !d.lon) throw new Error("no geo");
+      return fetch(`https://nominatim.openstreetmap.org/reverse?lat=${d.lat}&lon=${d.lon}&format=json&accept-language=zh-CN`);
+    })
+    .then(r => r.json())
+    .then(n => {
+      const a = (n && n.address) || {};
+      const dist = a.county || a.city_district || a.suburb || a.town || a.city || a.state || "";
+      if(!dist) return;
       const log = loadLoginLog();
-      if(log.length){ log[0].city = city; localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0,10))); }
+      if(log.length){ log[0].city = dist; localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0,10))); }
     }).catch(()=>{});
 }
 function pushLoginLog(act){
@@ -4722,7 +4728,7 @@ async function cloudPullAfterClear(){
     cleanTrash().catch(() => {});                        // 后台清理回收站中超过30天的图片
     startCloudWatcher();                                 // 登录后持续监控云端更新
     // 登录成功后自动上传一次（等城市异步补全后，把日志/本地改动一起推上云端）
-    setTimeout(() => { wdUpload("登录", true).catch(()=>{}); }, 1800);
+    setTimeout(() => { wdUpload("登录", true).catch(()=>{}); }, 3500);
   }catch(err){
     showToast("云端拉取失败，已保留本地数据：" + err.message, 5);
   }finally{
