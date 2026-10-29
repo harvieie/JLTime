@@ -2521,25 +2521,33 @@ function getAmapKey(){
 function refreshLoginCity(){
   const ak = getAmapKey();
   const applyCity = (c) => {
-    if(!c) return;
+    if(Array.isArray(c)) c = c[0] || "";
+    if(!c || (typeof c === "string" && !c.trim())) return;
+    c = String(c).trim();
     const log = loadLoginLog();
     if(log.length){ log[0].city = c; localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0,10))); syncLoginLogCloud(); renderLoginLogList(); }
   };
   const jsonp = (url) => new Promise((resolve)=>{
     const cb = "jlt_cb_" + Date.now() + "_" + Math.floor(Math.random()*1000);
     const s = document.createElement("script");
-    const done = (d)=>{ try{resolve(d);}catch(e){} try{delete window[cb];}catch(e){window[cb]=undefined;} s.remove(); };
-    window[cb] = done;
+    let done = false;
+    const finish = (d)=>{ if(done) return; done = true; try{resolve(d);}catch(e){} try{delete window[cb];}catch(e){window[cb]=undefined;} s.remove(); };
+    window[cb] = finish;
     s.src = url + (url.includes("?")?"&":"?") + "callback=" + cb;
-    s.onerror = ()=>done(null);
+    s.onerror = ()=>finish(null);
     document.body.appendChild(s);
-    setTimeout(()=>done(null), 5000);
+    setTimeout(()=>finish(null), 5000);
   });
-  // 第一步：JSONP 调高德 IP 定位（绕过 CORS）
+  // 第一步：JSONP 调高德 IP 定位
   if(ak){
     jsonp(`https://restapi.amap.com/v3/ip?key=${ak}`).then(n=>{
-      if(n && n.status === "1" && n.city){ applyCity(n.city); }
-      else { applyCity("定位失败:" + (n ? n.info : "网络错误")); }
+      if(n && n.status === "1"){
+        // 高德在直辖市返回 city 为空数组，取 province/district
+        const c = (n.city && n.city[0]) || n.province || (n.district && n.district[0]) || "";
+        if(c) applyCity(c); else applyCity("未知城市");
+      } else {
+        applyCity("定位失败:" + (n ? n.info : "网络错误"));
+      }
     });
   } else {
     applyCity("未配置Key");
@@ -2554,7 +2562,7 @@ function refreshLoginCity(){
           const a = (n && n.regeocode && n.regeocode.addressComponent) || {};
           const hood = (a.neighborhood && a.neighborhood.name) || "";
           const town = a.township || "";
-          const dist = hood || town || a.district || a.city || a.province || "";
+          const dist = hood || town || (a.district && a.district[0]) || (a.city && a.city[0]) || a.province || "";
           if(dist) applyCity(dist);
         }
       }
