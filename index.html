@@ -2525,7 +2525,15 @@ function refreshLoginCity(){
     const log = loadLoginLog();
     if(log.length){ log[0].city = c; localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0,10))); syncLoginLogCloud(); renderLoginLogList(); }
   };
-  // 方案1：ipapi.is 拿经纬度 → 高德反地理到街道
+  // 第一步：直接调高德 IP 定位（国内直连必通），先写入市级中文
+  if(ak){
+    fetch(`https://restapi.amap.com/v3/ip?key=${ak}`)
+      .then(r => r.json())
+      .then(n => {
+        if(n.status === "1" && n.city) applyCity(n.city);
+      }).catch(()=>{});
+  }
+  // 第二步：ipapi.is 拿经纬度 → 高德反地理到街道，覆盖成更精确的中文
   fetch("https://api.ipapi.is/", { cache: "no-store" })
     .then(r => r.json())
     .then(async d => {
@@ -2538,22 +2546,11 @@ function refreshLoginCity(){
             const hood = (a.neighborhood && a.neighborhood.name) || "";
             const town = a.township || "";
             const dist = hood || town || a.district || a.city || a.province || "";
-            if(dist){ applyCity(dist); return; }
+            if(dist) applyCity(dist);
           }
         }catch(e){}
       }
-      // 兜底：ipapi.is 的城市名
-      if(d && d.city) applyCity(d.city);
-    })
-    .catch(() => {
-      // 方案2：ipapi.is 失败 → 高德 IP 定位直接拿城市
-      if(!ak) return;
-      fetch(`https://restapi.amap.com/v3/ip?key=${ak}`)
-        .then(r => r.json())
-        .then(n => {
-          if(n.status === "1" && n.city) applyCity(n.city);
-        }).catch(()=>{});
-    });
+    }).catch(()=>{});
 }
 async function pushLoginLog(act){
   // 先拉云端日志合并，避免不同浏览器互相覆盖
