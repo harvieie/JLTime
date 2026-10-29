@@ -2256,8 +2256,7 @@ function packCloudData(){
     daynight: localStorage.getItem("jlt_daynight"),
     thQuick: localStorage.getItem("jlt_th_quick"),            // 树洞用过的人（快捷用户名）
     thAvatars: localStorage.getItem("jlt_th_recent_avatars"), // 树洞最近用过的头像
-    xinze: localStorage.getItem("jlt_xinze"),               // 心喜簿
-    loginLog: localStorage.getItem("jlt_login_log")           // 登录/操作日志（云端同步，最多10条）
+    xinze: localStorage.getItem("jlt_xinze")               // 心喜簿
   };
 }
 
@@ -2410,7 +2409,6 @@ function applyImportedData(imported){
     if(imported.thQuick) localStorage.setItem("jlt_th_quick", typeof imported.thQuick === "string" ? imported.thQuick : JSON.stringify(imported.thQuick));
     if(imported.thAvatars) localStorage.setItem("jlt_th_recent_avatars", typeof imported.thAvatars === "string" ? imported.thAvatars : JSON.stringify(imported.thAvatars));
     if(imported.xinze) localStorage.setItem("jlt_xinze", typeof imported.xinze === "string" ? imported.xinze : JSON.stringify(imported.xinze));
-    if(imported.loginLog) localStorage.setItem("jlt_login_log", typeof imported.loginLog === "string" ? imported.loginLog : JSON.stringify(imported.loginLog));
   }else{
     throw new Error("数据格式不正确：需要卡片数组，或 {title, cards} 对象");
   }
@@ -2523,6 +2521,38 @@ function pushLoginLog(act){
   log.unshift({ ts: Date.now(), device: deviceTag(), mode: viewMode === "full" ? "编辑" : "访客", act, city: "" });
   localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0, 10)));
   refreshLoginCity();
+  syncLoginLogCloud();   // 静默覆盖到独立文件 _loginlog.json，不进主数据版本
+}
+/* 登录日志独立云端文件：固定文件名覆盖写，不产生节点、不进恢复列表、不弹提醒 */
+async function syncLoginLogCloud(){
+  try{
+    const name = "_loginlog.json";
+    const url = ghApi() + ghPath(name);
+    // 先查 sha（覆盖写需要）
+    let sha = "";
+    try{
+      const ex = await ghFetch(url + "?ref=" + encodeURIComponent(GH.branch), { headers: ghHeaders() });
+      if(ex.ok) sha = (await ex.json()).sha;
+    }catch(e){}
+    const payload = {
+      message: "登录日志",
+      content: b64encode(localStorage.getItem("jlt_login_log") || "[]"),
+      branch: GH.branch
+    };
+    if(sha) payload.sha = sha;
+    await ghFetch(url, { method: "PUT", headers: Object.assign({ "Content-Type": "application/json" }, ghHeaders()), body: JSON.stringify(payload) });
+  }catch(e){ /* 静默失败，不打断 */ }
+}
+async function pullLoginLogCloud(){
+  try{
+    const url = "https://raw.githubusercontent.com/" + ghOwner() + "/" + ghRepo() + "/" + encodeURIComponent(GH.branch) + "/" + encodeURIComponent(GH.dir + "/_loginlog.json");
+    const r = await ghFetch(url, { headers: ghHeaders() });
+    if(r.ok){
+      const txt = await r.text();
+      const arr = JSON.parse(txt);
+      if(Array.isArray(arr)) localStorage.setItem("jlt_login_log", JSON.stringify(arr.slice(0, 10)));
+    }
+  }catch(e){}
 }
 function openLoginLogModal(){
   const log = loadLoginLog().slice(0, 10);
@@ -4727,6 +4757,7 @@ async function cloudPullAfterClear(){
     if(latest && latest.ts) localStorage.setItem("jlt_cloud_seen_ts", String(latest.ts));
     cleanTrash().catch(() => {});                        // 后台清理回收站中超过30天的图片
     startCloudWatcher();                                 // 登录后持续监控云端更新
+    pullLoginLogCloud().then(()=>{ renderAnniChips(); });  // 单独恢复登录日志，不进主数据
     // 登录成功后自动上传一次（等城市异步补全后，把日志/本地改动一起推上云端）
     setTimeout(() => { wdUpload("登录", true).catch(()=>{}); }, 3500);
   }catch(err){
