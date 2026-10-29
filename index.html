@@ -3130,12 +3130,10 @@ const EDIT_PWD = atob("MzI4");     // 编辑模式（编码混淆）
 let viewMode = "full";   // "full" | "view"
 let currentTab = "filter";  // 当前激活选项卡：filter(时迹) / edit(简驭) / fun(拾趣)
 function openCacheConfirm(){
-  console.log("openCacheConfirm called");
   const m = document.getElementById("cacheConfirmModal");
-  if(!m){ alert("cacheConfirmModal not found"); return; }
+  if(!m) return;
   document.getElementById("cachePwd").value = "";
-  m.style.display = "flex";
-  m.style.zIndex = "9999";
+  m.style.cssText = "display:flex!important;z-index:9999!important;";
   // 弹窗出现同时聚焦密码框（手机端自动弹出键盘）：连续两次 focus + 全选，提高弹起成功率
   const tryFocus = () => {
     const p = document.getElementById("cachePwd");
