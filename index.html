@@ -2499,12 +2499,22 @@ function deviceTag(){
   else d = "网页端";
   return d;
 }
-/* 登录/操作日志：最近10条，供长按登录按钮查看 */
+/* 登录/操作日志：最近10条，随主数据上传云端 */
 function loadLoginLog(){ try{ return JSON.parse(localStorage.getItem("jlt_login_log")||"[]"); }catch(e){ return []; } }
+function refreshLoginCity(){
+  // 异步根据 IP 补最近一条的城市定位，失败则留空
+  fetch("https://ipapi.co/json/?lang=zh").then(r=>r.json()).then(d=>{
+    const city = (d && (d.city || d.region)) ? (d.city + (d.country_code && d.country_code!=="CN" ? "·"+d.country_code : "")) : "";
+    if(!city) return;
+    const log = loadLoginLog();
+    if(log.length){ log[0].city = city; localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0,10))); }
+  }).catch(()=>{});
+}
 function pushLoginLog(act){
   const log = loadLoginLog();
-  log.unshift({ ts: Date.now(), device: deviceTag(), mode: viewMode === "full" ? "编辑" : "访客", act });
+  log.unshift({ ts: Date.now(), device: deviceTag(), mode: viewMode === "full" ? "编辑" : "访客", act, city: "" });
   localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0, 10)));
+  refreshLoginCity();
 }
 function openLoginLogModal(){
   const log = loadLoginLog().slice(0, 10);
@@ -2515,7 +2525,7 @@ function openLoginLogModal(){
     const pad = n => String(n).padStart(2,"0");
     const dt = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
     return `<div style="padding:8px 4px;border-bottom:1px dashed #eee;font-size:13px;">
-      <div style="color:#888;">${dt}</div>
+      <div style="color:#888;">${dt}${r.city ? " · " + escapeHtml(r.city) : ""}</div>
       <div>${escapeHtml(r.device)} · ${r.mode}模式 · ${escapeHtml(r.act)}</div>
     </div>`;
   }).join("") : '<div style="color:#999;text-align:center;padding:16px;">暂无记录</div>';
