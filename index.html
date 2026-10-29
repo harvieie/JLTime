@@ -689,7 +689,7 @@ button{border-radius:12px;}
 
   <!-- 编辑面板 -->
   <div class="tab-panel" id="panelEdit">
-    <button style="background:#e91e63;color:#fff;font-weight:bold;" onclick="openCacheConfirm()">登录</button>
+    <button id="loginBtn" style="background:#e91e63;color:#fff;font-weight:bold;" onclick="openCacheConfirm()">登录</button>
     <button class="success" onclick="openAddCardModal()">新增</button>
     <button class="checked-mode" id="multiDelBtn" onclick="toggleMultiDelete()">选删</button>
     <button class="export" onclick="openExportModal()">导出</button>
@@ -948,6 +948,15 @@ button{border-radius:12px;}
       <button class="btn-danger" onclick="clearFootBadge()">清除</button>
       <button class="btn-pri" onclick="saveFootBadge()">保存</button>
     </div>
+  </div>
+</div>
+
+<!-- 登录日志 -->
+<div class="modal-overlay" id="loginLogModal" onclick="if(event.target===this) closeLoginLogModal()">
+  <div class="modal-box" style="max-width:380px;">
+    <div class="modal-title">最近登录记录</div>
+    <div id="loginLogList" style="max-height:50vh;overflow:auto;text-align:left;margin:10px 0;"></div>
+    <div style="text-align:center;"><button class="btn-sec" onclick="closeLoginLogModal()">关闭</button></div>
   </div>
 </div>
 
@@ -2488,6 +2497,29 @@ function deviceTag(){
   else d = "网页端";
   return d;
 }
+/* 登录/操作日志：最近10条，供长按登录按钮查看 */
+function loadLoginLog(){ try{ return JSON.parse(localStorage.getItem("jlt_login_log")||"[]"); }catch(e){ return []; } }
+function pushLoginLog(act){
+  const log = loadLoginLog();
+  log.unshift({ ts: Date.now(), device: deviceTag(), mode: viewMode === "full" ? "编辑" : "访客", act });
+  localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0, 30)));
+}
+function openLoginLogModal(){
+  const log = loadLoginLog().slice(0, 10);
+  const box = document.getElementById("loginLogList");
+  if(!box) return;
+  box.innerHTML = log.length ? log.map(r => {
+    const d = new Date(r.ts);
+    const pad = n => String(n).padStart(2,"0");
+    const dt = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    return `<div style="padding:8px 4px;border-bottom:1px dashed #eee;font-size:13px;">
+      <div style="color:#888;">${dt}</div>
+      <div>${escapeHtml(r.device)} · ${r.mode}模式 · ${escapeHtml(r.act)}</div>
+    </div>`;
+  }).join("") : '<div style="color:#999;text-align:center;padding:16px;">暂无记录</div>';
+  document.getElementById("loginLogModal").style.display = "flex";
+}
+function closeLoginLogModal(){ document.getElementById("loginLogModal").style.display = "none"; }
 function b64decode(b64){
   const bin = atob(String(b64).replace(/\s+/g, ""));
   const bytes = new Uint8Array(bin.length);
@@ -2822,6 +2854,7 @@ async function wdUpload(note, silent){
     if(typeof clearDirty === "function") clearDirty();
     localStorage.setItem("jlt_cloud_seen_ts", ts);   // 自己刚传完，本页不再弹"载入新版"
     cloudUpdatePrompted = false;
+    pushLoginLog("上传：" + (note || "主数据"));
     if(silent){ showToast("已上传云端", 2); }
     else { alert(`已上传至云端（${formatNodeTime(ts)}），云端保留最近 ${GH.maxNodes} 个节点`); }
   }catch(err){
@@ -4611,6 +4644,7 @@ async function enterWithPwd(){
   sessionStorage.setItem("auth_granted", "1");
   applyViewMode(mode);
   sessionStorage.removeItem("cloud_locked");
+  pushLoginLog(mode === "full" ? "登录（编辑模式）" : "登录（访客模式）");
   sessionStorage.setItem("cache_prompt_shown", "1");
   closeCacheConfirm();
   // 密码正确后：先清掉本地旧业务数据（保留 jlt_mode 与 gh_* 仓库配置），再从云端拉最新，避免旧数据残留
@@ -5520,6 +5554,23 @@ function bindFootLongPress(){
     }, { passive: true });
     dt.addEventListener("touchcancel", cancel, { passive: true });
   });
+  // 登录按钮：长按查看登录日志
+  const lb = document.getElementById("loginBtn");
+  if(lb && !lb.dataset.longBound){
+    lb.dataset.longBound = "1";
+    let t = null, sx = 0, sy = 0, fired = false;
+    lb.addEventListener("touchstart", e => {
+      const p = e.touches[0];
+      sx = p.clientX; sy = p.clientY; fired = false;
+      t = setTimeout(() => { fired = true; swallowNextClick(); openLoginLogModal(); }, 450);
+    }, { passive: true });
+    lb.addEventListener("touchmove", e => {
+      const p = e.touches[0];
+      if(Math.abs(p.clientX - sx) > 12 || Math.abs(p.clientY - sy) > 12) clearTimeout(t);
+    }, { passive: true });
+    lb.addEventListener("touchend", e => { if(fired){ e.preventDefault(); e.stopPropagation(); } else clearTimeout(t); }, { passive: true });
+    lb.addEventListener("touchcancel", () => clearTimeout(t), { passive: true });
+  }
 }
 
 /* ---------- 上传红点：仅编辑模式下有改动时，上传按钮显示红点 ---------- */
