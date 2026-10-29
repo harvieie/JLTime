@@ -2519,31 +2519,41 @@ function getAmapKey(){
   try{ return atob("YTU3ZjM5Yzc5OTI2MmMxZmMzNTI4MDlmMzg2NzM5NzI=").split("").reverse().join(""); }catch(e){ return ""; }
 }
 function refreshLoginCity(){
-  // ipapi.is 拿经纬度 → 高德逆地理到区县级（中文）
+  const ak = getAmapKey();
+  const applyCity = (c) => {
+    if(!c) return;
+    const log = loadLoginLog();
+    if(log.length){ log[0].city = c; localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0,10))); syncLoginLogCloud(); renderLoginLogList(); }
+  };
+  // 方案1：ipapi.is 拿经纬度 → 高德反地理到街道
   fetch("https://api.ipapi.is/", { cache: "no-store" })
     .then(r => r.json())
     .then(async d => {
-      const fallback = (d && d.city) ? d.city : "";
-      const applyCity = (c) => {
-        if(!c) return;
-        const log = loadLoginLog();
-        if(log.length){ log[0].city = c; localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0,10))); syncLoginLogCloud(); renderLoginLogList(); }
-      };
-      applyCity(fallback);
-      const ak = getAmapKey();
       if(ak && d && d.lat && d.lon){
         try{
           const r = await fetch(`https://restapi.amap.com/v3/geocode/regeo?key=${ak}&location=${d.lon},${d.lat}&extensions=all&radius=1000`);
           const n = await r.json();
-          if(n.status !== "1") throw new Error("amap:" + (n.info||"err"));
-          const a = (n && n.regeocode && n.regeocode.addressComponent) || {};
-          const hood = (a.neighborhood && a.neighborhood.name) || "";
-          const town = a.township || "";
-          const dist = hood || town || a.district || a.city || a.province || "";
-          if(dist) applyCity(dist);
-        }catch(e){ applyCity((fallback||"") + "(定位失败:" + e.message + ")"); }
+          if(n.status === "1"){
+            const a = (n && n.regeocode && n.regeocode.addressComponent) || {};
+            const hood = (a.neighborhood && a.neighborhood.name) || "";
+            const town = a.township || "";
+            const dist = hood || town || a.district || a.city || a.province || "";
+            if(dist){ applyCity(dist); return; }
+          }
+        }catch(e){}
       }
-    }).catch(()=>{});
+      // 兜底：ipapi.is 的城市名
+      if(d && d.city) applyCity(d.city);
+    })
+    .catch(() => {
+      // 方案2：ipapi.is 失败 → 高德 IP 定位直接拿城市
+      if(!ak) return;
+      fetch(`https://restapi.amap.com/v3/ip?key=${ak}`)
+        .then(r => r.json())
+        .then(n => {
+          if(n.status === "1" && n.city) applyCity(n.city);
+        }).catch(()=>{});
+    });
 }
 async function pushLoginLog(act){
   // 先拉云端日志合并，避免不同浏览器互相覆盖
