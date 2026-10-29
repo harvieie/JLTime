@@ -2580,13 +2580,24 @@ function refreshLoginCity(){
   }, 3500);
 }
 async function pushLoginLog(act){
-  // 先拉云端日志合并，避免不同浏览器互相覆盖
-  try{ await pullLoginLogCloud(); }catch(e){}
+  // 新条目立即写本地，不等云端（避免卡住导致日志丢失）
   const log = loadLoginLog();
   log.unshift({ ts: Date.now(), device: deviceTag(), mode: viewMode === "full" ? "编辑" : "访客", act, city: "" });
   localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0, 10)));
   refreshLoginCity();
-  syncLoginLogCloud();
+  // 后台合并云端再上传
+  (async()=>{
+    try{ await pullLoginLogCloud(); }catch(e){}
+    // 保证刚写的新条目还在最前（pull 合并后可能重排）
+    const cur = loadLoginLog();
+    const mine = cur.find(x => x.ts === log[0].ts);
+    if(!mine){
+      cur.unshift(log[0]);
+      cur.sort((a,b)=>b.ts-a.ts);
+      localStorage.setItem("jlt_login_log", JSON.stringify(cur.slice(0,10)));
+    }
+    syncLoginLogCloud();
+  })();
 }
 /* 登录日志独立云端文件：固定文件名覆盖写，不产生节点、不进恢复列表、不弹提醒 */
 async function syncLoginLogCloud(){
