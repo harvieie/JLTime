@@ -2533,10 +2533,12 @@ function refreshLoginCity(){
       const ak = getAmapKey();
       if(ak && d && d.lat && d.lon){
         try{
-          const r = await fetch(`https://restapi.amap.com/v3/geocode/regeo?key=${ak}&location=${d.lon},${d.lat}&extensions=base`);
+          const r = await fetch(`https://restapi.amap.com/v3/geocode/regeo?key=${ak}&location=${d.lon},${d.lat}&extensions=all&radius=1000`);
           const n = await r.json();
           const a = (n && n.regeocode && n.regeocode.addressComponent) || {};
-          const dist = a.district || a.city || a.province || "";
+          const hood = (a.neighborhood && a.neighborhood.name) || "";
+          const town = a.township || "";
+          const dist = hood || town || a.district || a.city || a.province || "";
           if(dist) applyCity(dist);
         }catch(e){}
       }
