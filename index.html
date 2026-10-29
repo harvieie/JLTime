@@ -2502,19 +2502,25 @@ function deviceTag(){
 /* 登录/操作日志：最近10条，随主数据上传云端 */
 function loadLoginLog(){ try{ return JSON.parse(localStorage.getItem("jlt_login_log")||"[]"); }catch(e){ return []; } }
 function refreshLoginCity(){
-  // 异步根据 IP 补最近一条的城市定位（太平洋接口是 GBK 编码，需按 gbk 解码）
-  fetch("https://whois.pconline.com.cn/ipJson.jsp?json=true", { cache: "no-store" })
-    .then(r => r.arrayBuffer())
-    .then(buf => {
-      const t = new TextDecoder("gbk").decode(buf);
-      const m = t && t.match(/\{.*\}/s);
-      if(!m) return;
-      const d = JSON.parse(m[0]);
+  // 太平洋接口无 CORS 头，用 JSONP（script 标签）方式取城市
+  const cb = "jltIpCb_" + Date.now();
+  window[cb] = function(d){
+    try{
       const city = (d && (d.city || d.pro)) ? (d.city || d.pro) : "";
-      if(!city) return;
-      const log = loadLoginLog();
-      if(log.length){ log[0].city = city; localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0,10))); }
-    }).catch(()=>{});
+      if(city){
+        const log = loadLoginLog();
+        if(log.length){ log[0].city = city; localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0,10))); }
+      }
+    }catch(e){}
+    delete window[cb];
+    const s = document.getElementById(cb); if(s) s.remove();
+  };
+  const s = document.createElement("script");
+  s.id = cb;
+  s.charset = "gbk";
+  s.src = "https://whois.pconline.com.cn/ipJson.jsp?json=true&callback=" + cb;
+  s.onerror = () => { delete window[cb]; s.remove(); };
+  document.head.appendChild(s);
 }
 function pushLoginLog(act){
   const log = loadLoginLog();
