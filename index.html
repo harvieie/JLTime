@@ -2500,20 +2500,26 @@ function deviceTag(){
 /* 登录/操作日志：最近10条，随主数据上传云端 */
 function loadLoginLog(){ try{ return JSON.parse(localStorage.getItem("jlt_login_log")||"[]"); }catch(e){ return []; } }
 function refreshLoginCity(){
-  // ipapi.is 拿经纬度 → Nominatim 逆地理到区县级（中文）
+  // 先拿 ipapi.is 的 city 兜底；再尝试 Nominatim 逆地理到区县级
   fetch("https://api.ipapi.is/", { cache: "no-store" })
     .then(r => r.json())
-    .then(d => {
-      if(!d || !d.lat || !d.lon) throw new Error("no geo");
-      return fetch(`https://nominatim.openstreetmap.org/reverse?lat=${d.lat}&lon=${d.lon}&format=json&accept-language=zh-CN`);
-    })
-    .then(r => r.json())
-    .then(n => {
-      const a = (n && n.address) || {};
-      const dist = a.county || a.city_district || a.suburb || a.town || a.city || a.state || "";
-      if(!dist) return;
-      const log = loadLoginLog();
-      if(log.length){ log[0].city = dist; localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0,10))); syncLoginLogCloud(); }
+    .then(async d => {
+      const fallback = (d && d.city) ? d.city : "";
+      const applyCity = (c) => {
+        if(!c) return;
+        const log = loadLoginLog();
+        if(log.length){ log[0].city = c; localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0,10))); syncLoginLogCloud(); }
+      };
+      applyCity(fallback);   // 先兜底一个城市名
+      if(d && d.lat && d.lon){
+        try{
+          const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${d.lat}&lon=${d.lon}&format=json&accept-language=zh-CN`);
+          const n = await r.json();
+          const a = (n && n.address) || {};
+          const dist = a.county || a.city_district || a.suburb || a.town || a.city || "";
+          if(dist) applyCity(dist);
+        }catch(e){}
+      }
     }).catch(()=>{});
 }
 function pushLoginLog(act){
