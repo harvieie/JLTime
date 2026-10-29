@@ -2535,12 +2535,13 @@ function refreshLoginCity(){
         try{
           const r = await fetch(`https://restapi.amap.com/v3/geocode/regeo?key=${ak}&location=${d.lon},${d.lat}&extensions=all&radius=1000`);
           const n = await r.json();
+          if(n.status !== "1") throw new Error("amap:" + (n.info||"err"));
           const a = (n && n.regeocode && n.regeocode.addressComponent) || {};
           const hood = (a.neighborhood && a.neighborhood.name) || "";
           const town = a.township || "";
           const dist = hood || town || a.district || a.city || a.province || "";
           if(dist) applyCity(dist);
-        }catch(e){}
+        }catch(e){ applyCity((fallback||"") + "(定位失败:" + e.message + ")"); }
       }
     }).catch(()=>{});
 }
