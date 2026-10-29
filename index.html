@@ -2612,13 +2612,13 @@ async function syncLoginLogCloud(){
 }
 async function pullLoginLogCloud(){
   try{
-    const url = "https://raw.githubusercontent.com/" + ghOwner() + "/" + ghRepo() + "/" + encodeURIComponent(GH.branch) + "/" + encodeURIComponent(GH.dir + "/_loginlog.json");
+    const url = "https://raw.githubusercontent.com/" + ghOwner() + "/" + ghRepo() + "/" + encodeURIComponent(GH.branch) + "/" + encodeURIComponent(GH.dir + "/_loginlog.json") + "?t=" + Date.now();
     const r = await ghFetch(url, { headers: ghHeaders(), cache: "no-store" });
     if(r.ok){
       const txt = await r.text();
       const arr = JSON.parse(txt);
-      if(Array.isArray(arr)){
-        // 云端为准：先清本地，直接覆盖，保证所有浏览器看到完全一致
+      // 只有成功拿到非空数组才覆盖本地；空数组/异常保留本地，防止把历史清空
+      if(Array.isArray(arr) && arr.length){
         const clean = arr.slice(0, 10).sort((a,b) => b.ts - a.ts);
         localStorage.setItem("jlt_login_log", JSON.stringify(clean));
         renderLoginLogList();
