@@ -2525,30 +2525,35 @@ function refreshLoginCity(){
     const log = loadLoginLog();
     if(log.length){ log[0].city = c; localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0,10))); syncLoginLogCloud(); renderLoginLogList(); }
   };
-  // 第一步：直接调高德 IP 定位（国内直连必通），先写入市级中文
+  const jsonp = (url) => new Promise((resolve)=>{
+    const cb = "jlt_cb_" + Date.now() + "_" + Math.floor(Math.random()*1000);
+    const s = document.createElement("script");
+    const done = (d)=>{ try{resolve(d);}catch(e){} try{delete window[cb];}catch(e){window[cb]=undefined;} s.remove(); };
+    window[cb] = done;
+    s.src = url + (url.includes("?")?"&":"?") + "callback=" + cb;
+    s.onerror = ()=>done(null);
+    document.body.appendChild(s);
+    setTimeout(()=>done(null), 5000);
+  });
+  // 第一步：JSONP 调高德 IP 定位（绕过 CORS）
   if(ak){
-    fetch(`https://restapi.amap.com/v3/ip?key=${ak}`)
-      .then(r => r.json())
-      .then(n => {
-        if(n.status === "1" && n.city) applyCity(n.city);
-      }).catch(()=>{});
+    jsonp(`https://restapi.amap.com/v3/ip?key=${ak}`).then(n=>{
+      if(n && n.status === "1" && n.city) applyCity(n.city);
+    });
   }
-  // 第二步：ipapi.is 拿经纬度 → 高德反地理到街道，覆盖成更精确的中文
+  // 第二步：ipapi.is 拿经纬度 → 高德反地理（JSONP）
   fetch("https://api.ipapi.is/", { cache: "no-store" })
     .then(r => r.json())
     .then(async d => {
       if(ak && d && d.lat && d.lon){
-        try{
-          const r = await fetch(`https://restapi.amap.com/v3/geocode/regeo?key=${ak}&location=${d.lon},${d.lat}&extensions=all&radius=1000`);
-          const n = await r.json();
-          if(n.status === "1"){
-            const a = (n && n.regeocode && n.regeocode.addressComponent) || {};
-            const hood = (a.neighborhood && a.neighborhood.name) || "";
-            const town = a.township || "";
-            const dist = hood || town || a.district || a.city || a.province || "";
-            if(dist) applyCity(dist);
-          }
-        }catch(e){}
+        const n = await jsonp(`https://restapi.amap.com/v3/geocode/regeo?key=${ak}&location=${d.lon},${d.lat}&extensions=all&radius=1000`);
+        if(n && n.status === "1"){
+          const a = (n && n.regeocode && n.regeocode.addressComponent) || {};
+          const hood = (a.neighborhood && a.neighborhood.name) || "";
+          const town = a.township || "";
+          const dist = hood || town || a.district || a.city || a.province || "";
+          if(dist) applyCity(dist);
+        }
       }
     }).catch(()=>{});
 }
