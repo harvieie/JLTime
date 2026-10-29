@@ -2545,12 +2545,14 @@ function refreshLoginCity(){
       }
     }).catch(()=>{});
 }
-function pushLoginLog(act){
+async function pushLoginLog(act){
+  // 先拉云端日志合并，避免不同浏览器互相覆盖
+  try{ await pullLoginLogCloud(); }catch(e){}
   const log = loadLoginLog();
   log.unshift({ ts: Date.now(), device: deviceTag(), mode: viewMode === "full" ? "编辑" : "访客", act, city: "" });
   localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0, 10)));
   refreshLoginCity();
-  syncLoginLogCloud();   // 静默覆盖到独立文件 _loginlog.json，不进主数据版本
+  syncLoginLogCloud();
 }
 /* 登录日志独立云端文件：固定文件名覆盖写，不产生节点、不进恢复列表、不弹提醒 */
 async function syncLoginLogCloud(){
@@ -2579,7 +2581,13 @@ async function pullLoginLogCloud(){
     if(r.ok){
       const txt = await r.text();
       const arr = JSON.parse(txt);
-      if(Array.isArray(arr)) localStorage.setItem("jlt_login_log", JSON.stringify(arr.slice(0, 10)));
+      if(Array.isArray(arr)){
+        const local = loadLoginLog();
+        const seen = new Set(local.map(x => x.ts));
+        const merged = local.concat(arr.filter(x => !seen.has(x.ts)));
+        merged.sort((a,b) => b.ts - a.ts);
+        localStorage.setItem("jlt_login_log", JSON.stringify(merged.slice(0, 10)));
+      }
     }
   }catch(e){}
 }
@@ -4726,7 +4734,7 @@ async function enterWithPwd(){
   sessionStorage.setItem("auth_granted", "1");
   applyViewMode(mode);
   sessionStorage.removeItem("cloud_locked");
-  pushLoginLog(mode === "full" ? "登录（编辑模式）" : "登录（访客模式）");
+  await pushLoginLog(mode === "full" ? "登录（编辑模式）" : "登录（访客模式）");
   sessionStorage.setItem("cache_prompt_shown", "1");
   closeCacheConfirm();
   // 密码正确后：先清掉本地旧业务数据（保留 jlt_mode 与 gh_* 仓库配置），再从云端拉最新，避免旧数据残留
