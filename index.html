@@ -2256,7 +2256,8 @@ function packCloudData(){
     daynight: localStorage.getItem("jlt_daynight"),
     thQuick: localStorage.getItem("jlt_th_quick"),            // 树洞用过的人（快捷用户名）
     thAvatars: localStorage.getItem("jlt_th_recent_avatars"), // 树洞最近用过的头像
-    xinze: localStorage.getItem("jlt_xinze")                 // 心喜簿
+    xinze: localStorage.getItem("jlt_xinze"),               // 心喜簿
+    loginLog: localStorage.getItem("jlt_login_log")           // 登录/操作日志（云端同步，最多10条）
   };
 }
 
@@ -2409,6 +2410,7 @@ function applyImportedData(imported){
     if(imported.thQuick) localStorage.setItem("jlt_th_quick", typeof imported.thQuick === "string" ? imported.thQuick : JSON.stringify(imported.thQuick));
     if(imported.thAvatars) localStorage.setItem("jlt_th_recent_avatars", typeof imported.thAvatars === "string" ? imported.thAvatars : JSON.stringify(imported.thAvatars));
     if(imported.xinze) localStorage.setItem("jlt_xinze", typeof imported.xinze === "string" ? imported.xinze : JSON.stringify(imported.xinze));
+    if(imported.loginLog) localStorage.setItem("jlt_login_log", typeof imported.loginLog === "string" ? imported.loginLog : JSON.stringify(imported.loginLog));
   }else{
     throw new Error("数据格式不正确：需要卡片数组，或 {title, cards} 对象");
   }
@@ -2502,7 +2504,7 @@ function loadLoginLog(){ try{ return JSON.parse(localStorage.getItem("jlt_login_
 function pushLoginLog(act){
   const log = loadLoginLog();
   log.unshift({ ts: Date.now(), device: deviceTag(), mode: viewMode === "full" ? "编辑" : "访客", act });
-  localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0, 30)));
+  localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0, 10)));
 }
 function openLoginLogModal(){
   const log = loadLoginLog().slice(0, 10);
