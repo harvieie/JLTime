@@ -5966,7 +5966,8 @@ function init(){
     sessionStorage.setItem("cloud_locked", "1");
   }
   applyViewMode(savedMode === "full" ? "full" : "view");
-  if(!sessionStorage.getItem("cache_prompt_shown")) openCacheConfirm();
+  // 每次打开网页都弹登录框（除非是清缓存后自动拉云流程）
+  if(!sessionStorage.getItem("after_clear_pull")) openCacheConfirm();
   // 点「进入」后清缓存重载：拿到最新页面后自动拉取云端数据
   if(sessionStorage.getItem("after_clear_pull")){
     sessionStorage.removeItem("after_clear_pull");
