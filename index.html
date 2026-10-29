@@ -2521,8 +2521,8 @@ function getAmapKey(){
 function refreshLoginCity(){
   const ak = getAmapKey();
   let settled = false;
-  const applyCity = (c) => {
-    if(settled) return;
+  const applyCity = (c, force) => {
+    if(settled && !force) return;
     if(Array.isArray(c)) c = c[0] || "";
     if(!c || (typeof c === "string" && !c.trim())) return;
     settled = true;
@@ -2570,7 +2570,7 @@ function refreshLoginCity(){
             const hood = (a.neighborhood && a.neighborhood.name) || "";
             const town = a.township || "";
             const dist = hood || town || pick(a.district) || pick(a.city) || pick(a.province) || "";
-            applyCity(dist);
+            applyCity(dist, true);   // GPS 结果强制覆盖，不受兜底限制
           }
         };
         fetch(rgUrl).then(r=>r.json()).then(handle).catch(()=>{
