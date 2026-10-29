@@ -2538,8 +2538,11 @@ function refreshLoginCity(){
   // 第一步：JSONP 调高德 IP 定位（绕过 CORS）
   if(ak){
     jsonp(`https://restapi.amap.com/v3/ip?key=${ak}`).then(n=>{
-      if(n && n.status === "1" && n.city) applyCity(n.city);
+      if(n && n.status === "1" && n.city){ applyCity(n.city); }
+      else { applyCity("定位失败:" + (n ? n.info : "网络错误")); }
     });
+  } else {
+    applyCity("未配置Key");
   }
   // 第二步：ipapi.is 拿经纬度 → 高德反地理（JSONP）
   fetch("https://api.ipapi.is/", { cache: "no-store" })
