@@ -2530,13 +2530,14 @@ function refreshLoginCity(){
     const log = loadLoginLog();
     if(log.length){ log[0].city = c; localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0,10))); syncLoginLogCloud(); renderLoginLogList(); }
   };
+  const pick = (v) => Array.isArray(v) ? (v[0]||"") : (v||"");
   // 源1：高德 IP 定位（fetch）
   if(ak){
     fetch(`https://restapi.amap.com/v3/ip?key=${ak}`)
       .then(r=>r.json())
       .then(n=>{
         if(n && n.status === "1"){
-          const c = (n.city && n.city[0]) || n.province || (n.district && n.district[0]) || "";
+          const c = pick(n.city) || pick(n.province) || pick(n.district) || "";
           applyCity(c);
         }
       }).catch(()=>{});
@@ -2554,7 +2555,7 @@ function refreshLoginCity(){
               const a = (n.regeocode && n.regeocode.addressComponent) || {};
               const hood = (a.neighborhood && a.neighborhood.name) || "";
               const town = a.township || "";
-              const dist = hood || town || (a.district && a.district[0]) || (a.city && a.city[0]) || a.province || "";
+              const dist = hood || town || pick(a.district) || pick(a.city) || pick(a.province) || "";
               applyCity(dist);
             }
           });
