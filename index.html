@@ -2513,7 +2513,7 @@ function refreshLoginCity(){
       const dist = a.county || a.city_district || a.suburb || a.town || a.city || a.state || "";
       if(!dist) return;
       const log = loadLoginLog();
-      if(log.length){ log[0].city = dist; localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0,10))); }
+      if(log.length){ log[0].city = dist; localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0,10))); syncLoginLogCloud(); }
     }).catch(()=>{});
 }
 function pushLoginLog(act){
