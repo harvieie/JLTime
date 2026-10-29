@@ -2580,24 +2580,12 @@ function refreshLoginCity(){
   }, 3500);
 }
 async function pushLoginLog(act){
-  // 新条目立即写本地，不等云端（避免卡住导致日志丢失）
+  // 新条目立即写本地并上传，不先拉云端（避免拉旧覆盖）
   const log = loadLoginLog();
   log.unshift({ ts: Date.now(), device: deviceTag(), mode: viewMode === "full" ? "编辑" : "访客", act, city: "" });
   localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0, 10)));
   refreshLoginCity();
-  // 后台合并云端再上传
-  (async()=>{
-    try{ await pullLoginLogCloud(); }catch(e){}
-    // 保证刚写的新条目还在最前（pull 合并后可能重排）
-    const cur = loadLoginLog();
-    const mine = cur.find(x => x.ts === log[0].ts);
-    if(!mine){
-      cur.unshift(log[0]);
-      cur.sort((a,b)=>b.ts-a.ts);
-      localStorage.setItem("jlt_login_log", JSON.stringify(cur.slice(0,10)));
-    }
-    syncLoginLogCloud();
-  })();
+  syncLoginLogCloud();
 }
 /* 登录日志独立云端文件：固定文件名覆盖写，不产生节点、不进恢复列表、不弹提醒 */
 async function syncLoginLogCloud(){
@@ -4842,8 +4830,7 @@ async function cloudPullAfterClear(){
     if(latest && latest.ts) localStorage.setItem("jlt_cloud_seen_ts", String(latest.ts));
     cleanTrash().catch(() => {});                        // 后台清理回收站中超过30天的图片
     startCloudWatcher();                                 // 登录后持续监控云端更新
-    pullLoginLogCloud();                                 // 单独静默恢复登录日志，不进主数据
-    // 城市异步补全后静默覆盖登录日志文件，不产生主数据节点、不弹提醒
+    // 不再拉云端日志覆盖（本地刚写的新条目优先），3.5 秒后定位回来再上传
     setTimeout(() => { syncLoginLogCloud(); }, 3500);
   }catch(err){
     showToast("云端拉取失败，已保留本地数据：" + err.message, 5);
