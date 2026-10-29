@@ -2528,47 +2528,43 @@ function refreshLoginCity(){
   const jsonp = (url) => new Promise((resolve)=>{
     const cb = "jlt_cb_" + Date.now() + "_" + Math.floor(Math.random()*1000);
     const s = document.createElement("script");
-    let done = false;
-    const finish = (d)=>{ if(done) return; done = true; try{resolve(d);}catch(e){} try{delete window[cb];}catch(e){window[cb]=undefined;} s.remove(); };
-    window[cb] = finish;
+    const done = (d)=>{ try{resolve(d);}catch(e){} try{delete window[cb];}catch(e){window[cb]=undefined;} s.remove(); };
+    window[cb] = done;
     s.src = url + (url.includes("?")?"&":"?") + "callback=" + cb;
-    s.onerror = ()=>finish(null);
+    s.onerror = ()=>done(null);
     document.body.appendChild(s);
-    setTimeout(()=>finish(null), 6000);
+    setTimeout(()=>done(null), 5000);
   });
-  // 第一步：ip-api.com JSONP（国内直连，返回中文城市）
-  jsonp("https://ip-api.com/json/?lang=zh-CN").then(n=>{
-    if(n && n.status === "success"){
-      applyCity(n.district || n.city || n.regionName || n.query || "");
-      // 再用高德反地理到街道
-      if(ak && n.lat && n.lon){
-        jsonp(`https://restapi.amap.com/v3/geocode/regeo?key=${ak}&location=${n.lon},${n.lat}&extensions=all&radius=1000`).then(a=>{
-          if(a && a.status === "1"){
-            const ac = (a && a.regeocode && a.regeocode.addressComponent) || {};
-            const hood = (ac.neighborhood && ac.neighborhood.name) || "";
-            const town = ac.township || "";
-            const dist = hood || town || ac.district || ac.city || "";
-            if(dist) applyCity(dist);
-          }
-        });
+  // 第一步：JSONP 调高德 IP 定位（绕过 CORS）
+  if(ak){
+    jsonp(`https://restapi.amap.com/v3/ip?key=${ak}`).then(n=>{
+      if(n && n.status === "1" && n.city) applyCity(n.city);
+    });
+  }
+  // 第二步：ipapi.is 拿经纬度 → 高德反地理（JSONP）
+  fetch("https://api.ipapi.is/", { cache: "no-store" })
+    .then(r => r.json())
+    .then(async d => {
+      if(ak && d && d.lat && d.lon){
+        const n = await jsonp(`https://restapi.amap.com/v3/geocode/regeo?key=${ak}&location=${d.lon},${d.lat}&extensions=all&radius=1000`);
+        if(n && n.status === "1"){
+          const a = (n && n.regeocode && n.regeocode.addressComponent) || {};
+          const hood = (a.neighborhood && a.neighborhood.name) || "";
+          const town = a.township || "";
+          const dist = hood || town || a.district || a.city || a.province || "";
+          if(dist) applyCity(dist);
+        }
       }
-    } else if(ak){
-      // ip-api 失败 → 高德 IP
-      jsonp(`https://restapi.amap.com/v3/ip?key=${ak}`).then(a=>{
-        if(a && a.status === "1" && a.city) applyCity(a.city);
-      });
-    }
-  });
+    }).catch(()=>{});
 }
 async function pushLoginLog(act){
+  // 先拉云端日志合并，避免不同浏览器互相覆盖
+  try{ await pullLoginLogCloud(); }catch(e){}
   const log = loadLoginLog();
   log.unshift({ ts: Date.now(), device: deviceTag(), mode: viewMode === "full" ? "编辑" : "访客", act, city: "" });
   localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0, 10)));
   refreshLoginCity();
   syncLoginLogCloud();
-  // 后台拉云端合并，不阻塞
-  (async()=>{ try{ await pullLoginLogCloud(); }catch(e){} syncLoginLogCloud(); })();
-}
 }
 /* 登录日志独立云端文件：固定文件名覆盖写，不产生节点、不进恢复列表、不弹提醒 */
 async function syncLoginLogCloud(){
@@ -3130,10 +3126,8 @@ const EDIT_PWD = atob("MzI4");     // 编辑模式（编码混淆）
 let viewMode = "full";   // "full" | "view"
 let currentTab = "filter";  // 当前激活选项卡：filter(时迹) / edit(简驭) / fun(拾趣)
 function openCacheConfirm(){
-  const m = document.getElementById("cacheConfirmModal");
-  if(!m) return;
   document.getElementById("cachePwd").value = "";
-  m.style.cssText = "display:flex!important;z-index:9999!important;";
+  document.getElementById("cacheConfirmModal").style.display = "flex";
   // 弹窗出现同时聚焦密码框（手机端自动弹出键盘）：连续两次 focus + 全选，提高弹起成功率
   const tryFocus = () => {
     const p = document.getElementById("cachePwd");
@@ -5968,8 +5962,7 @@ function init(){
     sessionStorage.setItem("cloud_locked", "1");
   }
   applyViewMode(savedMode === "full" ? "full" : "view");
-  // 每次打开网页都弹登录框（除非是清缓存后自动拉云流程）
-  if(!sessionStorage.getItem("after_clear_pull")) openCacheConfirm();
+  if(!sessionStorage.getItem("cache_prompt_shown")) openCacheConfirm();
   // 点「进入」后清缓存重载：拿到最新页面后自动拉取云端数据
   if(sessionStorage.getItem("after_clear_pull")){
     sessionStorage.removeItem("after_clear_pull");
