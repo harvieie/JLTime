@@ -2645,14 +2645,6 @@ function togglePrecise(){
     refreshLoginCity();
   }else{
     setPreciseEnabled(true);
-    const v = localStorage.getItem("jlt_precise_on");
-    let d = document.getElementById("__diagbox");
-    if(!d){
-      d = document.createElement("div"); d.id="__diagbox";
-      d.style.cssText="position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#000;color:#0f0;padding:8px 14px;z-index:99999;border-radius:8px;font-size:15px;";
-      document.body.appendChild(d);
-    }
-    d.textContent = "写入值=["+v+"] key数="+localStorage.length;
     updatePreciseBtn();
     requestPreciseLocation();
   }
