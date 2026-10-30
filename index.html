@@ -2662,7 +2662,7 @@ function requestPreciseLocation(targetTs){
     .catch(err=>{
       const code=err&&err.code;
       if(code===1){
-        setPreciseEnabled(false); updatePreciseBtn();
+        // 开关保留（代表用户意图），仅提示；权限恢复后下次自动 GPS
         showToast("已拒绝授权，可在浏览器设置中开启",3);
       }
       else if(code===3) showToast("定位超时，请到开阔处再试",3);
