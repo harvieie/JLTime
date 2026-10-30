@@ -2645,6 +2645,8 @@ function togglePrecise(){
     refreshLoginCity();
   }else{
     setPreciseEnabled(true);
+    window.__diag = localStorage.getItem("jlt_precise_on");
+    showToast("写入后值=["+window.__diag+"]",3);
     updatePreciseBtn();
     requestPreciseLocation();
   }
