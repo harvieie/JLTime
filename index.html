@@ -2626,6 +2626,7 @@ async function commitLoginLog(entry){
       mergeLogEntry(local, entry);
       localStorage.setItem("jlt_login_log", JSON.stringify(finalizeLog(local)));
       renderLoginLogList();
+      flushPendingCity();
       return null;
     }
     // 1. 云端基线
@@ -2639,6 +2640,7 @@ async function commitLoginLog(entry){
     // 4. 成功后：清掉本地旧日志，用云端权威内容（=刚上传成功的数组）覆盖
     localStorage.setItem("jlt_login_log", JSON.stringify(base));
     renderLoginLogList();
+    flushPendingCity();   // 若定位回调早于本次写入，在此补刷 city
     return base;
   });
 }
@@ -2648,11 +2650,23 @@ async function pushLoginLog(act){
   refreshLoginCity(entry.ts);
   return commitLoginLog(entry);
 }
+// 定位结果待处理缓存：回调可能早于条目首次写本地，先缓存，写入后补刷
+let pendingCity = null;
 // 对外：定位回来更新指定条目的 city（静默再提交一次）
 function applyLoginCity(ts, city){
-  if(!ts || !city) return;
-  const cur = loadLoginLog().find(x => x.ts === ts);
-  if(!cur) return;
+  if(!city) return;
+  pendingCity = { ts, city };
+  flushPendingCity();
+}
+// 把待处理定位落到对应条目；指定 ts 尚不存在则回退到最新一条
+function flushPendingCity(){
+  if(!pendingCity) return;
+  const { ts, city } = pendingCity;
+  const log = loadLoginLog();
+  const cur = log.find(x => x.ts === ts) || log[0];
+  if(!cur) return;                       // 本地还没任何条目，等下次 commit 后再 flush
+  if(cur.city === city){ pendingCity = null; return; }
+  pendingCity = null;
   commitLoginLog(Object.assign({}, cur, { city }));
 }
 // 旧调用名兼容：提交逻辑已由 commitLoginLog 串行接管，空实现避免外部误触发并发重传
