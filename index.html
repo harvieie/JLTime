@@ -2540,22 +2540,36 @@ function refreshLoginCity(targetTs){
     s.src = url;
     document.body.appendChild(s);
   });
-  // 高德 IP 定位：fetch 失败再 JSONP（不弹任何定位授权，纯 IP）
+  // 高德请求：fetch 优先，CORS 失败回退 JSONP（全程不弹任何定位授权）
+  const amapGet = (base, cb) =>
+    fetch(base).then(r=>r.json()).catch(()=>
+      jsonp(base + (base.includes("?") ? "&" : "?") + "output=json&callback=" + cb, cb));
+  // 组装详细地址：直辖市 city 为空则用 province，拼接区县
+  const buildDetail = (rc) => {
+    const prov = pick(rc.province), city = pick(rc.city), dist = pick(rc.district);
+    const head = city || prov;
+    if(dist && dist !== head) return (head || "") + dist;
+    return head || dist || "";
+  };
+  // 高德静默定位：先 IP 拿市级，再用 IP 经纬度范围中心点调 regeo 细化到区县（无需授权弹窗）
   if(ak){
-    const ipUrl = `https://restapi.amap.com/v3/ip?key=${ak}`;
-    fetch(ipUrl).then(r=>r.json()).then(n=>{
-      if(n && n.status === "1"){
-        const c = pick(n.city) || pick(n.province) || pick(n.district) || "";
-        applyCity(c);
+    amapGet(`https://restapi.amap.com/v3/ip?key=${ak}`, "__jltIpCb").then(n=>{
+      if(!n || n.status !== "1") return;
+      applyCity(pick(n.city) || pick(n.province) || "");   // 先快速落市级
+      const rect = n.rectangle || "";
+      if(rect.includes(";")){
+        const p0 = rect.split(";")[0].split(","), p1 = rect.split(";")[1].split(",");
+        const lng = (+p0[0] + +p1[0]) / 2, lat = (+p0[1] + +p1[1]) / 2;
+        const reUrl = `https://restapi.amap.com/v3/geocode/regeo?key=${ak}&location=${lng.toFixed(6)},${lat.toFixed(6)}&extensions=base`;
+        amapGet(reUrl, "__jltReCb").then(r=>{
+          if(r && r.status === "1"){
+            const rc = ((r.regeocode||{}).addressComponent) || {};
+            const detail = buildDetail(rc);
+            if(detail) applyCity(detail, true);   // 用区县级详细地址覆盖
+          }
+        }).catch(()=>{});
       }
-    }).catch(()=>{
-      jsonp(ipUrl + "&output=json&callback=__jltIpCb", "__jltIpCb").then(n=>{
-        if(n && n.status === "1"){
-          const c = pick(n.city) || pick(n.province) || pick(n.district) || "";
-          applyCity(c);
-        }
-      }).catch(()=>{});
-    });
+    }).catch(()=>{});
   }
   // ipapi.is 兜底
   fetch("https://api.ipapi.is/", { cache: "no-store" })
