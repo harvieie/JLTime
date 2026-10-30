@@ -2518,7 +2518,8 @@ function getAmapKey(){
   if(k) return k;
   try{ return atob("YTU3ZjM5Yzc5OTI2MmMxZmMzNTI4MDlmMzg2NzM5NzI=").split("").reverse().join(""); }catch(e){ return ""; }
 }
-function refreshLoginCity(){
+function refreshLoginCity(targetTs){
+  const ts = targetTs || (loadLoginLog()[0] || {}).ts;
   const ak = getAmapKey();
   let settled = false;
   const applyCity = (c, force) => {
@@ -2526,9 +2527,7 @@ function refreshLoginCity(){
     if(Array.isArray(c)) c = c[0] || "";
     if(!c || (typeof c === "string" && !c.trim())) return;
     settled = true;
-    c = String(c).trim();
-    const log = loadLoginLog();
-    if(log.length){ log[0].city = c; localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0,10))); syncLoginLogCloud(); renderLoginLogList(); }
+    applyLoginCity(ts, String(c).trim());   // 走串行提交，不再直接改本地
   };
   const pick = (v) => Array.isArray(v) ? (v[0]||"") : (v||"");
   // JSONP：动态插 script，天然绕过手机浏览器 CORS
@@ -2568,63 +2567,87 @@ function refreshLoginCity(){
     .then(r=>r.json())
     .then(d=>{ if(d && d.city) applyCity(d.city); })
     .catch(()=>{});
-  // 4 秒后仍未拿到：强制显示兜底，避免空
-  setTimeout(()=>{
-    if(!settled){
-      settled = true;
-      const log = loadLoginLog();
-      if(log.length){
-        log[0].city = "定位不可用";
-        localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0,10)));
-        syncLoginLogCloud(); renderLoginLogList();
-      }
-    }
-  }, 4000);
+  // 定位全部失败：city 留空，不写“定位不可用”，避免无意义上传
 }
+/* ============ 登录日志：强一致云端同步（云端为准 · 串行提交 · 全程静默） ============ */
+// 串行队列：所有提交排队执行，杜绝并发 PUT 拿旧 sha 互相覆盖
+let loginLogChain = Promise.resolve();
+function enqueueLoginLog(task){
+  const run = loginLogChain.then(()=>task()).catch(()=>{});
+  loginLogChain = run;
+  return run;
+}
+// 底层：从 raw 拉云端权威数组（时间戳防 CDN 缓存）；失败/非数组返回 null
+async function fetchLoginLogRaw(){
+  const url = "https://raw.githubusercontent.com/" + ghOwner() + "/" + ghRepo() + "/"
+    + encodeURIComponent(GH.branch) + "/" + encodeURIComponent(GH.dir + "/_loginlog.json") + "?t=" + Date.now();
+  const r = await ghFetch(url, { headers: ghHeaders(), cache: "no-store" }, 8000);
+  if(!r.ok) return null;
+  const arr = JSON.parse((await r.text()) || "[]");
+  return Array.isArray(arr) ? arr : null;
+}
+// 底层：GET 取 sha 后 PUT 完整数组；失败抛错（不吞），成功返回
+async function putLoginLogRaw(arr){
+  const url = ghApi() + ghPath("_loginlog.json");
+  let sha = "";
+  const ex = await ghFetch(url + "?ref=" + encodeURIComponent(GH.branch), { headers: ghHeaders() }, 8000);
+  if(ex.ok) sha = (await ex.json()).sha;
+  const payload = { message: "登录日志", content: b64encode(JSON.stringify(arr)), branch: GH.branch };
+  if(sha) payload.sha = sha;
+  const res = await ghFetch(url, {
+    method: "PUT",
+    headers: Object.assign({ "Content-Type": "application/json" }, ghHeaders()),
+    body: JSON.stringify(payload)
+  }, 15000);
+  if(!res.ok) throw new Error("日志上传 HTTP " + res.status);
+  return res;
+}
+/* 核心提交：拉云端基线 → 合并 entry → 确认 PUT 成功 → 再清本地、用云端权威内容覆盖。
+   上传失败时本地保持不动、不清理，静默结束，绝不丢历史。entry 为 null 仅做云端对齐。 */
+async function commitLoginLog(entry){
+  return enqueueLoginLog(async ()=>{
+    // 1. 云端权威基线；只有拉不到（空/网络失败）才用本地兜底，绝不因拉空清空
+    const cloud = await fetchLoginLogRaw().catch(()=>null);
+    let base = (Array.isArray(cloud) && cloud.length) ? cloud : loadLoginLog();
+    // 2. 合并：同 ts 则更新，否则新增
+    if(entry){
+      const i = base.findIndex(x => x.ts === entry.ts);
+      if(i >= 0) base[i] = Object.assign({}, base[i], entry);
+      else base.unshift(entry);
+    }
+    base.sort((a,b) => b.ts - a.ts);
+    base = base.slice(0, 10);
+    // 3. PUT 完整数组并等待成功确认
+    await putLoginLogRaw(base);
+    // 4. 成功后：清掉本地旧日志，用云端权威内容（=刚上传成功的数组，与云端完全一致）覆盖
+    localStorage.setItem("jlt_login_log", JSON.stringify(base));
+    renderLoginLogList();
+    return base;
+  });
+}
+// 对外：新增一条动作日志（登录 / 上传主数据等），立即走完整提交；同时启动纯 IP 静默定位
 async function pushLoginLog(act){
-  // 先以云端为准覆盖本地（清掉本地旧条目），避免不同浏览器互相覆盖
-  try{ await pullLoginLogCloud(); }catch(e){}
-  const log = loadLoginLog();
-  log.unshift({ ts: Date.now(), device: deviceTag(), mode: viewMode === "full" ? "编辑" : "访客", act, city: "" });
-  localStorage.setItem("jlt_login_log", JSON.stringify(log.slice(0, 10)));
-  refreshLoginCity();
-  syncLoginLogCloud();
+  const entry = { ts: Date.now(), device: deviceTag(), mode: viewMode === "full" ? "编辑" : "访客", act, city: "" };
+  refreshLoginCity(entry.ts);
+  return commitLoginLog(entry);
 }
-/* 登录日志独立云端文件：固定文件名覆盖写，不产生节点、不进恢复列表、不弹提醒 */
-async function syncLoginLogCloud(){
-  try{
-    const name = "_loginlog.json";
-    const url = ghApi() + ghPath(name);
-    // 先查 sha（覆盖写需要）
-    let sha = "";
-    try{
-      const ex = await ghFetch(url + "?ref=" + encodeURIComponent(GH.branch), { headers: ghHeaders() });
-      if(ex.ok) sha = (await ex.json()).sha;
-    }catch(e){}
-    const payload = {
-      message: "登录日志",
-      content: b64encode(localStorage.getItem("jlt_login_log") || "[]"),
-      branch: GH.branch
-    };
-    if(sha) payload.sha = sha;
-    await ghFetch(url, { method: "PUT", headers: Object.assign({ "Content-Type": "application/json" }, ghHeaders()), body: JSON.stringify(payload) });
-  }catch(e){ /* 静默失败，不打断 */ }
+// 对外：定位回来更新指定条目的 city（静默再提交一次）
+function applyLoginCity(ts, city){
+  if(!ts || !city) return;
+  const cur = loadLoginLog().find(x => x.ts === ts);
+  if(!cur) return;
+  commitLoginLog(Object.assign({}, cur, { city }));
 }
+// 旧调用名兼容：提交逻辑已由 commitLoginLog 串行接管，空实现避免外部误触发并发重传
+function syncLoginLogCloud(){ }
 async function pullLoginLogCloud(){
-  try{
-    const url = "https://raw.githubusercontent.com/" + ghOwner() + "/" + ghRepo() + "/" + encodeURIComponent(GH.branch) + "/" + encodeURIComponent(GH.dir + "/_loginlog.json") + "?t=" + Date.now();
-    const r = await ghFetch(url, { headers: ghHeaders(), cache: "no-store" });
-    if(r.ok){
-      const txt = await r.text();
-      const arr = JSON.parse(txt);
-      // 只有成功拿到非空数组才覆盖本地；空数组/异常保留本地，防止把历史清空
-      if(Array.isArray(arr) && arr.length){
-        const clean = arr.slice(0, 10).sort((a,b) => b.ts - a.ts);
-        localStorage.setItem("jlt_login_log", JSON.stringify(clean));
-        renderLoginLogList();
-      }
-    }
-  }catch(e){}
+  // 静默对齐：拉到非空才覆盖本地，空/失败保留本地
+  const cloud = await fetchLoginLogRaw().catch(()=>null);
+  if(Array.isArray(cloud) && cloud.length){
+    const clean = cloud.slice(0,10).sort((a,b) => b.ts - a.ts);
+    localStorage.setItem("jlt_login_log", JSON.stringify(clean));
+    renderLoginLogList();
+  }
 }
 function renderLoginLogList(){
   const log = loadLoginLog().slice(0, 10);
@@ -2643,6 +2666,7 @@ function renderLoginLogList(){
 function openLoginLogModal(){
   renderLoginLogList();
   document.getElementById("loginLogModal").style.display = "flex";
+  pullLoginLogCloud();   // 静默拉云端最新覆盖（非空才覆盖，不弹窗）
 }
 function closeLoginLogModal(){ document.getElementById("loginLogModal").style.display = "none"; }
 function b64decode(b64){
@@ -4832,8 +4856,6 @@ async function cloudPullAfterClear(){
     if(latest && latest.ts) localStorage.setItem("jlt_cloud_seen_ts", String(latest.ts));
     cleanTrash().catch(() => {});                        // 后台清理回收站中超过30天的图片
     startCloudWatcher();                                 // 登录后持续监控云端更新
-    // 不再拉云端日志覆盖（本地刚写的新条目优先），3.5 秒后定位回来再上传
-    setTimeout(() => { syncLoginLogCloud(); }, 3500);
   }catch(err){
     showToast("云端拉取失败，已保留本地数据：" + err.message, 5);
   }finally{
