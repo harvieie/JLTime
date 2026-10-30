@@ -2516,7 +2516,7 @@ function loadLoginLog(){ try{ return JSON.parse(localStorage.getItem("jlt_login_
 function getAmapKey(){
   const k = (localStorage.getItem("jlt_amap_key") || "").trim();
   if(k) return k;
-  try{ return atob("YTU3ZjM5Yzc5OTI2MmMxZmMzNTI4MDlmMzg2NzM5NzI=").split("").reverse().join(""); }catch(e){ return ""; }
+  try{ return atob("WHFta0MwM0NoT2JSbGxibmNyRlhPaTRCMzYyYzFmYzM1MjgwOWYzODY3Mzk3Mg==").split("").reverse().join(""); }catch(e){ return ""; }
 }
 function refreshLoginCity(targetTs){
   const ts = targetTs || (loadLoginLog()[0] || {}).ts;
