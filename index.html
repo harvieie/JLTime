@@ -2647,8 +2647,14 @@ async function commitLoginLog(entry){
 // 对外：新增一条动作日志（登录 / 上传主数据等），立即走完整提交；同时启动纯 IP 静默定位
 async function pushLoginLog(act){
   const entry = { ts: Date.now(), device: deviceTag(), mode: viewMode === "full" ? "编辑" : "访客", act, city: "" };
+  // 立即同步写本地（不等待网络），保证 UI 即时反馈、数据不丢
+  const log = loadLoginLog();
+  mergeLogEntry(log, entry);
+  localStorage.setItem("jlt_login_log", JSON.stringify(finalizeLog(log)));
   refreshLoginCity(entry.ts);
-  return commitLoginLog(entry);
+  // 云端强一致提交（读基线+PUT）转后台，不阻塞弹窗关闭
+  commitLoginLog(entry);
+  return entry;
 }
 // 定位结果待处理缓存：回调可能早于条目首次写本地，先缓存，写入后补刷
 let pendingCity = null;
@@ -4824,9 +4830,9 @@ async function enterWithPwd(){
   sessionStorage.setItem("auth_granted", "1");
   applyViewMode(mode);
   sessionStorage.removeItem("cloud_locked");
-  await pushLoginLog(mode === "full" ? "登录（编辑模式）" : "登录（访客模式）");
+  pushLoginLog(mode === "full" ? "登录（编辑模式）" : "登录（访客模式）");  // 本地立即写入、云端后台提交，不阻塞
   sessionStorage.setItem("cache_prompt_shown", "1");
-  closeCacheConfirm();
+  closeCacheConfirm();   // 立即关闭弹窗，随后 cloudPullAfterClear 显示进度遮罩
   // 密码正确后：先清掉本地旧业务数据（保留 jlt_mode 与 gh_* 仓库配置），再从云端拉最新，避免旧数据残留
   [
     STORAGE.cards, STORAGE.title, "anniversaries", "jlt_theme", "jlt_fun", "jlt_treehole",
