@@ -2577,21 +2577,23 @@ function enqueueLoginLog(task){
   loginLogChain = run;
   return run;
 }
-// 底层：从 raw 拉云端权威数组（时间戳防 CDN 缓存）；失败/非数组返回 null
-async function fetchLoginLogRaw(){
-  const url = "https://raw.githubusercontent.com/" + ghOwner() + "/" + ghRepo() + "/"
-    + encodeURIComponent(GH.branch) + "/" + encodeURIComponent(GH.dir + "/_loginlog.json") + "?t=" + Date.now();
-  const r = await ghFetch(url, { headers: ghHeaders(), cache: "no-store" }, 8000);
+// 底层：用 Contents API 读取云端日志（该域名各环境稳定可访问，raw 域名可能被拦截）
+//   返回 {arr, sha}；文件不存在(404) → {arr:[],sha:""}（确定云端为空）；网络/状态不明 → null
+async function readLoginLogCloud(){
+  const url = ghApi() + ghPath("_loginlog.json") + "?ref=" + encodeURIComponent(GH.branch) + "&t=" + Date.now();
+  let r;
+  try{ r = await ghFetch(url, { headers: ghHeaders(), cache: "no-store" }, 8000); }
+  catch(e){ return null; }
+  if(r.status === 404) return { arr: [], sha: "" };
   if(!r.ok) return null;
-  const arr = JSON.parse((await r.text()) || "[]");
-  return Array.isArray(arr) ? arr : null;
+  const d = await r.json();
+  let arr = [];
+  try{ arr = JSON.parse(b64decode(d.content) || "[]"); }catch(e){ arr = []; }
+  return { arr: Array.isArray(arr) ? arr : [], sha: d.sha || "" };
 }
-// 底层：GET 取 sha 后 PUT 完整数组；失败抛错（不吞），成功返回
-async function putLoginLogRaw(arr){
+// 底层：用读到的 sha 做 PUT 覆盖；失败抛错（不吞），成功返回
+async function putLoginLogCloud(arr, sha){
   const url = ghApi() + ghPath("_loginlog.json");
-  let sha = "";
-  const ex = await ghFetch(url + "?ref=" + encodeURIComponent(GH.branch), { headers: ghHeaders() }, 8000);
-  if(ex.ok) sha = (await ex.json()).sha;
   const payload = { message: "登录日志", content: b64encode(JSON.stringify(arr)), branch: GH.branch };
   if(sha) payload.sha = sha;
   const res = await ghFetch(url, {
@@ -2602,24 +2604,39 @@ async function putLoginLogRaw(arr){
   if(!res.ok) throw new Error("日志上传 HTTP " + res.status);
   return res;
 }
-/* 核心提交：拉云端基线 → 合并 entry → 确认 PUT 成功 → 再清本地、用云端权威内容覆盖。
-   上传失败时本地保持不动、不清理，静默结束，绝不丢历史。entry 为 null 仅做云端对齐。 */
+// 合并工具：同 ts 更新字段，否则新增；之后排序、截断 10
+function mergeLogEntry(base, entry){
+  if(!entry) return;
+  const i = base.findIndex(x => x.ts === entry.ts);
+  if(i >= 0) base[i] = Object.assign({}, base[i], entry);
+  else base.unshift(entry);
+}
+function finalizeLog(base){
+  base.sort((a,b) => b.ts - a.ts);
+  return base.slice(0, 10);
+}
+/* 核心提交：读取云端基线 → 合并本地积压与本次 entry → 确认 PUT 成功 → 再清本地、用云端权威内容覆盖。
+   读取状态不明时绝不 PUT（避免空数组冲掉云端历史），仅把条目安全暂存本地，下次提交自动补传。 */
 async function commitLoginLog(entry){
   return enqueueLoginLog(async ()=>{
-    // 1. 云端权威基线；只有拉不到（空/网络失败）才用本地兜底，绝不因拉空清空
-    const cloud = await fetchLoginLogRaw().catch(()=>null);
-    let base = (Array.isArray(cloud) && cloud.length) ? cloud : loadLoginLog();
-    // 2. 合并：同 ts 则更新，否则新增
-    if(entry){
-      const i = base.findIndex(x => x.ts === entry.ts);
-      if(i >= 0) base[i] = Object.assign({}, base[i], entry);
-      else base.unshift(entry);
+    const cloud = await readLoginLogCloud().catch(()=>null);
+    // 状态不明：仅合并进本地暂存，不覆盖云端，等待下次重试
+    if(!cloud){
+      const local = loadLoginLog();
+      mergeLogEntry(local, entry);
+      localStorage.setItem("jlt_login_log", JSON.stringify(finalizeLog(local)));
+      renderLoginLogList();
+      return null;
     }
-    base.sort((a,b) => b.ts - a.ts);
-    base = base.slice(0, 10);
-    // 3. PUT 完整数组并等待成功确认
-    await putLoginLogRaw(base);
-    // 4. 成功后：清掉本地旧日志，用云端权威内容（=刚上传成功的数组，与云端完全一致）覆盖
+    // 1. 云端基线
+    let base = cloud.arr.slice();
+    // 2. 先补传本地积压（云端缺失的条目），再合并本次 entry
+    loadLoginLog().forEach(x => { if(!base.some(y => y.ts === x.ts)) base.push(x); });
+    mergeLogEntry(base, entry);
+    base = finalizeLog(base);
+    // 3. PUT 并等待成功确认；失败则本地保留、不清理
+    await putLoginLogCloud(base, cloud.sha);
+    // 4. 成功后：清掉本地旧日志，用云端权威内容（=刚上传成功的数组）覆盖
     localStorage.setItem("jlt_login_log", JSON.stringify(base));
     renderLoginLogList();
     return base;
@@ -2641,10 +2658,10 @@ function applyLoginCity(ts, city){
 // 旧调用名兼容：提交逻辑已由 commitLoginLog 串行接管，空实现避免外部误触发并发重传
 function syncLoginLogCloud(){ }
 async function pullLoginLogCloud(){
-  // 静默对齐：拉到非空才覆盖本地，空/失败保留本地
-  const cloud = await fetchLoginLogRaw().catch(()=>null);
-  if(Array.isArray(cloud) && cloud.length){
-    const clean = cloud.slice(0,10).sort((a,b) => b.ts - a.ts);
+  // 静默对齐：读到确定状态（含空数组）就覆盖本地；状态不明保留本地
+  const cloud = await readLoginLogCloud().catch(()=>null);
+  if(cloud){
+    const clean = finalizeLog(cloud.arr);
     localStorage.setItem("jlt_login_log", JSON.stringify(clean));
     renderLoginLogList();
   }
