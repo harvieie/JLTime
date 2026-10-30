@@ -957,7 +957,7 @@ button{border-radius:12px;}
     <div class="modal-title">最近登录记录</div>
     <div id="loginLogList" style="max-height:50vh;overflow:auto;text-align:left;margin:10px 0;"></div>
     <div style="display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;">
-      <button class="btn-sec" onclick="requestPreciseLocation()">精确定位</button>
+      <button class="btn-sec" id="preciseToggleBtn" onclick="togglePrecise()">精确定位</button>
       <button class="btn-sec" onclick="editAmapKey()">改定位Key</button>
       <button class="btn-sec" onclick="closeLoginLogModal()">关闭</button>
     </div>
@@ -2522,8 +2522,8 @@ function getAmapKey(){
 function refreshLoginCity(targetTs){
   const ts = targetTs || (loadLoginLog()[0] || {}).ts;
   const ak = getAmapKey();
-  // 已授权过精确定位：自动静默走 GPS（不再弹授权）；未授权/不支持则继续下面的 IP 静默方案
-  if(navigator.geolocation && navigator.permissions){
+  // 精确定位开关已开启且已授权：自动静默走 GPS（不再弹授权）；否则走下面的 IP 静默方案
+  if(preciseEnabled() && navigator.geolocation && navigator.permissions){
     navigator.permissions.query({name:"geolocation"}).then(st=>{
       if(st.state === "granted") requestPreciseLocation(ts);
     }).catch(()=>{});
@@ -2615,6 +2615,40 @@ function regeoPrecise(lng,lat){
     return g.formatted_address || ((pk(c.city)||pk(c.province))+(pk(c.district)||""));
   });
 }
+/* 精确定位开关：开启后默认自动走 GPS，可随时取消回到静默 IP 模式 */
+function preciseEnabled(){ return localStorage.getItem("jlt_precise_on") === "1"; }
+function setPreciseEnabled(on){
+  if(on) localStorage.setItem("jlt_precise_on","1");
+  else localStorage.removeItem("jlt_precise_on");
+}
+// 刷新按钮显示：开启时高亮「精确✓」，关闭时普通「精确定位」
+function updatePreciseBtn(){
+  const b = document.getElementById("preciseToggleBtn");
+  if(!b) return;
+  if(preciseEnabled()){
+    b.textContent = "精确✓";
+    b.style.background = "#1976d2";
+    b.style.color = "#fff";
+  }else{
+    b.textContent = "精确定位";
+    b.style.background = "";
+    b.style.color = "";
+  }
+}
+// 点按开关：未开启→开启并请求（首次弹授权）；已开启→取消并回到静默 IP
+function togglePrecise(){
+  if(!navigator.geolocation){ showToast("该浏览器不支持精确定位",2); return; }
+  if(preciseEnabled()){
+    setPreciseEnabled(false);
+    updatePreciseBtn();
+    showToast("已取消精确定位",2);
+    refreshLoginCity();
+  }else{
+    setPreciseEnabled(true);
+    updatePreciseBtn();
+    requestPreciseLocation();
+  }
+}
 // 用户主动点「精确定位」：首次弹浏览器原生授权，成功后逆地理到街道并更新日志
 function requestPreciseLocation(targetTs){
   if(!navigator.geolocation){ showToast("该浏览器不支持精确定位",2); return; }
@@ -2627,7 +2661,10 @@ function requestPreciseLocation(targetTs){
     .then(addr=>{ applyLoginCity(ts,addr); showToast("已更新精确位置",2); }))
     .catch(err=>{
       const code=err&&err.code;
-      if(code===1) showToast("已拒绝授权，可在浏览器设置中开启",3);
+      if(code===1){
+        setPreciseEnabled(false); updatePreciseBtn();
+        showToast("已拒绝授权，可在浏览器设置中开启",3);
+      }
       else if(code===3) showToast("定位超时，请到开阔处再试",3);
       else showToast("精确定位失败",2);
     });
@@ -2765,6 +2802,7 @@ function renderLoginLogList(){
 }
 function openLoginLogModal(){
   renderLoginLogList();
+  updatePreciseBtn();
   document.getElementById("loginLogModal").style.display = "flex";
   pullLoginLogCloud();   // 静默拉云端最新覆盖（非空才覆盖，不弹窗）
 }
