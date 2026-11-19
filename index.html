@@ -162,7 +162,7 @@ body.dark .th-tools::after{background:#8a8f9a;}
 .th-search-panel{width:100%;margin-top:10px;border-top:1px dashed #e8c89a;padding-top:8px;}
 .th-search-res{max-height:180px;overflow:auto;}
 /* ===== 弹幕详情（朋友圈式）：点哪改哪 + 树形评论（最多三层） ===== */
-.thd-box{max-width:430px;width:100%;padding:20px 16px 12px;max-height:88vh;overflow-y:auto;box-sizing:border-box;text-align:left;}
+.thd-box{max-width:430px;width:100%;padding:20px 16px 12px;max-height:88vh;overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;text-align:left;}
 .thd-head{display:flex;align-items:flex-start;gap:10px;}
 .thd-ava{width:42px;height:42px;border-radius:50%;background:#ffe9c9;border:1px solid #e8c89a;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;overflow:hidden;cursor:pointer;}
 .thd-ava img{width:100%;height:100%;object-fit:cover;}
@@ -172,7 +172,7 @@ body.dark .th-tools::after{background:#8a8f9a;}
 .thd-content{margin:10px 0 0 52px;font-size:14px;line-height:1.75;color:#4d3a21;white-space:pre-wrap;word-break:break-word;cursor:pointer;min-height:22px;}
 .thd-inline{border:1px solid #e8c89a;border-radius:9px;padding:3px 7px;font:inherit;background:#fffdf8;color:inherit;outline:none;box-sizing:border-box;width:100%;}
 .thd-inline-ava{width:42px;height:42px;padding:0;text-align:center;font-size:20px;border-radius:50%;}
-.thd-inline-area{min-height:62px;resize:none;line-height:1.7;margin-left:-52px;width:calc(100% + 52px);}
+.thd-inline-area{min-height:62px;max-height:300px;resize:vertical;line-height:1.7;margin-left:-52px;width:calc(100% + 52px);overflow:auto;}
 .thd-divider{height:1px;background:#f0dcc0;margin:12px 0 8px;}
 .thd-cmt-title{font-size:12px;color:#a58a6c;margin-bottom:2px;}
 .thd-cmt-list{max-height:36vh;overflow-y:auto;}
@@ -187,7 +187,9 @@ body.dark .th-tools::after{background:#8a8f9a;}
 .thd-cmt-text{font-size:13px;color:#4d3a21;line-height:1.6;margin-top:2px;white-space:pre-wrap;word-break:break-word;cursor:pointer;}
 .thd-cmt-side{margin-left:auto;display:flex;gap:9px;align-items:center;flex-shrink:0;font-size:11px;color:#c2567f;}
 .thd-cmt-side span{cursor:pointer;user-select:none;white-space:nowrap;}
-@media(max-width:520px){.thd-cmt-side{gap:7px;font-size:10.5px;}}
+@media(max-width:520px){.thd-cmt-side{gap:6px;font-size:10.5px;}}
+.thd-cmt-side .thd-cmt-reply,.thd-cmt-side .thd-cmt-del{font-size:11px;}
+@media(max-width:520px){.thd-cmt-side .thd-cmt-reply,.thd-cmt-side .thd-cmt-del{font-size:10.5px;}}
 .thd-empty{font-size:12px;color:#bda98f;padding:10px 0;cursor:pointer;}
 .thd-ce{display:flex;gap:8px;align-items:flex-start;padding:9px 0;border-bottom:1px dashed #f2e4cf;}
 .thd-ce-ava{flex:0 0 36px;width:36px;height:36px;border:1px solid #e8c89a;border-radius:50%;background:#ffe9c9;text-align:center;font-size:16px;padding:0;cursor:pointer;line-height:1;overflow:hidden;display:flex;align-items:center;justify-content:center;}
@@ -197,7 +199,7 @@ body.dark .th-tools::after{background:#8a8f9a;}
 .thd-ce-row1{display:flex;gap:6px;align-items:center;}
 .thd-ce-name{flex:0 0 88px;min-width:0;border:1px solid #e8d3b5;border-radius:9px;padding:6px 7px;font-size:12.5px;outline:none;box-sizing:border-box;background:#fffdf8;}
 .thd-ce-time{flex:1;min-width:0;border:1px solid #e8d3b5;border-radius:9px;padding:6px 7px;font-size:11.5px;outline:none;box-sizing:border-box;background:#fffdf8;font-family:monospace;}
-.thd-ce-text{width:100%;min-height:48px;margin-top:6px;border:1px solid #e8d3b5;border-radius:9px;padding:7px;font-size:12.5px;outline:none;resize:none;box-sizing:border-box;font-family:inherit;background:#fffdf8;line-height:1.5;}
+.thd-ce-text{width:100%;min-height:48px;max-height:240px;margin-top:6px;border:1px solid #e8d3b5;border-radius:9px;padding:7px;font-size:12.5px;outline:none;resize:vertical;box-sizing:border-box;font-family:inherit;background:#fffdf8;line-height:1.5;overflow:auto;}
 .thd-ce-acts{display:flex;gap:6px;margin-top:6px;}
 .thd-ce-acts .btn-pri,.thd-ce-acts .btn-sec{padding:6px 14px;font-size:12.5px;border-radius:10px;}
 .thd-quick-users{margin-top:9px;padding-top:9px;border-top:1px dashed #f2e4cf;}
@@ -219,6 +221,9 @@ body.dark .thd-quick-users{border-top-color:#2e323b;}
 body.dark .thd-inline,body.dark .thd-ce-name,body.dark .thd-ce-time,body.dark .thd-ce-text,body.dark .thd-quick textarea{background:#2b2f38;border-color:#3a3f4a;color:#e6e6e6;}
 body.dark .thd-empty,body.dark .thd-blank{color:#7d838d;}
 body.dark .thd-ce-ava-in{color:#e6e6e6;}
+body.dark .thd-cmt-side{color:#ff9ec4;}
+body.dark .thd-cmt-side .thd-cmt-del,body.dark .thd-cmt-side .thd-cmt-reply{color:#ff9ec4 !important;}
+@media(max-width:420px){.thd-cmt-side{gap:5px;}.thd-cmt-side .thd-cmt-reply,.thd-cmt-side .thd-cmt-del{font-size:10px;}}
 
 /* ===== 心喜簿（表单长方条） ===== */
 .xz-box{
@@ -4679,6 +4684,20 @@ function thdOpen(id){
   thdPreset = null;
   thdRender();
   document.getElementById("thdModal").style.display = "flex";
+  thdLockBg(true);
+}
+/* 详情弹窗打开时锁住背后的主页面滚动 */
+let thdBgLocked = false;
+function thdLockBg(on){
+  if(on){
+    thdBgLocked = true;
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+  }else if(thdBgLocked){
+    thdBgLocked = false;
+    document.documentElement.style.overflow = "";
+    document.body.style.overflow = "";
+  }
 }
 /* 按 parentId 组树，输出带层级的渲染顺序（层数最多 3） */
 function thdOrder(nodes){
@@ -4690,7 +4709,7 @@ function thdOrder(nodes){
   });
   const out = []; let guard = 0;
   const walk = (pid, depth) => {
-    if(depth > 3) return;
+    if(depth > 5) return;
     (byP[pid] || []).forEach(c => {
       if(guard++ > 400) return;
       out.push({ c: c, depth: depth });
@@ -4712,6 +4731,14 @@ function thdDepthOf(cs, id){
 function thdLast(){
   const q = thQuickList();
   return q[q.length - 1] || {};
+}
+/* 输入框按内容自动撑高（最高 240px），也可手动下拉调整 */
+function thdAutoGrow(el){
+  if(!el) return;
+  const cap = 240;
+  el.style.height = "auto";
+  const h = Math.min(cap, Math.max(el.dataset.minH ? +el.dataset.minH : 48, el.scrollHeight + 2));
+  el.style.height = h + "px";
 }
 function thdRender(){
   const it = thdCur(); if(!it) return;
@@ -4737,11 +4764,12 @@ function thdRender(){
   bk.textContent = cms.length ? "点这里写一条评论…" : "还没有评论，点这里写第一条…";
   bk.style.display = thdEditCid ? "none" : "";
   thdRenderQuickUsers();
+  thdAutoGrow(document.getElementById("thdCeText"));
   thdPreset = null;
   document.getElementById("thdDelBarBtn").textContent = thdDelBarConfirm ? "确认删除" : "删除";
 }
 function thdViewHtml(c, d){
-  const ind = (d - 1) * 18;
+  const ind = (d - 1) * 14;
   const cmf = thdConfirmCid === c.id;
   return `<div class="thd-cmt" style="margin-left:${ind}px;">
     <div class="thd-cmt-ava" onclick="thdEditCmt('${c.id}')">${thdAvaInner(c.avatar)}</div>
@@ -4750,8 +4778,8 @@ function thdViewHtml(c, d){
         <span class="thd-cmt-name" onclick="thdEditCmt('${c.id}')">${escapeHtml(c.name || "")}</span>
         <span class="thd-cmt-time" onclick="thdEditCmt('${c.id}')">${escapeHtml(c.time || "")}</span>
         <span class="thd-cmt-side">
-          ${d < 3 ? `<span onclick="thdReplyTo('${c.id}')">回</span>` : ""}
-          <span class="thd-cmt-del" style="color:${cmf ? "#e0567a" : "#c2567f"};" onclick="thdDelCmt('${c.id}')">${cmf ? "确认×?" : "删"}</span>
+          ${d < 5 ? `<span class="thd-cmt-reply" onclick="thdReplyTo('${c.id}')">回复</span>` : ""}
+          <span class="thd-cmt-del" style="color:${cmf ? "#e0567a" : "#c2567f"};" onclick="thdDelCmt('${c.id}')">${cmf ? "确认删除?" : "删除"}</span>
         </span>
       </div>
       <div class="thd-cmt-text" onclick="thdEditCmt('${c.id}')">${escapeHtml(c.text || "").replace(/\n/g, "<br>")}</div>
@@ -4759,7 +4787,7 @@ function thdViewHtml(c, d){
   </div>`;
 }
 function thdCeHtml(d, c){
-  const ind = (d - 1) * 18;
+  const ind = (d - 1) * 14;
   const av = c ? (c.avatar || "🙂") : (thdPreset ? (thdPreset.avatar || "🙂") : (thdLast().avatar || "🙂"));
   const nm = c ? (c.name || "") : (thdPreset ? (thdPreset.name || "") : (thdLast().name || ""));
   const tm = c ? (c.time || "") : thdNowStr();
@@ -4771,7 +4799,7 @@ function thdCeHtml(d, c){
         <input class="thd-ce-name" id="thdCeName" value="${escapeHtml(nm)}" placeholder="名字" maxlength="12">
         <input class="thd-ce-time" id="thdCeTime" value="${escapeHtml(tm)}" placeholder="时间（可改）">
       </div>
-      <textarea class="thd-ce-text" id="thdCeText" rows="2" placeholder="评论内容（回车换行）">${escapeHtml(tx)}</textarea>
+      <textarea class="thd-ce-text" id="thdCeText" rows="2" placeholder="评论内容（回车换行）" oninput="thdAutoGrow(this)">${escapeHtml(tx)}</textarea>
       <div class="thd-ce-acts">
         <button class="btn-pri" onclick="thdSaveCmt()">保存</button>
         <button class="btn-sec" onclick="thdCancelCmt()">取消</button>
@@ -4808,7 +4836,7 @@ function thdReplyTo(cid){
   const it = thdCur(); if(!it) return;
   const cs = it.comments || [];
   const depth = thdDepthOf(cs, cid);
-  if(depth >= 3){ showToast("最多三层回复", 2); return; }
+  if(depth >= 5){ showToast("最多五层回复", 2); return; }
   thdEditCid = "__new__"; thdNewParent = cid; thdConfirmCid = null;
   thdRender();
   setTimeout(() => { const i = document.getElementById("thdCeText"); if(i) i.focus(); }, 60);
@@ -4867,13 +4895,14 @@ function thdEditField(f){
   const val = it[f] || "";
   thdFieldEditing = f;
   if(f === "text"){
-    el.innerHTML = `<textarea class="thd-inline thd-inline-area" id="thdFieldIn">${escapeHtml(val)}</textarea>`;
+    el.innerHTML = `<textarea class="thd-inline thd-inline-area" id="thdFieldIn" oninput="thdAutoGrow(this)">${escapeHtml(val)}</textarea>`;
   }else{
     el.innerHTML = `<input class="thd-inline${f === "avatar" ? " thd-inline-ava" : ""}" id="thdFieldIn" value="${escapeHtml(val)}" maxlength="${f === "avatar" ? 8 : 20}">`;
   }
   const inp = document.getElementById("thdFieldIn");
   inp.focus();
   if(inp.select && inp.value) inp.select();
+  if(f === "text"){ thdAutoGrow(inp); setTimeout(() => thdAutoGrow(inp), 0); }
   inp.addEventListener("blur", () => thdCommitField(f, inp.value));
   inp.addEventListener("keydown", e => {
     if(e.key === "Enter" && f !== "text"){ e.preventDefault(); inp.blur(); }
@@ -4962,6 +4991,7 @@ function thdDelBarrage(){
 }
 function thdClose(){
   document.getElementById("thdModal").style.display = "none";
+  thdLockBg(false);
   thdEditCid = null; thdNewParent = null; thdConfirmCid = null;
   thdFieldEditing = null; thdDelBarConfirm = false;
 }
