@@ -185,11 +185,11 @@ body.dark .th-tools::after{background:#8a8f9a;}
 .thd-cmt-name{font-size:12.5px;font-weight:700;color:#8b5a2b;cursor:pointer;}
 .thd-cmt-time{font-size:10.5px;color:#a58a6c;cursor:pointer;}
 .thd-cmt-text{font-size:13px;color:#4d3a21;line-height:1.6;margin-top:2px;white-space:pre-wrap;word-break:break-word;cursor:pointer;}
-.thd-cmt-side{margin-left:auto;display:flex;gap:9px;align-items:center;flex-shrink:0;font-size:11px;color:#c2567f;}
-.thd-cmt-side span{cursor:pointer;user-select:none;white-space:nowrap;}
-@media(max-width:520px){.thd-cmt-side{gap:6px;font-size:10.5px;}}
-.thd-cmt-side .thd-cmt-reply,.thd-cmt-side .thd-cmt-del{font-size:11px;}
-@media(max-width:520px){.thd-cmt-side .thd-cmt-reply,.thd-cmt-side .thd-cmt-del{font-size:10.5px;}}
+.thd-cmt-side{margin-left:auto;display:flex;gap:6px;align-items:center;flex-shrink:0;font-size:12px;color:#c2567f;}
+.thd-cmt-side span{cursor:pointer;user-select:none;white-space:nowrap;font-size:12px;line-height:1.3;padding:4px 9px;border-radius:999px;background:rgba(194,86,127,.1);}
+.thd-cmt-side span:hover{background:rgba(194,86,127,.2);}
+.thd-cmt-side span:active{background:rgba(194,86,127,.3);}
+@media(max-width:520px){.thd-cmt-side{gap:5px;}.thd-cmt-side span{font-size:11.5px;padding:4px 7px;}}
 .thd-empty{font-size:12px;color:#bda98f;padding:10px 0;cursor:pointer;}
 .thd-ce{display:flex;gap:8px;align-items:flex-start;padding:9px 0;border-bottom:1px dashed #f2e4cf;}
 .thd-ce-ava{flex:0 0 36px;width:36px;height:36px;border:1px solid #e8c89a;border-radius:50%;background:#ffe9c9;text-align:center;font-size:16px;padding:0;cursor:pointer;line-height:1;overflow:hidden;display:flex;align-items:center;justify-content:center;}
@@ -222,8 +222,9 @@ body.dark .thd-inline,body.dark .thd-ce-name,body.dark .thd-ce-time,body.dark .t
 body.dark .thd-empty,body.dark .thd-blank{color:#7d838d;}
 body.dark .thd-ce-ava-in{color:#e6e6e6;}
 body.dark .thd-cmt-side{color:#ff9ec4;}
+body.dark .thd-cmt-side span{background:rgba(255,158,196,.14);}
+body.dark .thd-cmt-side span:hover{background:rgba(255,158,196,.26);}
 body.dark .thd-cmt-side .thd-cmt-del,body.dark .thd-cmt-side .thd-cmt-reply{color:#ff9ec4 !important;}
-@media(max-width:420px){.thd-cmt-side{gap:5px;}.thd-cmt-side .thd-cmt-reply,.thd-cmt-side .thd-cmt-del{font-size:10px;}}
 
 /* ===== 心喜簿（表单长方条） ===== */
 .xz-box{
@@ -1804,7 +1805,7 @@ function openGallery(imgEl){
   state.activeImageIndex = 0;
   showGalleryImage();
   document.getElementById("lightbox").style.display = "flex";
-  document.body.style.overflow = "hidden";
+  if(typeof syncModalLock === "function") syncModalLock(); else document.body.style.overflow = "hidden";
   // 惊喜：打开大图有 30% 概率在图片周围放一次小烟花
   setTimeout(() => { if(Math.random() < 0.3) launchFireworks(innerWidth / 2, innerHeight * 0.45, 26); }, 350);
 }
@@ -1812,7 +1813,8 @@ function closeGallery(){
   document.getElementById("lightbox").style.display = "none";
   // 若拼图视图还开着，关闭灯箱后回到拼图（保持锁定滚动）；否则恢复页面滚动
   const mosaicOpen = document.getElementById("mosaicModal").style.display === "flex";
-  document.body.style.overflow = mosaicOpen ? "hidden" : "";
+  if(typeof syncModalLock === "function"){ syncModalLock(); }
+  else document.body.style.overflow = mosaicOpen ? "hidden" : "";
 }
 
 /* ---------- 脚印拼图：铺出该卡片所有缩略图，支持排序 ---------- */
@@ -1893,7 +1895,7 @@ function openMosaic(footprintEl){
     grid.appendChild(img);
   });
   document.getElementById("mosaicModal").style.display = "flex";
-  document.body.style.overflow = "hidden";
+  if(typeof syncModalLock === "function") syncModalLock(); else document.body.style.overflow = "hidden";
 }
 function toggleMosaicSort(){
   mosaicSorting = !mosaicSorting;
@@ -1935,7 +1937,8 @@ function moveMosaicImg(src, target){
 }
 function closeMosaic(){
   document.getElementById("mosaicModal").style.display = "none";
-  document.body.style.overflow = "";
+  if(typeof syncModalLock === "function") syncModalLock();
+  else document.body.style.overflow = "";
 }
 // 点击拼图空白处（网格空白/背景）返回主界面
 (function(){
@@ -4686,19 +4689,46 @@ function thdOpen(id){
   document.getElementById("thdModal").style.display = "flex";
   thdLockBg(true);
 }
-/* 详情弹窗打开时锁住背后的主页面滚动 */
-let thdBgLocked = false;
-function thdLockBg(on){
-  if(on){
-    thdBgLocked = true;
-    document.documentElement.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
-  }else if(thdBgLocked){
-    thdBgLocked = false;
-    document.documentElement.style.overflow = "";
-    document.body.style.overflow = "";
+/* 任意弹窗打开时：锁住背后页面滚动 + 阻止滑动穿透（所有弹窗通用） */
+let modLockOn = false;
+function modAnyOpen(){
+  const els = document.querySelectorAll(".modal-overlay, #lightbox, #mosaicModal");
+  for(const el of els){
+    const st = getComputedStyle(el);
+    if(st.display !== "none" && st.visibility !== "hidden" && el.getBoundingClientRect().height > 0) return true;
   }
+  return false;
 }
+function syncModalLock(){
+  const open = modAnyOpen();
+  if(open === modLockOn) return;
+  modLockOn = open;
+  document.documentElement.style.overflow = open ? "hidden" : "";
+  document.body.style.overflow = open ? "hidden" : "";
+  document.body.classList.toggle("modal-open", open);
+}
+window.syncModalLock = syncModalLock;
+setInterval(syncModalLock, 250);
+(function bindModalTouchGuard(){
+  function touchScrollable(n){
+    while(n && n !== document.body){
+      if(n.nodeType === 1){
+        const st = getComputedStyle(n);
+        if(n.classList && n.classList.contains("modal-overlay")) return false;
+        if(/(auto|scroll)/.test(st.overflowY) && n.scrollHeight > n.clientHeight + 2) return true;
+      }
+      n = n.parentElement;
+    }
+    return false;
+  }
+  document.addEventListener("touchmove", function(e){
+    if(!modLockOn) return;
+    if(touchScrollable(e.target)) return;
+    if(e.cancelable) e.preventDefault();
+  }, {passive:false});
+})();
+/* 兼容旧调用 */
+function thdLockBg(on){ syncModalLock(); }
 /* 按 parentId 组树，输出带层级的渲染顺序（层数最多 3） */
 function thdOrder(nodes){
   const ids = {}, byP = {};
@@ -4766,7 +4796,9 @@ function thdRender(){
   thdRenderQuickUsers();
   thdAutoGrow(document.getElementById("thdCeText"));
   thdPreset = null;
-  document.getElementById("thdDelBarBtn").textContent = thdDelBarConfirm ? "确认删除" : "删除";
+  const _dlb = document.getElementById("thdDelBarBtn");
+  _dlb.textContent = thdDelBarConfirm ? "确认删除" : "删除";
+  _dlb.style.display = isFunEditMode() ? "" : "none";   // 访客模式不显示删除
 }
 function thdViewHtml(c, d){
   const ind = (d - 1) * 14;
@@ -4779,7 +4811,7 @@ function thdViewHtml(c, d){
         <span class="thd-cmt-time" onclick="thdEditCmt('${c.id}')">${escapeHtml(c.time || "")}</span>
         <span class="thd-cmt-side">
           ${d < 5 ? `<span class="thd-cmt-reply" onclick="thdReplyTo('${c.id}')">回复</span>` : ""}
-          <span class="thd-cmt-del" style="color:${cmf ? "#e0567a" : "#c2567f"};" onclick="thdDelCmt('${c.id}')">${cmf ? "确认删除?" : "删除"}</span>
+          ${isFunEditMode() ? `<span class="thd-cmt-del" style="color:${cmf ? "#e0567a" : "#c2567f"};" onclick="thdDelCmt('${c.id}')">${cmf ? "确认删除?" : "删除"}</span>` : ""}
         </span>
       </div>
       <div class="thd-cmt-text" onclick="thdEditCmt('${c.id}')">${escapeHtml(c.text || "").replace(/\n/g, "<br>")}</div>
