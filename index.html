@@ -3576,6 +3576,7 @@ function thRender(todayFirst){
   const st = document.getElementById("thStage");
   if(!st) return;
   st.innerHTML = "";
+  thSuspended = [];
   const items = thTodayPriority(loadTreehole());
   const n = thLaneCount();                       // 行数 = 当前树洞高度（拖高后自动多出行）
   thLastPlan = [];
@@ -3601,6 +3602,7 @@ function thSpawnRow(st, items, lane, baseSeed){
 /* 发射一行：文本越长走得越慢；前一条左端刚触左缘时，下一条才从右屏发车（前条继续往外飞完整段才消失，不直接消失）；
    各泳道首发错开；先发的层级(z-index)高于后发的 */
 let thPendingTimers = [];
+let thSuspended = [];   // 暂停期间到点但没能发车的弹幕（挂起，恢复时按原节奏继续，不会丢失队列）
 function thLaunchRow(st, items, lane, dms, seeds, fixedIds){
   thLastPlan = (thLastPlan || []).filter(p => p.lane !== lane);   // 只保留本行最新一轮
   const rowObj = { dms, seeds, lane, perRow: dms.length, finished: 0 };
@@ -3622,6 +3624,10 @@ function thLaunchRow(st, items, lane, dms, seeds, fixedIds){
     const gap = (W / v) * 1000;         // 前条飞完屏宽所需时间（毫秒）→ 前条左端触左缘时后条发车
     const tid = setTimeout(() => {
       if(!dm.isConnected) return;
+      if(st.classList.contains("paused")){          // 暂停中：记下来，恢复后接着发（不丢队列、不额外冒新弹幕）
+        thSuspended.push({ dm, items, seed: seeds[j], fixedId: fixedIds ? fixedIds[j] : null, lane, j, perRow: dms.length, dur, rowObj, gap });
+        return;
+      }
       thStartFly(dm, items, seeds[j], true, fixedIds ? fixedIds[j] : null, lane, j, dms.length, dur, dur, 0, rowObj);
     }, t);
     thPendingTimers.push(tid);
@@ -3762,6 +3768,19 @@ function thResume(){
   st.classList.remove("paused");
   st.getAnimations({ subtree: true }).forEach(a => { try{ a.play(); }catch(e){} });
   st.querySelectorAll(".th-dm.th-del-mode").forEach(d => d.classList.remove("th-del-mode"));
+  // 暂停期间挂起的弹幕，按原来的节奏接着发车（点空白处继续弹后面的）
+  const pend = thSuspended.slice();
+  thSuspended = [];
+  let delay = 320;
+  pend.forEach(p => {
+    const tid = setTimeout(() => {
+      if(!p.dm.isConnected) return;
+      if(st.classList.contains("paused")){ thSuspended.push(p); return; }
+      thStartFly(p.dm, p.items, p.seed, true, p.fixedId, p.lane, p.j, p.perRow, p.dur, p.dur, 0, p.rowObj);
+    }, delay);
+    thPendingTimers.push(tid);
+    delay += (p.gap || 1200);
+  });
 }
 /* 清空所有排队待发的弹幕定时器（暂停时调用，防止暂停后新弹幕还冒出来） */
 function thClearPending(){
@@ -3805,9 +3824,8 @@ function bindTreehole(){
       // 暂停态再点弹幕：先打开详情查看（头像名字时间 / 全文 / 留言与引用回复），不直接进编辑
       thdOpen(dm.dataset.id); return;
     }
-    // 点按 → 暂停固定，右上角出叉（编辑模式）；同时清空排队待发弹幕，暂停期间不再冒新弹幕
+    // 点按 → 暂停固定，右上角出叉（编辑模式）；排队待发的弹幕自然挂起，暂停期间不再冒新弹幕
     st.classList.add("paused");
-    thClearPending();
     st.getAnimations({ subtree: true }).forEach(a => { try{ a.pause(); }catch(err){} });
     if(isFunEditMode()) dm.classList.add("th-del-mode");
   }
@@ -5085,12 +5103,7 @@ function thdClose(){
   thdLockBg(false);
   thdEditCid = null; thdNewParent = null; thdConfirmCid = null;
   thdFieldEditing = null; thdDelBarConfirm = false;
-  // 关闭详情后让暂停的弹幕继续飞：暂停时已清空排队定时器，这里整轮重启才不会"关掉就再也不弹"
-  const _st = document.getElementById("thStage");
-  if(_st && _st.classList.contains("paused")){
-    _st.classList.remove("paused");
-    if(typeof thStart === "function") thStart();
-  }
+  // 关闭详情不重新出一批弹幕：保持暂停原样，点树洞空白处恢复后接着弹后面的（队列不丢）
 }
 
 function thAdd(){ thEditId = null; openThModal(); }
