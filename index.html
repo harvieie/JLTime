@@ -314,8 +314,10 @@ body.dark .thd-cmt-side .thd-cmt-del,body.dark .thd-cmt-side .thd-cmt-reply{colo
 
 .th-search-item{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed #f3dfc2;}
 .th-search-item .th-avatar{width:22px;height:22px;border-radius:50%;background:#ffe9c9;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.th-search-item .th-t{flex:1;min-width:0;font-size:12px;color:#555;display:flex;align-items:center;gap:8px;}
+.th-search-item .th-t{flex:1;min-width:0;font-size:12px;color:#555;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .th-search-item .th-t-main{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.th-search-item .th-t-sub{flex-basis:100%;font-size:11px;color:#b0899a;line-height:1.3;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+body.dark .th-search-item .th-t-sub{color:#c9a8b8;}
 .th-search-item .th-t-time{flex-shrink:0;margin-left:auto;color:#bbb;font-size:11px;white-space:nowrap;}
 .th-search-item .th-x-del{width:20px;height:20px;border-radius:50%;background:#ffe3e3;border:1px solid #ffc9c9;color:#c92a2a;font-size:13px;line-height:18px;text-align:center;cursor:pointer;flex-shrink:0;}
 .th-search-item .th-x-del:hover{background:#ffd6d6;}
@@ -5297,16 +5299,29 @@ function thOpenSearch(){
 function thSearch(){
   const kw = document.getElementById("thSearchInput").value.trim().toLowerCase();
   const edit = isFunEditMode();
-  const list = loadTreehole()
-    .filter(it => !kw || (it.name || "").toLowerCase().includes(kw) || (it.text || "").toLowerCase().includes(kw) || (it.time || "").toLowerCase().includes(kw))
-    .sort((a, b) => (b.time || "").localeCompare(a.time || ""));  // 按时间从新到旧
+  // 弹幕正文 / 名字 / 时间，以及这条弹幕下面的留言正文、留言者，都能搜到
+  const list = loadTreehole().map(it => {
+    let hit = !kw, hitCmt = null;
+    if(kw){
+      const base = ((it.name || "") + " " + (it.text || "") + " " + (it.time || "")).toLowerCase();
+      if(base.includes(kw)) hit = true;
+      else (it.comments || []).some(c => {
+        const s = ((c.name || "") + " " + (c.text || "") + " " + (c.time || "")).toLowerCase();
+        if(s.includes(kw)){ hit = true; hitCmt = c; return true; }
+        return false;
+      });
+    }
+    return { it, hit, hitCmt };
+  }).filter(x => x.hit)
+    .sort((a, b) => (b.it.time || "").localeCompare(a.it.time || ""));  // 按时间从新到旧
   document.getElementById("thSearchRes").innerHTML = list.length
-    ? list.map(it => `
+    ? list.map(({ it, hitCmt }) => `
       <div class="th-search-item" onclick="thOpenFromSearch('${it.id}')" title="点按查看/编辑">
         <span class="th-avatar">${escapeHtml(it.avatar || "🙂")}</span>
         <span class="th-t">
           <span class="th-t-main">${escapeHtml(it.name || "")} · ${escapeHtml(it.text || "")}</span>
           <span class="th-t-time">${escapeHtml(it.time || "")}</span>
+          ${hitCmt ? `<span class="th-t-sub">留言 · ${escapeHtml(hitCmt.name || "")}：${escapeHtml(hitCmt.text || "")}</span>` : ""}
         </span>
         ${edit ? `<span class="th-x-del" onclick="event.stopPropagation();thDel('${it.id}')" title="删除">×</span>` : ""}
       </div>`).join("")
