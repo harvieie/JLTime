@@ -161,62 +161,62 @@ body.dark .th-tools::after{background:#8a8f9a;}
 .th-quick .th-q-hint{color:#bbb;border-color:transparent;background:transparent;cursor:default;}
 .th-search-panel{width:100%;margin-top:10px;border-top:1px dashed #e8c89a;padding-top:8px;}
 .th-search-res{max-height:180px;overflow:auto;}
-/* ===== 弹幕详情（参考朋友圈：头像名字时间 / 内容 / 评论区） ===== */
-.thd-box{max-width:430px;width:100%;padding:20px 18px 14px;max-height:88vh;overflow-y:auto;box-sizing:border-box;text-align:left;}
+/* ===== 弹幕详情（朋友圈式）：点哪改哪 + 树形评论（最多三层） ===== */
+.thd-box{max-width:430px;width:100%;padding:20px 16px 12px;max-height:88vh;overflow-y:auto;box-sizing:border-box;text-align:left;}
 .thd-head{display:flex;align-items:flex-start;gap:10px;}
-.thd-ava{width:42px;height:42px;border-radius:50%;background:#ffe9c9;border:1px solid #e8c89a;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;overflow:hidden;}
+.thd-ava{width:42px;height:42px;border-radius:50%;background:#ffe9c9;border:1px solid #e8c89a;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;overflow:hidden;cursor:pointer;}
 .thd-ava img{width:100%;height:100%;object-fit:cover;}
 .thd-meta{flex:1;min-width:0;}
-.thd-name{font-size:15px;font-weight:700;color:#8b5a2b;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.thd-time{font-size:11px;color:#a58a6c;margin-top:3px;}
-.thd-ops{display:flex;gap:12px;flex-shrink:0;font-size:12px;color:#c2567f;}
-.thd-ops span{cursor:pointer;user-select:none;}
-.thd-content{margin:10px 0 0 52px;font-size:14px;line-height:1.75;color:#4d3a21;white-space:pre-wrap;word-break:break-word;}
-.thd-divider{height:1px;background:#f0dcc0;margin:14px 0 8px;}
+.thd-name{font-size:15px;font-weight:700;color:#8b5a2b;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;}
+.thd-time{font-size:11px;color:#a58a6c;margin-top:3px;cursor:pointer;}
+.thd-content{margin:10px 0 0 52px;font-size:14px;line-height:1.75;color:#4d3a21;white-space:pre-wrap;word-break:break-word;cursor:pointer;min-height:22px;}
+.thd-inline{border:1px solid #e8c89a;border-radius:9px;padding:3px 7px;font:inherit;background:#fffdf8;color:inherit;outline:none;box-sizing:border-box;width:100%;}
+.thd-inline-ava{width:42px;height:42px;padding:0;text-align:center;font-size:20px;border-radius:50%;}
+.thd-inline-area{min-height:62px;resize:none;line-height:1.7;margin-left:-52px;width:calc(100% + 52px);}
+.thd-divider{height:1px;background:#f0dcc0;margin:12px 0 8px;}
 .thd-cmt-title{font-size:12px;color:#a58a6c;margin-bottom:2px;}
-.thd-cmt-list{max-height:34vh;overflow-y:auto;margin-bottom:6px;}
-.thd-cmt{display:flex;gap:8px;padding:8px 0;border-bottom:1px dashed #f2e4cf;}
+.thd-cmt-list{max-height:36vh;overflow-y:auto;}
+.thd-cmt{display:flex;gap:8px;padding:7px 0;border-bottom:1px dashed #f2e4cf;}
 .thd-cmt:last-child{border-bottom:none;}
-.thd-ava.sm{width:28px;height:28px;font-size:14px;border-width:1px;}
+.thd-cmt-ava{width:26px;height:26px;border-radius:50%;background:#ffe9c9;border:1px solid #e8c89a;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;overflow:hidden;cursor:pointer;}
+.thd-cmt-ava img{width:100%;height:100%;object-fit:cover;}
 .thd-cmt-body{flex:1;min-width:0;}
 .thd-cmt-meta{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;}
-.thd-cmt-name{font-size:12.5px;font-weight:700;color:#8b5a2b;}
-.thd-cmt-time{font-size:10.5px;color:#a58a6c;}
-.thd-cmt-text{font-size:13px;color:#4d3a21;line-height:1.6;margin-top:2px;white-space:pre-wrap;word-break:break-word;}
-.thd-at{color:#c2567f;}
-.thd-cmt-side{display:flex;flex-direction:row;gap:9px;align-items:center;flex-shrink:0;font-size:11px;color:#c2567f;align-self:flex-end;}
-@media(max-width:520px){.thd-cmt-side{gap:7px;font-size:10.5px;}}
+.thd-cmt-name{font-size:12.5px;font-weight:700;color:#8b5a2b;cursor:pointer;}
+.thd-cmt-time{font-size:10.5px;color:#a58a6c;cursor:pointer;}
+.thd-cmt-text{font-size:13px;color:#4d3a21;line-height:1.6;margin-top:2px;white-space:pre-wrap;word-break:break-word;cursor:pointer;}
+.thd-cmt-side{margin-left:auto;display:flex;gap:9px;align-items:center;flex-shrink:0;font-size:11px;color:#c2567f;}
 .thd-cmt-side span{cursor:pointer;user-select:none;white-space:nowrap;}
-.thd-empty{font-size:12px;color:#bda98f;padding:10px 0;}
-.thd-editor{margin-top:10px;border-top:1px solid #f0dcc0;padding-top:10px;}
-.thd-reply{display:flex;align-items:center;gap:8px;background:#fff6ec;border:1px solid #e8c89a;border-radius:10px;padding:5px 9px;font-size:12px;color:#8b5a2b;margin-bottom:8px;}
-.thd-reply b{color:#c2567f;}
-.thd-reply .thd-reply-x{margin-left:auto;cursor:pointer;color:#a58a6c;}
-.thd-row1{display:flex;gap:6px;align-items:center;}
-.thd-row1 input{border:1px solid #e8d3b5;border-radius:10px;padding:7px 8px;font-size:13px;outline:none;box-sizing:border-box;}
-.thd-row1 #thdAvaInput{width:46px;flex:0 0 auto;min-width:0;text-align:center;padding-left:2px;padding-right:2px;}
-.thd-row1 #thdNameInput{flex:1;min-width:0;}
-.thd-row1 #thdTimeInput{width:132px;flex:0 0 auto;min-width:0;font-family:monospace;font-size:11px;}
-.thd-avaquick{display:flex;flex-wrap:wrap;gap:5px;margin:7px 0 2px;}
-.thd-avaquick span{width:26px;height:26px;border-radius:50%;background:#ffe9c9;border:1px solid #e8c89a;display:inline-flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;}
-.thd-avaquick span.on{border-color:#c2567f;background:#ffe0ea;}
-.thd-namequick{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 6px;}
-.thd-namequick span{font-size:11.5px;padding:3px 9px;border-radius:11px;background:#fff0f6;border:1px solid #ffd6e2;color:#c2567f;cursor:pointer;}
-.thd-editor textarea{width:100%;min-height:58px;border:1px solid #e8d3b5;border-radius:10px;padding:8px;font-size:13px;outline:none;resize:vertical;box-sizing:border-box;font-family:inherit;}
-.thd-btns{display:flex;gap:6px;justify-content:center;margin-top:10px;}
-.thd-btns button{padding:6px 12px;font-size:13px;white-space:nowrap;}
+@media(max-width:520px){.thd-cmt-side{gap:7px;font-size:10.5px;}}
+.thd-empty{font-size:12px;color:#bda98f;padding:10px 0;cursor:pointer;}
+.thd-ce{padding:8px 0;border-bottom:1px dashed #f2e4cf;}
+.thd-ce-row1{display:flex;gap:6px;align-items:center;}
+.thd-ce-name{flex:0 0 84px;min-width:0;border:1px solid #e8d3b5;border-radius:9px;padding:6px 7px;font-size:12.5px;outline:none;box-sizing:border-box;background:#fffdf8;}
+.thd-ce-time{flex:1;min-width:0;border:1px solid #e8d3b5;border-radius:9px;padding:6px 7px;font-size:11.5px;outline:none;box-sizing:border-box;background:#fffdf8;font-family:monospace;}
+.thd-ce-ava{flex:0 0 38px;width:38px;height:34px;border:1px solid #e8c89a;border-radius:9px;background:#ffe9c9;text-align:center;font-size:16px;padding:0;cursor:pointer;line-height:1;overflow:hidden;}
+.thd-ce-ava img{width:100%;height:100%;object-fit:cover;}
+.thd-ce-ava-in{width:100%;height:100%;border:none;outline:none;background:transparent;text-align:center;font-size:15px;padding:0;}
+.thd-ce-row2{display:flex;gap:6px;align-items:flex-start;margin-top:6px;}
+.thd-ce-save{flex:0 0 auto;padding:7px 11px !important;font-size:12.5px !important;border-radius:10px !important;}
+.thd-ce-text{flex:1;min-width:0;min-height:36px;border:1px solid #e8d3b5;border-radius:9px;padding:7px;font-size:12.5px;outline:none;resize:vertical;box-sizing:border-box;font-family:inherit;background:#fffdf8;}
+.thd-ce-foot{text-align:right;font-size:11px;color:#a58a6c;margin-top:4px;cursor:pointer;}
+.thd-quick{display:flex;gap:6px;align-items:center;margin-top:8px;}
+.thd-quick textarea{flex:1;min-width:0;height:34px;max-height:96px;border:1px solid #e8d3b5;border-radius:10px;padding:7px 9px;font-size:12.5px;outline:none;resize:none;box-sizing:border-box;font-family:inherit;line-height:1.4;background:#fffdf8;overflow:hidden;scrollbar-width:none;}
+.thd-quick textarea::-webkit-scrollbar{display:none;}
+.thd-quick button{padding:6px 14px;font-size:13px;border-radius:18px;}
+.thd-blank{font-size:12px;color:#bda98f;padding:9px 0;cursor:pointer;text-align:center;border-top:1px dashed #f2e4cf;}
+.thd-btns{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin-top:11px;}
+.thd-btns button{padding:6px 10px;font-size:12.5px;white-space:nowrap;}
 body.dark .thd-box{background:#22252c;color:#e6e6e6;}
 body.dark .thd-name,body.dark .thd-cmt-name{color:#ffc9a0;}
 body.dark .thd-content,body.dark .thd-cmt-text{color:#e2e2e2;}
 body.dark .thd-time,body.dark .thd-cmt-time,body.dark .thd-cmt-title{color:#9aa0aa;}
-body.dark .thd-ava,body.dark .thd-avaquick span{background:#33363f;border-color:#454a55;color:#e6e6e6;}
+body.dark .thd-ava,body.dark .thd-cmt-ava,body.dark .thd-ce-ava{background:#33363f;border-color:#454a55;color:#e6e6e6;}
 body.dark .thd-divider{background:#33363f;}
-body.dark .thd-editor{border-top-color:#33363f;}
-body.dark .thd-cmt{border-bottom-color:#2e323b;}
-body.dark .thd-row1 input,body.dark .thd-box textarea{background:#2b2f38;border-color:#3a3f4a;color:#e6e6e6;}
-body.dark .thd-reply{background:#2b2f38;border-color:#3a3f4a;color:#ffc9a0;}
-body.dark .thd-namequick span{background:#3a2732;border-color:#51313f;color:#ffb8d0;}
-body.dark .thd-empty{color:#7d838d;}
+body.dark .thd-cmt,body.dark .thd-ce{border-color:#2e323b;}
+body.dark .thd-inline,body.dark .thd-ce-name,body.dark .thd-ce-time,body.dark .thd-ce-text,body.dark .thd-quick textarea{background:#2b2f38;border-color:#3a3f4a;color:#e6e6e6;}
+body.dark .thd-empty,body.dark .thd-blank{color:#7d838d;}
+body.dark .thd-ce-ava-in{color:#e6e6e6;}
 
 /* ===== 心喜簿（表单长方条） ===== */
 .xz-box{
@@ -401,6 +401,7 @@ body.dark .thd-empty{color:#7d838d;}
   box-shadow:0 10px 30px rgba(0,0,0,.25);opacity:0;transition:opacity .3s;pointer-events:none;
 }
 .toast.show{opacity:1;}
+.toast.high{top:15%;}
 
 /* ===== 移动端 ===== */
 @media (max-width:640px){
@@ -820,42 +821,30 @@ button{border-radius:12px;}
   </div>
 </div>
 
-<!-- 弹幕详情（朋友圈式）：弹幕原文 + 评论 + 引用回复 -->
+<!-- 弹幕详情（朋友圈式）：头像/名字/时间/正文点一下就改；评论为树形，最多三层 -->
 <div class="modal-overlay" id="thdModal" onclick="if(event.target===this) thdClose()">
   <div class="modal-box thd-box">
     <div class="thd-head">
-      <div class="thd-ava" id="thdAva"></div>
+      <div class="thd-ava" id="thdAva" onclick="thdEditField('avatar')" title="点击更换头像"></div>
       <div class="thd-meta">
-        <div class="thd-name" id="thdName"></div>
-        <div class="thd-time" id="thdTime"></div>
-      </div>
-      <div class="thd-ops">
-        <span id="thdEditBtn" onclick="thdEditBarrage()" title="编辑这条弹幕">编辑</span>
-        <span id="thdDelBtn" onclick="thdDelBarrage()" title="删除这条弹幕" style="display:none;">删除</span>
+        <div class="thd-name" id="thdName" onclick="thdEditField('name')" title="点击修改名字"></div>
+        <div class="thd-time" id="thdTime" onclick="thdEditField('time')" title="点击修改时间"></div>
       </div>
     </div>
-    <div class="thd-content" id="thdContent"></div>
+    <div class="thd-content" id="thdContent" onclick="thdEditField('text')" title="点击修改内容"></div>
     <div class="thd-divider"></div>
-    <div class="thd-cmt-title">评论 <span id="thdCmtCount">0</span></div>
+    <div class="thd-cmt-title">评论 <span id="thdCmtCount"></span></div>
     <div class="thd-cmt-list" id="thdCmtList"></div>
-    <div class="thd-editor">
-      <div class="thd-reply" id="thdReplyBar" style="display:none;">
-        回复 <b id="thdReplyName"></b>
-        <span class="thd-reply-x" onclick="thdClearReply()">取消</span>
-      </div>
-      <div class="thd-row1">
-        <input id="thdAvaInput" maxlength="8" placeholder="头像" title="头像（可改）">
-        <input id="thdNameInput" maxlength="12" placeholder="名字" title="名字（可改）">
-        <input id="thdTimeInput" placeholder="时间" title="时间（可改，默认当前）">
-      </div>
-      <div class="thd-avaquick" id="thdAvaQuick"></div>
-      <div class="thd-namequick" id="thdNameQuick"></div>
-      <textarea id="thdTextInput" placeholder="写评论…"></textarea>
-      <div class="thd-btns">
-        <button class="btn-pri" id="thdAddBtn" onclick="thdSubmitComment()">发表</button>
-        <button class="success" id="thdCloudBtn" onclick="thdSubmitComment(true)">上传云端</button>
-        <button class="btn-sec" onclick="thdClose()">关闭</button>
-      </div>
+    <div class="thd-blank" id="thdBlank" onclick="thdNewCmt()">点这里写一条评论…</div>
+    <div class="thd-quick" id="thdQuick">
+      <textarea id="thdQuickInput" rows="1" placeholder="写评论…" oninput="this.style.height='34px';this.style.height=Math.min(96,this.scrollHeight+4)+'px'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();thdQuickSubmit();}"></textarea>
+      <button class="btn-pri" onclick="thdQuickSubmit()">发表</button>
+    </div>
+    <div class="thd-btns">
+      <button class="btn-pri" onclick="thdSaveLocal()">保存本地</button>
+      <button class="success" onclick="thdUpload()">上传云端</button>
+      <button class="danger" id="thdDelBarBtn" onclick="thdDelBarrage()">删除</button>
+      <button class="btn-sec" onclick="thdClose()">关闭</button>
     </div>
   </div>
 </div>
@@ -4656,178 +4645,297 @@ function closeXzSearch(){
   document.removeEventListener("touchmove", xzOutsideTouch, {capture:true});
 }
 
-/* ===== 弹幕详情（参考朋友圈）：头部头像/名字/时间 → 弹幕全文 → 评论区（可引用回复） ===== */
-let thdCurId = null, thdReplyCid = null, thdEditCid = null, thdConfirmCid = null;
+/* ===== 弹幕详情（朋友圈式）：点哪改哪 + 树形评论（最多三层） ===== */
+let thdCurId = null, thdEditCid = null, thdNewParent = null, thdConfirmCid = null, thdFieldEditing = null, thdDelBarConfirm = false;
 function thdNowStr(){
   const d = new Date();
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0") +
     " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
 }
 function thdCur(){ return loadTreehole().find(x => x.id === thdCurId) || null; }
-function thdAvaHtml(a, cls){
+function thdAvaInner(a){
   const v = String(a || "🙂");
-  const inner = /^(https?:|data:|blob:)/.test(v) ? `<img src="${escapeHtml(v)}" alt="">` : escapeHtml(v);
-  return `<div class="thd-ava${cls ? " " + cls : ""}">${inner}</div>`;
+  return /^(https?:|data:|blob:)/.test(v) ? `<img src="${escapeHtml(v)}" alt="">` : escapeHtml(v);
+}
+/* 旧数据兼容：comments 里的 replyTo(名字) 迁移成 parentId，形成树 */
+function thdNorm(it){
+  if(!it) return null;
+  if(!Array.isArray(it.comments)) it.comments = [];
+  const byName = {};
+  it.comments.forEach(c => { if(c && c.name && !byName[c.name]) byName[c.name] = c.id; });
+  it.comments.forEach(c => {
+    if(!c.id) c.id = uid();
+    if(c.parentId === undefined || c.parentId === null){
+      c.parentId = c.replyTo ? (byName[c.replyTo] || "") : "";
+    }
+  });
+  return it;
 }
 function thdOpen(id){
-  thdCurId = id; thdReplyCid = null; thdEditCid = null; thdConfirmCid = null;
+  thdCurId = id; thdEditCid = null; thdNewParent = null; thdConfirmCid = null;
+  thdFieldEditing = null; thdDelBarConfirm = false;
+  const list = loadTreehole();
+  const t = list.find(x => x.id === id);
+  if(t){ thdNorm(t); saveTreehole(list); }
   thdRender();
-  // 输入区默认：当前时间；头像/名字预填最近使用的一对
-  const q = thQuickList();
-  const last = q[q.length - 1] || {};
-  document.getElementById("thdAvaInput").value = last.avatar || "";
-  document.getElementById("thdNameInput").value = last.name || "";
-  document.getElementById("thdTimeInput").value = thdNowStr();
-  document.getElementById("thdTextInput").value = "";
-  thdRenderQuick();
-  thdSyncBtns();
+  const qi = document.getElementById("thdQuickInput");
+  if(qi){ qi.value = ""; qi.style.height = "34px"; }
   document.getElementById("thdModal").style.display = "flex";
 }
-function thdRenderQuick(){
-  const recent = thRecentAvatars();
-  const all = recent.concat(TH_EMOJIS.filter(e => !recent.includes(e)));
-  const cur = document.getElementById("thdAvaInput").value.trim();
-  document.getElementById("thdAvaQuick").innerHTML = all.slice(0, 14).map(e =>
-    `<span class="${e === cur ? "on" : ""}" onclick="thdPickAva('${e}')">${e}</span>`).join("");
+/* 按 parentId 组树，输出带层级的渲染顺序（层数最多 3） */
+function thdOrder(nodes){
+  const ids = {}, byP = {};
+  nodes.forEach(c => { ids[c.id] = 1; });
+  nodes.forEach(c => {
+    const p = (c.parentId && ids[c.parentId]) ? c.parentId : "";
+    (byP[p] = byP[p] || []).push(c);
+  });
+  const out = []; let guard = 0;
+  const walk = (pid, depth) => {
+    if(depth > 3) return;
+    (byP[pid] || []).forEach(c => {
+      if(guard++ > 400) return;
+      out.push({ c: c, depth: depth });
+      walk(c.id, depth + 1);
+    });
+  };
+  walk("", 1);
+  return out;
+}
+function thdDepthOf(cs, id){
+  let d = 1, cur = cs.find(x => x.id === id), guard = 0;
+  while(cur && cur.parentId && guard++ < 20){
+    const p = cs.find(x => x.id === cur.parentId);
+    if(!p) break;
+    cur = p; d++;
+  }
+  return d;
+}
+function thdLast(){
   const q = thQuickList();
-  document.getElementById("thdNameQuick").innerHTML = q.length
-    ? q.map((x, i) => `<span onclick="thdPickPerson(${i})">${escapeHtml(x.avatar || "🙂")} ${escapeHtml(x.name || "")}</span>`).join("")
-    : "";
-}
-function thdPickAva(e){
-  document.getElementById("thdAvaInput").value = e;
-  thdRenderQuick();
-}
-function thdPickPerson(i){
-  const x = thQuickList()[i];
-  if(!x) return;
-  document.getElementById("thdAvaInput").value = x.avatar || "";
-  document.getElementById("thdNameInput").value = x.name || "";
-  thdRenderQuick();
-}
-function thdSyncBtns(){
-  document.getElementById("thdAddBtn").textContent = thdEditCid ? "保存修改" : "发表";
-  document.getElementById("thdEditBtn").style.display = thdEditCid ? "none" : "";
+  return q[q.length - 1] || {};
 }
 function thdRender(){
-  const it = thdCur();
-  if(!it) return;
-  const avaEl = document.getElementById("thdAva");
-  const av = String(it.avatar || "🙂");
-  avaEl.innerHTML = /^(https?:|data:|blob:)/.test(av) ? `<img src="${escapeHtml(av)}" alt="">` : escapeHtml(av);
+  const it = thdCur(); if(!it) return;
+  thdNorm(it);
+  document.getElementById("thdAva").innerHTML = thdAvaInner(it.avatar);
   document.getElementById("thdName").textContent = it.name || "";
   document.getElementById("thdTime").textContent = it.time || "";
   document.getElementById("thdContent").textContent = it.text || "";
-  document.getElementById("thdDelBtn").style.display = isFunEditMode() ? "" : "none";
-  const cms = Array.isArray(it.comments) ? it.comments : [];
+  const cms = it.comments || [];
   document.getElementById("thdCmtCount").textContent = cms.length ? "(" + cms.length + ")" : "";
-  const list = document.getElementById("thdCmtList");
-  if(!cms.length){
-    list.innerHTML = `<div class="thd-empty">还没有评论，来说一句吧</div>`;
-    return;
-  }
-  const edit = isFunEditMode();
-  list.innerHTML = cms.map(c => `
-    <div class="thd-cmt">
-      ${thdAvaHtml(c.avatar, "sm")}
-      <div class="thd-cmt-body">
-        <div class="thd-cmt-meta">
-          <span class="thd-cmt-name">${escapeHtml(c.name || "")}</span>
-          <span class="thd-cmt-time">${escapeHtml(c.time || "")}</span>
-        </div>
-        <div class="thd-cmt-text">${c.replyTo ? `<span class="thd-at">回复 @${escapeHtml(c.replyTo)}：</span>` : ""}${escapeHtml(c.text || "")}</div>
+  const nodes = cms.slice();
+  if(thdEditCid === "__new__") nodes.push({ id: "__new__", parentId: (thdNewParent || "") });
+  const ordered = thdOrder(nodes);
+  let html = "";
+  ordered.forEach(o => {
+    const c = o.c, d = o.depth;
+    if(c.id === "__new__"){ html += thdCeHtml(d, null); return; }
+    if(thdEditCid === c.id){ html += thdCeHtml(d, c); return; }
+    html += thdViewHtml(c, d);
+  });
+  document.getElementById("thdCmtList").innerHTML = html;
+  const bk = document.getElementById("thdBlank");
+  bk.textContent = cms.length ? "点这里写一条评论…" : "还没有评论，点这里写第一条…";
+  bk.style.display = thdEditCid ? "none" : "";
+  document.getElementById("thdQuick").style.display = thdEditCid ? "none" : "flex";
+  document.getElementById("thdDelBarBtn").textContent = thdDelBarConfirm ? "确认删除" : "删除";
+}
+function thdViewHtml(c, d){
+  const ind = (d - 1) * 18;
+  const cmf = thdConfirmCid === c.id;
+  return `<div class="thd-cmt" style="margin-left:${ind}px;">
+    <div class="thd-cmt-ava" onclick="thdEditCmt('${c.id}')">${thdAvaInner(c.avatar)}</div>
+    <div class="thd-cmt-body">
+      <div class="thd-cmt-meta">
+        <span class="thd-cmt-name" onclick="thdEditCmt('${c.id}')">${escapeHtml(c.name || "")}</span>
+        <span class="thd-cmt-time" onclick="thdEditCmt('${c.id}')">${escapeHtml(c.time || "")}</span>
+        <span class="thd-cmt-side">
+          ${d < 3 ? `<span onclick="thdReplyTo('${c.id}')">回</span>` : ""}
+          <span class="thd-cmt-del" style="color:${cmf ? "#e0567a" : "#c2567f"};" onclick="thdDelCmt('${c.id}')">${cmf ? "确认×?" : "删"}</span>
+        </span>
       </div>
-      <div class="thd-cmt-side">
-        <span onclick="thdStartReply('${c.id}')">回复</span>
-        ${edit ? `<span onclick="thdEditComment('${c.id}')">改</span><span style="color:${thdConfirmCid === c.id ? "#e0567a" : "#a58a6c"};" onclick="thdDelComment('${c.id}')">${thdConfirmCid === c.id ? "确认删?" : "删"}</span>` : ""}
-      </div>
-    </div>`).join("");
+      <div class="thd-cmt-text" onclick="thdEditCmt('${c.id}')">${escapeHtml(c.text || "").replace(/\n/g, "<br>")}</div>
+    </div>
+  </div>`;
 }
-function thdStartReply(cid){
-  const it = thdCur();
-  const c = it && (it.comments || []).find(x => x.id === cid);
-  if(!c) return;
-  thdReplyCid = cid;
-  document.getElementById("thdReplyName").textContent = c.name || "";
-  document.getElementById("thdReplyBar").style.display = "flex";
-  const t = document.getElementById("thdTextInput");
-  t.focus();
+function thdCeHtml(d, c){
+  const ind = (d - 1) * 18;
+  const av = c ? (c.avatar || "🙂") : (thdLast().avatar || "🙂");
+  const nm = c ? (c.name || "") : (thdLast().name || "");
+  const tm = c ? (c.time || "") : thdNowStr();
+  const tx = c ? (c.text || "") : "";
+  return `<div class="thd-ce" style="margin-left:${ind}px;">
+    <div class="thd-ce-row1">
+      <input class="thd-ce-name" id="thdCeName" value="${escapeHtml(nm)}" placeholder="名字" maxlength="12">
+      <input class="thd-ce-time" id="thdCeTime" value="${escapeHtml(tm)}" placeholder="时间（可改）">
+      <button class="thd-ce-ava" id="thdCeAva" data-ava="${escapeHtml(av)}" onclick="thdPickCmtAva()" title="点击更换头像">${thdAvaInner(av)}</button>
+    </div>
+    <div class="thd-ce-row2">
+      <button class="btn-pri thd-ce-save" onclick="thdSaveCmt()">保存</button>
+      <textarea class="thd-ce-text" id="thdCeText" rows="2" placeholder="评论内容（回车换行）">${escapeHtml(tx)}</textarea>
+    </div>
+    <div class="thd-ce-foot" onclick="thdCancelCmt()">取消</div>
+  </div>`;
 }
-function thdClearReply(){
-  thdReplyCid = null;
-  document.getElementById("thdReplyBar").style.display = "none";
+function thdPickCmtAva(){
+  const btn = document.getElementById("thdCeAva");
+  if(!btn || btn.querySelector("input")) return;
+  const cur = btn.dataset.ava || "";
+  btn.dataset.ava = cur;
+  btn.innerHTML = `<input class="thd-ce-ava-in" id="thdCeAvaIn" value="${escapeHtml(cur)}" maxlength="8">`;
+  const inp = document.getElementById("thdCeAvaIn");
+  inp.focus(); if(inp.value) inp.select();
+  inp.addEventListener("blur", () => {
+    const v = inp.value.trim() || "🙂";
+    btn.dataset.ava = v;
+    btn.innerHTML = thdAvaInner(v);
+  });
+  inp.addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); inp.blur(); } });
 }
-function thdEditComment(cid){
-  const it = thdCur();
-  const c = it && (it.comments || []).find(x => x.id === cid);
-  if(!c) return;
-  thdEditCid = cid; thdConfirmCid = null;
-  document.getElementById("thdAvaInput").value = c.avatar || "";
-  document.getElementById("thdNameInput").value = c.name || "";
-  document.getElementById("thdTimeInput").value = c.time || "";
-  document.getElementById("thdTextInput").value = c.text || "";
-  if(c.replyTo){
-    thdReplyCid = (it.comments.find(x => x.name === c.replyTo) || {}).id || null;
-    document.getElementById("thdReplyName").textContent = c.replyTo;
-    document.getElementById("thdReplyBar").style.display = "flex";
-  }else thdClearReply();
-  thdRenderQuick(); thdRender(); thdSyncBtns();
-  document.getElementById("thdTextInput").focus();
+function thdEditCmt(cid){
+  thdEditCid = cid; thdNewParent = null; thdConfirmCid = null;
+  thdRender();
+  setTimeout(() => { const i = document.getElementById("thdCeText"); if(i) i.focus(); }, 60);
 }
-function thdDelComment(cid){
-  if(thdConfirmCid !== cid){ thdConfirmCid = cid; thdRender(); showToast("再点一次确认删除", 2); return; }
-  const list = loadTreehole();
-  const it = list.find(x => x.id === thdCurId);
-  if(it){ it.comments = (it.comments || []).filter(c => c.id !== cid); saveTreehole(list); }
-  thdConfirmCid = null; thdRender(); showToast("已删除这条评论", 2);
+function thdNewCmt(){
+  thdEditCid = "__new__"; thdNewParent = null; thdConfirmCid = null;
+  thdRender();
+  setTimeout(() => { const i = document.getElementById("thdCeText"); if(i) i.focus(); }, 60);
 }
-function thdSubmitComment(upload){
-  const it = thdCur();
-  if(!it) return;
-  const avatar = document.getElementById("thdAvaInput").value.trim() || "🙂";
-  const name = document.getElementById("thdNameInput").value.trim();
-  const time = document.getElementById("thdTimeInput").value.trim() || thdNowStr();
-  const text = document.getElementById("thdTextInput").value.trim();
+function thdReplyTo(cid){
+  const it = thdCur(); if(!it) return;
+  const cs = it.comments || [];
+  const depth = thdDepthOf(cs, cid);
+  if(depth >= 3){ showToast("最多三层回复", 2); return; }
+  thdEditCid = "__new__"; thdNewParent = cid; thdConfirmCid = null;
+  thdRender();
+  setTimeout(() => { const i = document.getElementById("thdCeText"); if(i) i.focus(); }, 60);
+}
+function thdCancelCmt(){
+  thdEditCid = null; thdNewParent = null; thdConfirmCid = null;
+  thdRender();
+}
+function thdSaveCmt(){
+  const avaBtn = document.getElementById("thdCeAva");
+  const avatar = String((avaBtn && avaBtn.dataset.ava) || "").trim() || "🙂";
+  const name = document.getElementById("thdCeName").value.trim();
+  const time = document.getElementById("thdCeTime").value.trim() || thdNowStr();
+  const text = document.getElementById("thdCeText").value.trim();
   if(!name){ showToast("请填写名字", 2); return; }
   if(!text){ showToast("请填写评论内容", 2); return; }
   const list = loadTreehole();
-  const target = list.find(x => x.id === thdCurId);
-  if(!target) return;
-  if(!Array.isArray(target.comments)) target.comments = [];
-  const replyTo = thdReplyCid ? ((target.comments.find(c => c.id === thdReplyCid) || {}).name || "") : "";
-  if(thdEditCid){
-    const c = target.comments.find(x => x.id === thdEditCid);
-    if(c){ c.avatar = avatar; c.name = name; c.time = time; c.text = text; c.replyTo = replyTo; }
+  const t = list.find(x => x.id === thdCurId);
+  if(!t) return;
+  if(!Array.isArray(t.comments)) t.comments = [];
+  const isNew = (thdEditCid === "__new__");
+  if(isNew){
+    t.comments.push({ id: uid(), avatar: avatar, name: name, time: time, text: text, parentId: (thdNewParent || "") });
+    thSaveQuick(avatar, name); thSaveRecentAvatar(avatar);
   }else{
-    target.comments.push({ id: uid(), avatar: avatar, name: name, time: time, text: text, replyTo: replyTo });
+    const c = t.comments.find(x => x.id === thdEditCid);
+    if(c){ c.avatar = avatar; c.name = name; c.time = time; c.text = text; }
   }
   saveTreehole(list);
-  thSaveQuick(avatar, name);
-  thSaveRecentAvatar(avatar);
-  const wasEdit = !!thdEditCid;
-  const hadReply = !!replyTo;
-  thdEditCid = null; thdConfirmCid = null;
-  if(upload) wdUpload("耳语", true);
-  document.getElementById("thdTextInput").value = "";
-  document.getElementById("thdTimeInput").value = thdNowStr();
-  thdClearReply();
-  thdRender(); thdSyncBtns(); thdRenderQuick();
-  showToast(wasEdit ? "评论已修改" : (hadReply ? "已回复 " + replyTo : "评论已保存到本地"), 2);
+  thdEditCid = null; thdNewParent = null; thdConfirmCid = null;
+  thdRender();
+  showToast(isNew ? "已保存到本地" : "已修改", 2);
 }
-function thdEditBarrage(){
-  thEditId = thdCurId;
-  thdClose();
-  openThModal();
+function thdDelCmt(cid){
+  if(thdConfirmCid !== cid){ thdConfirmCid = cid; thdRender(); showToast("再点一次确认删除", 2); return; }
+  const list = loadTreehole();
+  const t = list.find(x => x.id === thdCurId);
+  if(t && Array.isArray(t.comments)){
+    const delSet = [cid]; let guard = 0;
+    while(guard++ < 200){
+      const more = t.comments.filter(c => delSet.indexOf(c.parentId) >= 0 && delSet.indexOf(c.id) < 0).map(c => c.id);
+      if(!more.length) break;
+      more.forEach(x => delSet.push(x));
+    }
+    t.comments = t.comments.filter(c => delSet.indexOf(c.id) < 0);
+    saveTreehole(list);
+  }
+  thdConfirmCid = null; thdRender(); showToast("已删除", 2);
 }
+/* 顶部四项：点头像/名字/时间/正文 → 直接变成输入框 */
+const THD_FIELD_IDS = { avatar: "thdAva", name: "thdName", time: "thdTime", text: "thdContent" };
+function thdEditField(f){
+  if(thdFieldEditing) return;
+  const it = thdCur(); if(!it) return;
+  const el = document.getElementById(THD_FIELD_IDS[f]); if(!el) return;
+  const val = it[f] || "";
+  thdFieldEditing = f;
+  if(f === "text"){
+    el.innerHTML = `<textarea class="thd-inline thd-inline-area" id="thdFieldIn">${escapeHtml(val)}</textarea>`;
+  }else{
+    el.innerHTML = `<input class="thd-inline${f === "avatar" ? " thd-inline-ava" : ""}" id="thdFieldIn" value="${escapeHtml(val)}" maxlength="${f === "avatar" ? 8 : 20}">`;
+  }
+  const inp = document.getElementById("thdFieldIn");
+  inp.focus();
+  if(inp.select && inp.value) inp.select();
+  inp.addEventListener("blur", () => thdCommitField(f, inp.value));
+  inp.addEventListener("keydown", e => {
+    if(e.key === "Enter" && f !== "text"){ e.preventDefault(); inp.blur(); }
+  });
+}
+function thdCommitField(f, v){
+  if(thdFieldEditing === null) return;
+  thdFieldEditing = null;
+  const list = loadTreehole();
+  const t = list.find(x => x.id === thdCurId);
+  if(!t){ thdRender(); return; }
+  const val = String(v == null ? "" : v).trim();
+  if(f === "name" && !val){ showToast("名字不能为空", 2); return thdRender(); }
+  if(f === "avatar") t.avatar = val || "🙂";
+  else if(f === "name") t.name = val;
+  else if(f === "time") t.time = val || thdNowStr();
+  else t.text = val;
+  saveTreehole(list);
+  if(f === "name" || f === "avatar") thSaveQuick(t.avatar, t.name);
+  thdRender(); showToast("已保存到本地", 1.5);
+}
+/* 一行高的“写评论”框 + 右侧发表：用最近使用的名字/头像直接发 */
+function thdQuickSubmit(){
+  const it = thdCur(); if(!it) return;
+  const box = document.getElementById("thdQuickInput");
+  const txt = box.value.trim();
+  if(!txt){ showToast("先写点什么", 2); return; }
+  const last = thdLast();
+  const name = String(last.name || "").trim();
+  if(!name){ showToast("先点上方空白处填好名字", 2); thdNewCmt(); return; }
+  const list = loadTreehole();
+  const t = list.find(x => x.id === thdCurId); if(!t) return;
+  if(!Array.isArray(t.comments)) t.comments = [];
+  t.comments.push({ id: uid(), avatar: (last.avatar || "🙂"), name: name, time: thdNowStr(), text: txt, parentId: "" });
+  saveTreehole(list);
+  box.value = ""; box.style.height = "34px";
+  thdRender(); showToast("已发表", 2);
+}
+function thdSaveLocal(){
+  if(thdEditCid){ thdSaveCmt(); return; }
+  if(thdFieldEditing){ const i = document.getElementById("thdFieldIn"); if(i && i.blur) i.blur(); }
+  if(thdCur()) saveTreehole(loadTreehole());
+  thdRender(); showToast("已保存到本地", 2);
+}
+function thdUpload(){ wdUpload("耳语", true); }
 function thdDelBarrage(){
   if(!thdCurId) return;
-  if(!confirm("确定删除这条弹幕（含其评论）吗？")) return;
+  if(!thdDelBarConfirm){
+    thdDelBarConfirm = true;
+    document.getElementById("thdDelBarBtn").textContent = "确认删除";
+    showToast("再点一次确认删除这条弹幕", 2);
+    return;
+  }
   saveTreehole(loadTreehole().filter(x => x.id !== thdCurId));
-  thdClose(); thStart(); thSearch();
+  thdDelBarConfirm = false;
+  thdClose();
+  if(typeof thStart === "function") thStart();
+  if(typeof thSearch === "function") thSearch();
 }
 function thdClose(){
   document.getElementById("thdModal").style.display = "none";
-  thdReplyCid = null; thdEditCid = null; thdConfirmCid = null;
+  thdEditCid = null; thdNewParent = null; thdConfirmCid = null;
+  thdFieldEditing = null; thdDelBarConfirm = false;
 }
 
 function thAdd(){ thEditId = null; openThModal(); }
@@ -5297,6 +5405,8 @@ let toastTimerId = null;
 function showToast(msg, seconds){
   const el = document.getElementById("globalToast");
   el.textContent = msg;
+  const tm = document.getElementById("thdModal");
+  el.classList.toggle("high", !!(tm && tm.style.display !== "none"));
   el.classList.add("show");
   clearTimeout(toastTimerId);
   toastTimerId = setTimeout(() => el.classList.remove("show"), (seconds || 3) * 1000);
