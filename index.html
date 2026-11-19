@@ -321,6 +321,28 @@ body.dark .th-search-item .th-t-sub{color:#c9a8b8;}
 .th-search-item .th-t-time{flex-shrink:0;margin-left:auto;color:#bbb;font-size:11px;white-space:nowrap;}
 .th-search-item .th-x-del{width:20px;height:20px;border-radius:50%;background:#ffe3e3;border:1px solid #ffc9c9;color:#c92a2a;font-size:13px;line-height:18px;text-align:center;cursor:pointer;flex-shrink:0;}
 .th-search-item .th-x-del:hover{background:#ffd6d6;}
+/* 全局搜索面板 */
+#gsModal .modal-box{background:#fffdfa;}
+.gs-g{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;color:#b4638a;padding:8px 2px 4px;border-bottom:1px dashed #f0d8e2;margin-bottom:2px;}
+.gs-g span{font-weight:400;color:#bbb;font-size:11px;}
+.gs-item{display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px dashed #f5e6ec;cursor:pointer;border-radius:8px;}
+.gs-item:hover,.gs-item:active{background:#fff3f7;}
+.gs-ic{width:24px;height:24px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:15px;background:#fff0f6;border-radius:50%;}
+.gs-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+.gs-tx b{font-size:13px;color:#6b3a4d;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.gs-tx i{font-size:11px;color:#a893a0;font-style:normal;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.gs-ar{color:#d5b8c8;font-size:15px;flex-shrink:0;}
+.gs-more{font-size:11px;color:#c0a8b4;padding:6px 2px;text-align:center;}
+.gs-flash{animation:gsFlash 1.5s ease;border-radius:12px;}
+@keyframes gsFlash{0%,100%{box-shadow:none;}20%,70%{box-shadow:0 0 0 3px rgba(126,87,194,.55);}}
+body.dark #gsModal .modal-box{background:#23262d;}
+body.dark .gs-g{color:#e48fb2;border-bottom-color:#343842;}
+body.dark .gs-item{border-bottom-color:#2c3038;}
+body.dark .gs-item:hover,body.dark .gs-item:active{background:#2b2f38;}
+body.dark .gs-ic{background:#2f333c;}
+body.dark .gs-tx b{color:#e8d5de;}
+body.dark .gs-tx i{color:#9a8f97;}
+
 .th-emoji-pick{display:flex;flex-wrap:nowrap;gap:4px;margin-bottom:4px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch;}
 .th-emoji-pick span{font-size:20px;cursor:pointer;padding:2px;border-radius:8px;}
 .th-emoji-pick span:hover{background:#fff6ec;}
@@ -673,6 +695,17 @@ button{border-radius:12px;}
   </div>
 </div>
 
+<!-- 全局搜索（简驭 → 搜索）：文字 / 数字 / 日期 / 图标，点结果直接跳转 -->
+<div class="modal-overlay" id="gsModal" onclick="if(event.target===this) closeGlobalSearch()">
+  <div class="modal-box" style="max-width:430px;max-height:82vh;display:flex;flex-direction:column;text-align:left;">
+    <div class="modal-title" style="text-align:center;">搜索</div>
+    <input type="text" id="gsInput" placeholder="搜文字 / 数字 / 日期 / 图标" autocomplete="off" oninput="gsRender()"
+      style="width:100%;margin:10px 0 8px;padding:9px 12px;border:1px solid #e9ecef;border-radius:12px;box-sizing:border-box;outline:none;">
+    <div id="gsRes" style="flex:1;overflow:auto;-webkit-overflow-scrolling:touch;min-height:70px;max-height:60vh;"></div>
+    <div class="modal-buttons" style="margin-top:10px;"><button style="background:#999;flex:1;" onclick="closeGlobalSearch()">关闭</button></div>
+  </div>
+</div>
+
 <div class="header-wrap">
   <div class="title-wrap">
     <span class="title-heart" id="titleHeartA"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="#ff5b8a" d="M12 21.35l-1.45-1.36C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.49L12 21.35z"/></svg></span>
@@ -765,14 +798,15 @@ button{border-radius:12px;}
   <!-- 编辑面板 -->
   <div class="tab-panel" id="panelEdit">
     <button id="loginBtn" style="background:#e91e63;color:#fff;font-weight:bold;" onclick="openCacheConfirm()">登录</button>
-    <button class="success" onclick="openAddCardModal()">新增</button>
-    <button class="checked-mode" id="multiDelBtn" onclick="toggleMultiDelete()">选删</button>
-    <button class="export" onclick="openExportModal()">导出</button>
-    <button class="import" onclick="openImportModal()">导入</button>
-    <button class="success" id="cloudUploadBtn" onclick="wdUpload()">上传</button>
-    <button onclick="wdDownload()">下载</button>
-    <button class="checked-mode" onclick="wdOpenRestore()">恢复</button>
     <button onclick="openThemeModal()" title="主题色/背景" style="background:#4fc3f7;color:#fff;">主题</button>
+    <button class="checked-mode" onclick="wdOpenRestore()">恢复</button>
+    <button onclick="wdDownload()">下载</button>
+    <button class="success" id="cloudUploadBtn" onclick="wdUpload()">上传</button>
+    <button class="import" onclick="openImportModal()">导入</button>
+    <button class="export" onclick="openExportModal()">导出</button>
+    <button class="checked-mode" id="multiDelBtn" onclick="toggleMultiDelete()">选删</button>
+    <button class="success" onclick="openAddCardModal()">新增</button>
+    <button onclick="openGlobalSearch()" title="搜索网页里的一切文字、数字、图标" style="background:#7e57c2;color:#fff;">搜索</button>
   </div>
 
   <!-- 拾趣面板：网页框 + 树洞框 -->
@@ -4685,7 +4719,7 @@ function xzSearch(fromOpen){
   const hit=list.filter(it=>{
     if(!q) return true;
     if((it.text||"").toLowerCase().includes(q)) return true;
-    return (it.votes||[]).some(v=>(v.name||"").toLowerCase().includes(q)||(v.avatar||"").includes(q));
+    return (it.votes||[]).some(v=>(v.name||"").toLowerCase().includes(q)||(v.avatar||"").includes(q)||(v.note||"").toLowerCase().includes(q));
   });
   // 按修改时间从旧到新排列，最新修改的落在列表最下方（紧贴搜索框）
   const ordered = hit.slice().sort((a,b)=> (a.mtime||"").localeCompare(b.mtime||""));
@@ -5295,6 +5329,120 @@ function thOpenSearch(){
   const p = document.getElementById("thSearchPanel");
   p.style.display = p.style.display === "none" ? "" : "none";
   if(p.style.display !== "none") thSearch();
+}
+/* ================= 全局搜索：网页里的一切文字 / 数字 / 日期 / 图标 ================= */
+function openGlobalSearch(){
+  if(typeof isAuthGranted === "function" && !isAuthGranted()){ openCacheConfirm(); return; }
+  const box = document.getElementById("gsModal");
+  if(!box) return;
+  box.style.display = "flex";
+  document.getElementById("gsInput").value = "";
+  gsRender();
+  setTimeout(() => { const i = document.getElementById("gsInput"); if(i) i.focus(); }, 80);
+}
+function closeGlobalSearch(){ const m = document.getElementById("gsModal"); if(m) m.style.display = "none"; }
+function gsQuery(q){
+  q = String(q || "").trim().toLowerCase();
+  if(!q) return [];
+  const hit = (s2) => String(s2 == null ? "" : s2).toLowerCase().includes(q);
+  const out = [];
+  const push = (group, icon, title, sub, kind, key) => out.push({ group, icon, title, sub, kind, key: String(key == null ? "" : key) });
+  // 时迹卡片：日期 / 地点 / 备注 / 链接
+  (loadCards() || []).forEach(c => {
+    const locs = (c.locs || []).join(" / ");
+    if(hit(c.date) || hit(locs) || hit(c.note) || hit(c.link)){
+      push("时迹", "📷", c.date + (locs ? " · " + locs : ""), String(c.note || "").split("\n")[0].slice(0, 40), "card", c.id);
+    }
+  });
+  // 纪念日：名称 / 日期 / 图标
+  (typeof loadAnniversaries === "function" ? loadAnniversaries() : []).forEach(a => {
+    if(hit(a.label) || hit(a.date) || hit(a.icon)) push("纪念日", a.icon || "💛", a.label || "纪念日", a.date || "", "anni", a.id);
+  });
+  // 移步：名称 / 链接
+  (typeof loadFunItems === "function" ? loadFunItems() : []).forEach(f => {
+    if(hit(f.name) || hit(f.url)) push("移步", "🔗", f.name || "", f.url || "", "fun", f.name || "");
+  });
+  // 耳语弹幕 + 下面的留言
+  (typeof loadTreehole === "function" ? loadTreehole() : []).forEach(it => {
+    if(hit(it.name) || hit(it.text) || hit(it.time) || hit(it.avatar))
+      push("耳语", it.avatar || "💬", (it.name || "") + " · " + (it.text || ""), it.time || "", "dm", it.id);
+    (it.comments || []).forEach(c => {
+      if(hit(c.name) || hit(c.text) || hit(c.time) || hit(c.avatar))
+        push("留言", c.avatar || "💬", (c.name || "") + " · " + (c.text || ""), c.time || "", "cmt", it.id);
+    });
+  });
+  // 心喜簿：条目文字 / 图标 / 备注 / 用户
+  (typeof loadXinze === "function" ? loadXinze() : []).forEach(it => {
+    const notes = (it.votes || []).map(v => v.note || "").filter(Boolean).join(" ");
+    const users = (it.votes || []).map(v => v.name || "").filter(Boolean).join(" ");
+    if(hit(it.text) || hit(it.icon) || hit(notes) || hit(users))
+      push("心喜簿", it.isImg ? "🖼" : (it.icon || "❓"), String(it.text || "").split("\n")[0] || "(无文字)",
+        notes ? "备注：" + notes.slice(0, 30) : (users ? "选择过：" + users.slice(0, 24) : ""), "xz", it.id);
+  });
+  return out;
+}
+function gsRender(){
+  const box = document.getElementById("gsRes");
+  if(!box) return;
+  const q = document.getElementById("gsInput").value.trim();
+  if(!q){
+    box.innerHTML = '<div style="font-size:12px;color:#999;padding:12px 0;text-align:center;">输入文字 / 数字 / 日期 / 图标，就能搜到网页里的对应内容，点结果直接跳过去</div>';
+    return;
+  }
+  const rows = gsQuery(q);
+  if(!rows.length){
+    box.innerHTML = '<div style="font-size:12px;color:#999;padding:12px 0;text-align:center;">没有找到「' + escapeHtml(q) + '」</div>';
+    return;
+  }
+  const groups = {};
+  rows.forEach(r => { (groups[r.group] = groups[r.group] || []).push(r); });
+  let html = "";
+  Object.keys(groups).forEach(g => {
+    const arr = groups[g];
+    html += '<div class="gs-g">' + escapeHtml(g) + '<span>' + arr.length + '</span></div>';
+    arr.slice(0, 8).forEach(r => {
+      const act = r.kind + ":" + encodeURIComponent(r.key);
+      html += '<div class="gs-item" onclick="gsGo(\'' + act + '\')">'
+        + '<span class="gs-ic">' + escapeHtml(r.icon) + '</span>'
+        + '<span class="gs-tx"><b>' + escapeHtml(r.title) + '</b>' + (r.sub ? '<i>' + escapeHtml(r.sub) + '</i>' : "") + '</span>'
+        + '<span class="gs-ar">›</span></div>';
+    });
+    if(arr.length > 8) html += '<div class="gs-more">还有 ' + (arr.length - 8) + ' 条，输入更具体的关键词试试</div>';
+  });
+  box.innerHTML = html;
+}
+function gsGo(act){
+  const str = String(act || "");
+  const k = str.indexOf(":");
+  if(k < 0) return;
+  const kind = str.slice(0, k), key = decodeURIComponent(str.slice(k + 1));
+  closeGlobalSearch();
+  if(kind === "card"){
+    switchTab("filter");
+    setTimeout(() => gsFlash(document.querySelector('.timeline-item[data-card-id="' + key + '"]')), 240);
+  }else if(kind === "anni"){
+    openAnniModal();
+    setTimeout(() => gsFlash(document.querySelector('.anni-item[data-id="' + key + '"]')), 260);
+  }else if(kind === "fun"){
+    switchTab("fun");
+    setTimeout(() => {
+      const chips = [].slice.call(document.querySelectorAll(".fun-chip"));
+      const el = chips.find(c => (c.textContent || "").indexOf(key) >= 0);
+      gsFlash(el);
+    }, 240);
+  }else if(kind === "dm" || kind === "cmt"){
+    switchTab("fun");
+    setTimeout(() => { try{ thdOpen(key); }catch(e){} }, 240);
+  }else if(kind === "xz"){
+    switchTab("fun");
+    setTimeout(() => { try{ xzOpenDetail(key); }catch(e){} }, 240);
+  }
+}
+function gsFlash(el){
+  if(!el) return;
+  try{ el.scrollIntoView({ block: "center", behavior: "smooth" }); }catch(e){ el.scrollIntoView(); }
+  el.classList.add("gs-flash");
+  setTimeout(() => el.classList.remove("gs-flash"), 1500);
 }
 function thSearch(){
   const kw = document.getElementById("thSearchInput").value.trim().toLowerCase();
