@@ -154,11 +154,12 @@ body.dark .th-tools::after{background:#8a8f9a;}
 .th-dm .th-text{font-size:14px;color:#4d3a21;line-height:1.4;min-width:56px;max-width:170px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-all;align-self:center;}
 .th-dm .th-x{position:absolute;top:-8px;right:-8px;width:18px;height:18px;border-radius:50%;background:#ff6b81;color:#fff;font-size:12px;line-height:18px;text-align:center;cursor:pointer;display:none;box-shadow:0 1px 3px rgba(0,0,0,.25);z-index:2;}
 .th-dm.th-del-mode .th-x{display:block;}
-/* 用户名右下角（时间行右侧）：留言条数 */
-.th-dm .th-row2{display:flex;align-items:center;gap:4px;max-width:100%;}
-.th-dm .th-num{font-size:9px;line-height:1.3;padding:0 3px;border-radius:7px;flex-shrink:0;
-  color:#a4673a;background:rgba(255,238,214,.92);border:1px solid rgba(216,178,128,.55);
-  font-weight:700;letter-spacing:0;pointer-events:none;}
+/* 留言条数角标：贴在用户名右下角 */
+.th-dm .th-row1{position:relative;display:flex;align-items:center;gap:6px;}
+.th-dm .th-row2{display:flex;align-items:center;gap:4px;max-width:100%;margin-top:3px;}
+.th-dm .th-num{position:absolute;right:-2px;bottom:-5px;font-size:9px;line-height:1.25;padding:0 3px;border-radius:7px;
+  color:#a4673a;background:rgba(255,238,214,.95);border:1px solid rgba(216,178,128,.55);
+  font-weight:700;letter-spacing:0;pointer-events:none;white-space:nowrap;}
 .th-resize{height:14px;cursor:ns-resize;background:linear-gradient(180deg,transparent,rgba(201,138,75,.35));border-radius:0 0 14px 14px;margin-top:2px;touch-action:none;position:relative;}.th-resize::after{content:"⋮";position:absolute;right:6px;top:2px;color:#c98a4b;font-size:11px;}
 .th-quick{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px;}
 .th-quick span{background:#fff0f6;border:1px solid #ffd6e2;color:#c2567f;font-size:12px;padding:3px 10px;border-radius:12px;cursor:pointer;user-select:none;}
@@ -3694,8 +3695,8 @@ function thPlayOne(el, items, seed, rand, fixedId){
   const shown = firstLine.length > 30 ? firstLine.slice(0, 30) + "…" : firstLine;
   el.innerHTML = `
     <span class="th-head">
-      <span class="th-row1"><span class="th-avatar">${escapeHtml(it.avatar || "🙂")}</span><span class="th-name">${escapeHtml(it.name || "")}</span></span>
-      <span class="th-row2"><span class="th-time">${escapeHtml(it.time || "")}</span>${(it.comments && it.comments.length) ? `<span class="th-num">+${it.comments.length}</span>` : ""}</span>
+      <span class="th-row1"><span class="th-avatar">${escapeHtml(it.avatar || "🙂")}</span><span class="th-name">${escapeHtml(it.name || "")}</span>${(it.comments && it.comments.length) ? `<span class="th-num">+${it.comments.length}</span>` : ""}</span>
+      <span class="th-row2"><span class="th-time">${escapeHtml(it.time || "")}</span></span>
     </span>
     <span class="th-text" style="font-size:${size}px">${escapeHtml(shown)}</span>
     <span class="th-x" title="删除">×</span>`;
@@ -4686,6 +4687,13 @@ function thdNorm(it){
   });
   return it;
 }
+/* 打开详情的那一下会紧跟一次 click，若不放行就会"穿透"点到弹窗里的按钮（上传云端、新建留言框等）
+   这里在打开瞬间短暂吞掉所有点击，杜绝误触 */
+function thdSwallowClicks(ms){
+  const handler = e => { e.stopPropagation(); e.preventDefault(); };
+  document.addEventListener("click", handler, true);
+  setTimeout(() => document.removeEventListener("click", handler, true), ms || 320);
+}
 function thdOpen(id){
   thdCurId = id; thdEditCid = null; thdNewParent = null; thdConfirmCid = null;
   thdFieldEditing = null; thdDelBarConfirm = false; thdOpenedAt = Date.now();
@@ -4697,6 +4705,7 @@ function thdOpen(id){
   document.getElementById("thdModal").style.display = "flex";
   thdFitView();
   thdLockBg(true);
+  thdSwallowClicks(320);
 }
 /* 任意弹窗打开时：锁住背后页面滚动 + 阻止滑动穿透（所有弹窗通用） */
 let modLockOn = false;
@@ -4908,6 +4917,7 @@ function thdEditCmt(cid){
   setTimeout(thdFocusCe, 60);
 }
 function thdNewCmt(){
+  if(Date.now() - thdOpenedAt < 700) return;   // 刚打开详情时先只查看，避免误触弹键盘
   thdEditCid = "__new__"; thdNewParent = null; thdConfirmCid = null;
   thdRender();
   setTimeout(thdFocusCe, 60);
@@ -5075,6 +5085,12 @@ function thdClose(){
   thdLockBg(false);
   thdEditCid = null; thdNewParent = null; thdConfirmCid = null;
   thdFieldEditing = null; thdDelBarConfirm = false;
+  // 关闭详情后让暂停的弹幕继续飞：暂停时已清空排队定时器，这里整轮重启才不会"关掉就再也不弹"
+  const _st = document.getElementById("thStage");
+  if(_st && _st.classList.contains("paused")){
+    _st.classList.remove("paused");
+    if(typeof thStart === "function") thStart();
+  }
 }
 
 function thAdd(){ thEditId = null; openThModal(); }
