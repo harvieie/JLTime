@@ -161,6 +161,61 @@ body.dark .th-tools::after{background:#8a8f9a;}
 .th-quick .th-q-hint{color:#bbb;border-color:transparent;background:transparent;cursor:default;}
 .th-search-panel{width:100%;margin-top:10px;border-top:1px dashed #e8c89a;padding-top:8px;}
 .th-search-res{max-height:180px;overflow:auto;}
+/* ===== 弹幕详情（参考朋友圈：头像名字时间 / 内容 / 评论区） ===== */
+.thd-box{max-width:430px;width:100%;padding:20px 18px 14px;max-height:88vh;overflow-y:auto;box-sizing:border-box;text-align:left;}
+.thd-head{display:flex;align-items:flex-start;gap:10px;}
+.thd-ava{width:42px;height:42px;border-radius:50%;background:#ffe9c9;border:1px solid #e8c89a;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;overflow:hidden;}
+.thd-ava img{width:100%;height:100%;object-fit:cover;}
+.thd-meta{flex:1;min-width:0;}
+.thd-name{font-size:15px;font-weight:700;color:#8b5a2b;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.thd-time{font-size:11px;color:#a58a6c;margin-top:3px;}
+.thd-ops{display:flex;gap:12px;flex-shrink:0;font-size:12px;color:#c2567f;}
+.thd-ops span{cursor:pointer;user-select:none;}
+.thd-content{margin:10px 0 0 52px;font-size:14px;line-height:1.75;color:#4d3a21;white-space:pre-wrap;word-break:break-word;}
+.thd-divider{height:1px;background:#f0dcc0;margin:14px 0 8px;}
+.thd-cmt-title{font-size:12px;color:#a58a6c;margin-bottom:2px;}
+.thd-cmt-list{max-height:34vh;overflow-y:auto;margin-bottom:6px;}
+.thd-cmt{display:flex;gap:8px;padding:8px 0;border-bottom:1px dashed #f2e4cf;}
+.thd-cmt:last-child{border-bottom:none;}
+.thd-ava.sm{width:28px;height:28px;font-size:14px;border-width:1px;}
+.thd-cmt-body{flex:1;min-width:0;}
+.thd-cmt-meta{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;}
+.thd-cmt-name{font-size:12.5px;font-weight:700;color:#8b5a2b;}
+.thd-cmt-time{font-size:10.5px;color:#a58a6c;}
+.thd-cmt-text{font-size:13px;color:#4d3a21;line-height:1.6;margin-top:2px;white-space:pre-wrap;word-break:break-word;}
+.thd-at{color:#c2567f;}
+.thd-cmt-side{display:flex;flex-direction:row;gap:9px;align-items:center;flex-shrink:0;font-size:11px;color:#c2567f;align-self:flex-end;}
+.thd-cmt-side span{cursor:pointer;user-select:none;white-space:nowrap;}
+.thd-empty{font-size:12px;color:#bda98f;padding:10px 0;}
+.thd-editor{margin-top:10px;border-top:1px solid #f0dcc0;padding-top:10px;}
+.thd-reply{display:flex;align-items:center;gap:8px;background:#fff6ec;border:1px solid #e8c89a;border-radius:10px;padding:5px 9px;font-size:12px;color:#8b5a2b;margin-bottom:8px;}
+.thd-reply b{color:#c2567f;}
+.thd-reply .thd-reply-x{margin-left:auto;cursor:pointer;color:#a58a6c;}
+.thd-row1{display:flex;gap:6px;align-items:center;}
+.thd-row1 input{border:1px solid #e8d3b5;border-radius:10px;padding:7px 8px;font-size:13px;outline:none;box-sizing:border-box;}
+.thd-row1 #thdAvaInput{width:46px;flex:0 0 auto;min-width:0;text-align:center;padding-left:2px;padding-right:2px;}
+.thd-row1 #thdNameInput{flex:1;min-width:0;}
+.thd-row1 #thdTimeInput{width:132px;flex:0 0 auto;min-width:0;font-family:monospace;font-size:11px;}
+.thd-avaquick{display:flex;flex-wrap:wrap;gap:5px;margin:7px 0 2px;}
+.thd-avaquick span{width:26px;height:26px;border-radius:50%;background:#ffe9c9;border:1px solid #e8c89a;display:inline-flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;}
+.thd-avaquick span.on{border-color:#c2567f;background:#ffe0ea;}
+.thd-namequick{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 6px;}
+.thd-namequick span{font-size:11.5px;padding:3px 9px;border-radius:11px;background:#fff0f6;border:1px solid #ffd6e2;color:#c2567f;cursor:pointer;}
+.thd-editor textarea{width:100%;min-height:58px;border:1px solid #e8d3b5;border-radius:10px;padding:8px;font-size:13px;outline:none;resize:vertical;box-sizing:border-box;font-family:inherit;}
+.thd-btns{display:flex;gap:6px;justify-content:center;margin-top:10px;}
+.thd-btns button{padding:6px 12px;font-size:13px;white-space:nowrap;}
+body.dark .thd-box{background:#22252c;color:#e6e6e6;}
+body.dark .thd-name,body.dark .thd-cmt-name{color:#ffc9a0;}
+body.dark .thd-content,body.dark .thd-cmt-text{color:#e2e2e2;}
+body.dark .thd-time,body.dark .thd-cmt-time,body.dark .thd-cmt-title{color:#9aa0aa;}
+body.dark .thd-ava,body.dark .thd-avaquick span{background:#33363f;border-color:#454a55;color:#e6e6e6;}
+body.dark .thd-divider{background:#33363f;}
+body.dark .thd-editor{border-top-color:#33363f;}
+body.dark .thd-cmt{border-bottom-color:#2e323b;}
+body.dark .thd-row1 input,body.dark .thd-box textarea{background:#2b2f38;border-color:#3a3f4a;color:#e6e6e6;}
+body.dark .thd-reply{background:#2b2f38;border-color:#3a3f4a;color:#ffc9a0;}
+body.dark .thd-namequick span{background:#3a2732;border-color:#51313f;color:#ffb8d0;}
+body.dark .thd-empty{color:#7d838d;}
 
 /* ===== 心喜簿（表单长方条） ===== */
 .xz-box{
@@ -760,6 +815,46 @@ button{border-radius:12px;}
       <button class="success" id="thCloudBtn" onclick="if(saveThModal()!==false) wdUpload('树洞', true);" style="padding:6px 10px;font-size:13px;white-space:nowrap;">上传云端</button>
       <button class="btn-danger" id="thDelBtn" onclick="thDelModal()" style="display:none;padding:6px 10px;font-size:13px;white-space:nowrap;">删除</button>
       <button class="btn-sec" onclick="closeThModal()" style="padding:6px 10px;font-size:13px;white-space:nowrap;">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 弹幕详情（朋友圈式）：弹幕原文 + 评论 + 引用回复 -->
+<div class="modal-overlay" id="thdModal" onclick="if(event.target===this) thdClose()">
+  <div class="modal-box thd-box">
+    <div class="thd-head">
+      <div class="thd-ava" id="thdAva"></div>
+      <div class="thd-meta">
+        <div class="thd-name" id="thdName"></div>
+        <div class="thd-time" id="thdTime"></div>
+      </div>
+      <div class="thd-ops">
+        <span id="thdEditBtn" onclick="thdEditBarrage()" title="编辑这条弹幕">编辑</span>
+        <span id="thdDelBtn" onclick="thdDelBarrage()" title="删除这条弹幕" style="display:none;">删除</span>
+      </div>
+    </div>
+    <div class="thd-content" id="thdContent"></div>
+    <div class="thd-divider"></div>
+    <div class="thd-cmt-title">评论 <span id="thdCmtCount">0</span></div>
+    <div class="thd-cmt-list" id="thdCmtList"></div>
+    <div class="thd-editor">
+      <div class="thd-reply" id="thdReplyBar" style="display:none;">
+        回复 <b id="thdReplyName"></b>
+        <span class="thd-reply-x" onclick="thdClearReply()">取消</span>
+      </div>
+      <div class="thd-row1">
+        <input id="thdAvaInput" maxlength="8" placeholder="头像" title="头像（可改）">
+        <input id="thdNameInput" maxlength="12" placeholder="名字" title="名字（可改）">
+        <input id="thdTimeInput" placeholder="时间" title="时间（可改，默认当前）">
+      </div>
+      <div class="thd-avaquick" id="thdAvaQuick"></div>
+      <div class="thd-namequick" id="thdNameQuick"></div>
+      <textarea id="thdTextInput" placeholder="写评论…"></textarea>
+      <div class="thd-btns">
+        <button class="btn-pri" id="thdAddBtn" onclick="thdSubmitComment()">发表</button>
+        <button class="success" id="thdCloudBtn" onclick="thdSubmitComment(true)">上传云端</button>
+        <button class="btn-sec" onclick="thdClose()">关闭</button>
+      </div>
     </div>
   </div>
 </div>
@@ -3702,8 +3797,8 @@ function bindTreehole(){
     e.stopPropagation();
     const paused = st.classList.contains("paused");
     if(paused){
-      // 暂停态再点弹幕任意位置：编辑模式编辑 / 访客查看
-      thEditId = dm.dataset.id; openThModal(); return;
+      // 暂停态再点弹幕：打开详情（头像名字时间 / 全文 / 评论与引用回复）
+      thdOpen(dm.dataset.id); return;
     }
     // 点按 → 暂停固定，右上角出叉（编辑模式）；同时清空排队待发弹幕，暂停期间不再冒新弹幕
     st.classList.add("paused");
@@ -4560,6 +4655,180 @@ function closeXzSearch(){
   document.removeEventListener("touchmove", xzOutsideTouch, {capture:true});
 }
 
+/* ===== 弹幕详情（参考朋友圈）：头部头像/名字/时间 → 弹幕全文 → 评论区（可引用回复） ===== */
+let thdCurId = null, thdReplyCid = null, thdEditCid = null, thdConfirmCid = null;
+function thdNowStr(){
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0") +
+    " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+}
+function thdCur(){ return loadTreehole().find(x => x.id === thdCurId) || null; }
+function thdAvaHtml(a, cls){
+  const v = String(a || "🙂");
+  const inner = /^(https?:|data:|blob:)/.test(v) ? `<img src="${escapeHtml(v)}" alt="">` : escapeHtml(v);
+  return `<div class="thd-ava${cls ? " " + cls : ""}">${inner}</div>`;
+}
+function thdOpen(id){
+  thdCurId = id; thdReplyCid = null; thdEditCid = null; thdConfirmCid = null;
+  thdRender();
+  // 输入区默认：当前时间；头像/名字预填最近使用的一对
+  const q = thQuickList();
+  const last = q[q.length - 1] || {};
+  document.getElementById("thdAvaInput").value = last.avatar || "";
+  document.getElementById("thdNameInput").value = last.name || "";
+  document.getElementById("thdTimeInput").value = thdNowStr();
+  document.getElementById("thdTextInput").value = "";
+  thdRenderQuick();
+  thdSyncBtns();
+  document.getElementById("thdModal").style.display = "flex";
+}
+function thdRenderQuick(){
+  const recent = thRecentAvatars();
+  const all = recent.concat(TH_EMOJIS.filter(e => !recent.includes(e)));
+  const cur = document.getElementById("thdAvaInput").value.trim();
+  document.getElementById("thdAvaQuick").innerHTML = all.slice(0, 14).map(e =>
+    `<span class="${e === cur ? "on" : ""}" onclick="thdPickAva('${e}')">${e}</span>`).join("");
+  const q = thQuickList();
+  document.getElementById("thdNameQuick").innerHTML = q.length
+    ? q.map((x, i) => `<span onclick="thdPickPerson(${i})">${escapeHtml(x.avatar || "🙂")} ${escapeHtml(x.name || "")}</span>`).join("")
+    : "";
+}
+function thdPickAva(e){
+  document.getElementById("thdAvaInput").value = e;
+  thdRenderQuick();
+}
+function thdPickPerson(i){
+  const x = thQuickList()[i];
+  if(!x) return;
+  document.getElementById("thdAvaInput").value = x.avatar || "";
+  document.getElementById("thdNameInput").value = x.name || "";
+  thdRenderQuick();
+}
+function thdSyncBtns(){
+  document.getElementById("thdAddBtn").textContent = thdEditCid ? "保存修改" : "发表";
+  document.getElementById("thdEditBtn").style.display = thdEditCid ? "none" : "";
+}
+function thdRender(){
+  const it = thdCur();
+  if(!it) return;
+  const avaEl = document.getElementById("thdAva");
+  const av = String(it.avatar || "🙂");
+  avaEl.innerHTML = /^(https?:|data:|blob:)/.test(av) ? `<img src="${escapeHtml(av)}" alt="">` : escapeHtml(av);
+  document.getElementById("thdName").textContent = it.name || "";
+  document.getElementById("thdTime").textContent = it.time || "";
+  document.getElementById("thdContent").textContent = it.text || "";
+  document.getElementById("thdDelBtn").style.display = isFunEditMode() ? "" : "none";
+  const cms = Array.isArray(it.comments) ? it.comments : [];
+  document.getElementById("thdCmtCount").textContent = cms.length ? "(" + cms.length + ")" : "";
+  const list = document.getElementById("thdCmtList");
+  if(!cms.length){
+    list.innerHTML = `<div class="thd-empty">还没有评论，来说一句吧</div>`;
+    return;
+  }
+  const edit = isFunEditMode();
+  list.innerHTML = cms.map(c => `
+    <div class="thd-cmt">
+      ${thdAvaHtml(c.avatar, "sm")}
+      <div class="thd-cmt-body">
+        <div class="thd-cmt-meta">
+          <span class="thd-cmt-name">${escapeHtml(c.name || "")}</span>
+          <span class="thd-cmt-time">${escapeHtml(c.time || "")}</span>
+        </div>
+        <div class="thd-cmt-text">${c.replyTo ? `<span class="thd-at">回复 @${escapeHtml(c.replyTo)}：</span>` : ""}${escapeHtml(c.text || "")}</div>
+      </div>
+      <div class="thd-cmt-side">
+        <span onclick="thdStartReply('${c.id}')">回复</span>
+        ${edit ? `<span onclick="thdEditComment('${c.id}')">改</span><span style="color:${thdConfirmCid === c.id ? "#e0567a" : "#a58a6c"};" onclick="thdDelComment('${c.id}')">${thdConfirmCid === c.id ? "确认删?" : "删"}</span>` : ""}
+      </div>
+    </div>`).join("");
+}
+function thdStartReply(cid){
+  const it = thdCur();
+  const c = it && (it.comments || []).find(x => x.id === cid);
+  if(!c) return;
+  thdReplyCid = cid;
+  document.getElementById("thdReplyName").textContent = c.name || "";
+  document.getElementById("thdReplyBar").style.display = "flex";
+  const t = document.getElementById("thdTextInput");
+  t.focus();
+}
+function thdClearReply(){
+  thdReplyCid = null;
+  document.getElementById("thdReplyBar").style.display = "none";
+}
+function thdEditComment(cid){
+  const it = thdCur();
+  const c = it && (it.comments || []).find(x => x.id === cid);
+  if(!c) return;
+  thdEditCid = cid; thdConfirmCid = null;
+  document.getElementById("thdAvaInput").value = c.avatar || "";
+  document.getElementById("thdNameInput").value = c.name || "";
+  document.getElementById("thdTimeInput").value = c.time || "";
+  document.getElementById("thdTextInput").value = c.text || "";
+  if(c.replyTo){
+    thdReplyCid = (it.comments.find(x => x.name === c.replyTo) || {}).id || null;
+    document.getElementById("thdReplyName").textContent = c.replyTo;
+    document.getElementById("thdReplyBar").style.display = "flex";
+  }else thdClearReply();
+  thdRenderQuick(); thdRender(); thdSyncBtns();
+  document.getElementById("thdTextInput").focus();
+}
+function thdDelComment(cid){
+  if(thdConfirmCid !== cid){ thdConfirmCid = cid; thdRender(); showToast("再点一次确认删除", 2); return; }
+  const list = loadTreehole();
+  const it = list.find(x => x.id === thdCurId);
+  if(it){ it.comments = (it.comments || []).filter(c => c.id !== cid); saveTreehole(list); }
+  thdConfirmCid = null; thdRender(); showToast("已删除这条评论", 2);
+}
+function thdSubmitComment(upload){
+  const it = thdCur();
+  if(!it) return;
+  const avatar = document.getElementById("thdAvaInput").value.trim() || "🙂";
+  const name = document.getElementById("thdNameInput").value.trim();
+  const time = document.getElementById("thdTimeInput").value.trim() || thdNowStr();
+  const text = document.getElementById("thdTextInput").value.trim();
+  if(!name){ showToast("请填写名字", 2); return; }
+  if(!text){ showToast("请填写评论内容", 2); return; }
+  const list = loadTreehole();
+  const target = list.find(x => x.id === thdCurId);
+  if(!target) return;
+  if(!Array.isArray(target.comments)) target.comments = [];
+  const replyTo = thdReplyCid ? ((target.comments.find(c => c.id === thdReplyCid) || {}).name || "") : "";
+  if(thdEditCid){
+    const c = target.comments.find(x => x.id === thdEditCid);
+    if(c){ c.avatar = avatar; c.name = name; c.time = time; c.text = text; c.replyTo = replyTo; }
+  }else{
+    target.comments.push({ id: uid(), avatar: avatar, name: name, time: time, text: text, replyTo: replyTo });
+  }
+  saveTreehole(list);
+  thSaveQuick(avatar, name);
+  thSaveRecentAvatar(avatar);
+  const wasEdit = !!thdEditCid;
+  const hadReply = !!replyTo;
+  thdEditCid = null; thdConfirmCid = null;
+  if(upload) wdUpload("耳语", true);
+  document.getElementById("thdTextInput").value = "";
+  document.getElementById("thdTimeInput").value = thdNowStr();
+  thdClearReply();
+  thdRender(); thdSyncBtns(); thdRenderQuick();
+  showToast(wasEdit ? "评论已修改" : (hadReply ? "已回复 " + replyTo : "评论已保存到本地"), 2);
+}
+function thdEditBarrage(){
+  thEditId = thdCurId;
+  thdClose();
+  openThModal();
+}
+function thdDelBarrage(){
+  if(!thdCurId) return;
+  if(!confirm("确定删除这条弹幕（含其评论）吗？")) return;
+  saveTreehole(loadTreehole().filter(x => x.id !== thdCurId));
+  thdClose(); thStart(); thSearch();
+}
+function thdClose(){
+  document.getElementById("thdModal").style.display = "none";
+  thdReplyCid = null; thdEditCid = null; thdConfirmCid = null;
+}
+
 function thAdd(){ thEditId = null; openThModal(); }
 function thEdit(id){ thEditId = id; openThModal(); }
 /* 最近用的头像（按使用先后顺序，整排参与排序） */
@@ -4693,8 +4962,7 @@ function thSearch(){
     : `<div style="font-size:12px;color:#bbb;padding:6px 0;">没有找到相关弹幕</div>`;
 }
 function thOpenFromSearch(id){
-  thEditId = id;
-  openThModal();  // 访客只读查看，编辑模式可编辑
+  thdOpen(id);  // 统一打开朋友圈式详情（访客只读+可评论，编辑模式可改删）
 }
 function thDelModal(){
   if(!thEditId) return;
