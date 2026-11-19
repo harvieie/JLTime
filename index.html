@@ -154,10 +154,11 @@ body.dark .th-tools::after{background:#8a8f9a;}
 .th-dm .th-text{font-size:14px;color:#4d3a21;line-height:1.4;min-width:56px;max-width:170px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-all;align-self:center;}
 .th-dm .th-x{position:absolute;top:-8px;right:-8px;width:18px;height:18px;border-radius:50%;background:#ff6b81;color:#fff;font-size:12px;line-height:18px;text-align:center;cursor:pointer;display:none;box-shadow:0 1px 3px rgba(0,0,0,.25);z-index:2;}
 .th-dm.th-del-mode .th-x{display:block;}
-/* 弹幕条内右下角：留言条数 */
-.th-dm .th-num{position:absolute;right:6px;bottom:1px;font-size:9px;line-height:1.25;padding:0 4px;border-radius:8px;
-  color:#a4673a;background:rgba(255,238,214,.92);border:1px solid rgba(216,178,128,.55);pointer-events:none;
-  font-weight:700;letter-spacing:0;z-index:1;}
+/* 用户名右下角（时间行右侧）：留言条数 */
+.th-dm .th-row2{display:flex;align-items:center;gap:4px;max-width:100%;}
+.th-dm .th-num{font-size:9px;line-height:1.3;padding:0 3px;border-radius:7px;flex-shrink:0;
+  color:#a4673a;background:rgba(255,238,214,.92);border:1px solid rgba(216,178,128,.55);
+  font-weight:700;letter-spacing:0;pointer-events:none;}
 .th-resize{height:14px;cursor:ns-resize;background:linear-gradient(180deg,transparent,rgba(201,138,75,.35));border-radius:0 0 14px 14px;margin-top:2px;touch-action:none;position:relative;}.th-resize::after{content:"⋮";position:absolute;right:6px;top:2px;color:#c98a4b;font-size:11px;}
 .th-quick{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px;}
 .th-quick span{background:#fff0f6;border:1px solid #ffd6e2;color:#c2567f;font-size:12px;padding:3px 10px;border-radius:12px;cursor:pointer;user-select:none;}
@@ -180,6 +181,7 @@ body.dark .th-tools::after{background:#8a8f9a;}
 .thd-divider{height:1px;background:#f0dcc0;margin:12px 0 8px;}
 .thd-cmt-title{font-size:12px;color:#a58a6c;margin-bottom:2px;}
 .thd-cmt-list{max-height:36vh;overflow-y:auto;}
+.thd-cmt-list.editing{max-height:none;overflow:visible;}   /* 编辑留言时放开列表滚动，交给整块弹窗滚动，保证保存/取消可见 */
 .thd-cmt{display:flex;gap:8px;padding:7px 0;border-bottom:1px dashed #f2e4cf;}
 .thd-cmt:last-child{border-bottom:none;}
 .thd-cmt-ava{width:26px;height:26px;border-radius:50%;background:#ffe9c9;border:1px solid #e8c89a;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;overflow:hidden;cursor:pointer;}
@@ -3693,10 +3695,9 @@ function thPlayOne(el, items, seed, rand, fixedId){
   el.innerHTML = `
     <span class="th-head">
       <span class="th-row1"><span class="th-avatar">${escapeHtml(it.avatar || "🙂")}</span><span class="th-name">${escapeHtml(it.name || "")}</span></span>
-      <span class="th-time">${escapeHtml(it.time || "")}</span>
+      <span class="th-row2"><span class="th-time">${escapeHtml(it.time || "")}</span>${(it.comments && it.comments.length) ? `<span class="th-num">+${it.comments.length}</span>` : ""}</span>
     </span>
     <span class="th-text" style="font-size:${size}px">${escapeHtml(shown)}</span>
-    ${(it.comments && it.comments.length) ? `<span class="th-num">+${it.comments.length}</span>` : ""}
     <span class="th-x" title="删除">×</span>`;
   el.dataset.id = it.id;
   el.dataset.len = String(firstLine.length);
@@ -4694,6 +4695,7 @@ function thdOpen(id){
   thdPreset = null;
   thdRender();
   document.getElementById("thdModal").style.display = "flex";
+  thdFitView();
   thdLockBg(true);
 }
 /* 任意弹窗打开时：锁住背后页面滚动 + 阻止滑动穿透（所有弹窗通用） */
@@ -4736,6 +4738,16 @@ setInterval(syncModalLock, 250);
 })();
 /* 兼容旧调用 */
 function thdLockBg(on){ syncModalLock(); }
+/* 键盘弹出/收起、窗口尺寸变化时，重算弹窗高度并保持编辑块可见 */
+(function bindThdViewport(){
+  const h = () => {
+    if(document.getElementById("thdModal").style.display !== "flex") return;
+    thdFitView();
+    if(thdEditCid) thdScrollToCe();
+  };
+  if(window.visualViewport){ window.visualViewport.addEventListener("resize", h); window.visualViewport.addEventListener("scroll", h); }
+  window.addEventListener("resize", h);
+})();
 /* 按 parentId 组树，输出带层级的渲染顺序（层数最多 3） */
 function thdOrder(nodes){
   const ids = {}, byP = {};
@@ -4796,7 +4808,9 @@ function thdRender(){
     if(thdEditCid === c.id){ html += thdCeHtml(d, c); return; }
     html += thdViewHtml(c, d);
   });
-  document.getElementById("thdCmtList").innerHTML = html;
+  const _cl = document.getElementById("thdCmtList");
+  _cl.innerHTML = html;
+  _cl.classList.toggle("editing", !!thdEditCid);   // 编辑留言时列表不再单独滚动
   const bk = document.getElementById("thdBlank");
   bk.textContent = cms.length ? "点这里写一条留言…" : "还没有留言，点这里写第一条…";
   bk.style.display = thdEditCid ? "none" : "";
@@ -4831,7 +4845,7 @@ function thdCeHtml(d, c){
   const nm = c ? (c.name || "") : (thdPreset ? (thdPreset.name || "") : (thdLast().name || ""));
   const tm = c ? (c.time || "") : thdNowStr();
   const tx = c ? (c.text || "") : "";
-  return `<div class="thd-ce" style="margin-left:${ind}px;">
+  return `<div class="thd-ce" id="thdCe" style="margin-left:${ind}px;">
     <button class="thd-ce-ava" id="thdCeAva" data-ava="${escapeHtml(av)}" onclick="thdPickCmtAva()" title="点击更换头像">${thdAvaInner(av)}</button>
     <div class="thd-ce-body">
       <div class="thd-ce-row1">
@@ -4861,16 +4875,42 @@ function thdPickCmtAva(){
   });
   inp.addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); inp.blur(); } });
 }
+/* 弹窗高度跟随可视区（手机弹出键盘时自动收缩，保证不被键盘盖住） */
+function thdFitView(){
+  const box = document.querySelector("#thdModal .thd-box");
+  if(!box) return;
+  const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight) || window.innerHeight;
+  box.style.maxHeight = Math.max(200, Math.round(h * 0.94)) + "px";
+}
+/* 把编辑块（含保存/取消）滚到可见区域 */
+function thdScrollToCe(){
+  const ce = document.getElementById("thdCe");
+  const box = document.querySelector("#thdModal .thd-box");
+  if(!ce || !box) return;
+  const cr = ce.getBoundingClientRect(), br = box.getBoundingClientRect();
+  const pad = 12;
+  if(cr.bottom + pad > br.bottom) box.scrollTop += (cr.bottom + pad - br.bottom);
+  else if(cr.top - pad < br.top) box.scrollTop -= (br.top - (cr.top - pad));
+}
+/* 进入编辑：聚焦 + 适配视口 + 反复校正滚动（覆盖键盘弹出的动画过程） */
+function thdFocusCe(){
+  const i = document.getElementById("thdCeText");
+  if(i){ try{ i.focus(); }catch(e){} }
+  thdFitView(); thdScrollToCe();
+  setTimeout(() => { thdFitView(); thdScrollToCe(); }, 260);
+  setTimeout(() => { thdFitView(); thdScrollToCe(); }, 620);
+  setTimeout(() => { thdFitView(); thdScrollToCe(); }, 1000);
+}
 function thdEditCmt(cid){
   if(Date.now() - thdOpenedAt < 700) return;   // 同上，先查看再编辑
   thdEditCid = cid; thdNewParent = null; thdConfirmCid = null;
   thdRender();
-  setTimeout(() => { const i = document.getElementById("thdCeText"); if(i) i.focus(); }, 60);
+  setTimeout(thdFocusCe, 60);
 }
 function thdNewCmt(){
   thdEditCid = "__new__"; thdNewParent = null; thdConfirmCid = null;
   thdRender();
-  setTimeout(() => { const i = document.getElementById("thdCeText"); if(i) i.focus(); }, 60);
+  setTimeout(thdFocusCe, 60);
 }
 function thdReplyTo(cid){
   const it = thdCur(); if(!it) return;
@@ -4879,7 +4919,7 @@ function thdReplyTo(cid){
   if(depth >= 5){ showToast("最多五层回复", 2); return; }
   thdEditCid = "__new__"; thdNewParent = cid; thdConfirmCid = null;
   thdRender();
-  setTimeout(() => { const i = document.getElementById("thdCeText"); if(i) i.focus(); }, 60);
+  setTimeout(thdFocusCe, 60);
 }
 function thdCancelCmt(){
   thdEditCid = null; thdNewParent = null; thdConfirmCid = null;
