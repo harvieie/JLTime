@@ -3601,6 +3601,20 @@ function thSpawnRow(st, items, lane, baseSeed){
 }
 /* 发射一行：文本越长走得越慢；前一条左端刚触左缘时，下一条才从右屏发车（前条继续往外飞完整段才消失，不直接消失）；
    各泳道首发错开；先发的层级(z-index)高于后发的 */
+/* 等前一条弹幕头部（左缘）触到树洞左边界后再执行 fire；暂停时位置不动 → 自动等待，恢复后继续 */
+function thWaitHeadThen(st, prevDm, fire){
+  let frames = 0;
+  const tick = () => {
+    if(!st || !st.isConnected) return;
+    if(!prevDm || !prevDm.isConnected){ fire(); return; }
+    if(!prevDm._thAnim || !prevDm.style.opacity || prevDm.style.opacity === "0"){ setTimeout(tick, 100); return; }
+    const sr = st.getBoundingClientRect();
+    const pr = prevDm.getBoundingClientRect();
+    if(pr.left <= sr.left + 2 || ++frames > 2400){ fire(); return; }
+    requestAnimationFrame(tick);
+  };
+  tick();
+}
 let thPendingTimers = [];
 let thSuspended = [];   // 暂停期间到点但没能发车的弹幕（挂起，恢复时按原节奏继续，不会丢失队列）
 function thLaunchRow(st, items, lane, dms, seeds, fixedIds){
@@ -3612,8 +3626,7 @@ function thLaunchRow(st, items, lane, dms, seeds, fixedIds){
     dm.style.opacity = "0";
   });
   const W = st.clientWidth;
-  let t = 400 + lane * 800 + Math.random() * 500;   // 首发错落（毫秒）
-  dms.forEach((dm, j) => {
+  const plan = dms.map((dm, j) => {
     thPlayOne(dm, items, seeds[j], true, fixedIds ? fixedIds[j] : null);
     thLastPlan.push({ lane, j, seed: seeds[j], id: dm.dataset.id || null });
     const len = parseInt(dm.dataset.len || 0, 10);
@@ -3621,18 +3634,29 @@ function thLaunchRow(st, items, lane, dms, seeds, fixedIds){
     const w = dm.offsetWidth || 200;
     const dur = (W + w) / v;             // 完整飞行时间（整条飞出左屏才结束）
     dm.dataset.dur = dur.toFixed(2);
-    const gap = (W / v) * 1000;         // 前条飞完屏宽所需时间（毫秒）→ 前条左端触左缘时后条发车
-    const tid = setTimeout(() => {
-      if(!dm.isConnected) return;
-      if(st.classList.contains("paused")){          // 暂停中：记下来，恢复后接着发（不丢队列、不额外冒新弹幕）
-        thSuspended.push({ dm, items, seed: seeds[j], fixedId: fixedIds ? fixedIds[j] : null, lane, j, perRow: dms.length, dur, rowObj, gap });
+    return { dm, j, dur };
+  });
+  // 串行发车：后一条必须等前一条的"头部"（左缘）真正越过树洞左边界后才发；暂停时自动等待，恢复后继续
+  const fireAt = k => {
+    const p = plan[k];
+    if(!p) return;
+    const go = () => {
+      if(!p.dm.isConnected) return;
+      if(st.classList.contains("paused")){
+        thSuspended.push({ dm: p.dm, items, seed: seeds[p.j], fixedId: fixedIds ? fixedIds[p.j] : null, lane, j: p.j, perRow: dms.length, dur: p.dur, rowObj, gap: 0 });
         return;
       }
-      thStartFly(dm, items, seeds[j], true, fixedIds ? fixedIds[j] : null, lane, j, dms.length, dur, dur, 0, rowObj);
-    }, t);
-    thPendingTimers.push(tid);
-    t += gap;
-  });
+      thStartFly(p.dm, items, seeds[p.j], true, fixedIds ? fixedIds[p.j] : null, lane, p.j, dms.length, p.dur, p.dur, 0, rowObj);
+      fireAt(k + 1);
+    };
+    if(k === 0){
+      const tid = setTimeout(go, 400 + lane * 800 + Math.random() * 500);   // 首发错落
+      thPendingTimers.push(tid);
+    }else{
+      thWaitHeadThen(st, plan[k - 1].dm, go);
+    }
+  };
+  fireAt(0);
 }
 /* 下一轮重排：复用本行元素，重新随机选弹幕、重算时长，错峰再起飞 */
 function thRowNext(items, rowObj){
@@ -3771,15 +3795,20 @@ function thResume(){
   // 暂停期间挂起的弹幕，按原来的节奏接着发车（点空白处继续弹后面的）
   const pend = thSuspended.slice();
   thSuspended = [];
-  let delay = 320;
-  pend.forEach(p => {
-    const tid = setTimeout(() => {
+  let prevDm = null;
+  pend.forEach((p, k) => {
+    const fire = () => {
       if(!p.dm.isConnected) return;
-      if(st.classList.contains("paused")){ thSuspended.push(p); return; }
+      if(st.classList.contains("paused")) return;     // 又被暂停了：留待下次恢复继续
       thStartFly(p.dm, p.items, p.seed, true, p.fixedId, p.lane, p.j, p.perRow, p.dur, p.dur, 0, p.rowObj);
-    }, delay);
-    thPendingTimers.push(tid);
-    delay += (p.gap || 1200);
+    };
+    if(k === 0){
+      const tid = setTimeout(fire, 260);
+      thPendingTimers.push(tid);
+    }else{
+      thWaitHeadThen(st, prevDm, fire);
+    }
+    prevDm = p.dm;
   });
 }
 /* 清空所有排队待发的弹幕定时器（暂停时调用，防止暂停后新弹幕还冒出来） */
@@ -5072,6 +5101,17 @@ function thdRenderQuickUsers(){
 function thdUseQuick(i){
   const x = thQuickList()[i];
   if(!x) return;
+  // 正在编辑（已有留言或新建中）：只替换头像和用户名，时间和已输入的内容保持原样，绝不刷新
+  const avaBtn = document.getElementById("thdCeAva");
+  const nameEl = document.getElementById("thdCeName");
+  if(avaBtn && nameEl && document.getElementById("thdCe")){
+    const av = x.avatar || "🙂";
+    avaBtn.dataset.ava = av;
+    if(!avaBtn.querySelector("input")) avaBtn.innerHTML = thdAvaInner(av);
+    nameEl.value = x.name || "";
+    thdPreset = { avatar: av, name: nameEl.value };
+    return;
+  }
   if(!thdEditCid){ thdEditCid = "__new__"; thdNewParent = ""; }
   thdPreset = { avatar: x.avatar || "🙂", name: x.name || "" };
   thdRender();
