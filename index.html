@@ -189,17 +189,18 @@ body.dark .th-tools::after{background:#8a8f9a;}
 .thd-cmt-side span{cursor:pointer;user-select:none;white-space:nowrap;}
 @media(max-width:520px){.thd-cmt-side{gap:7px;font-size:10.5px;}}
 .thd-empty{font-size:12px;color:#bda98f;padding:10px 0;cursor:pointer;}
-.thd-ce{padding:8px 0;border-bottom:1px dashed #f2e4cf;}
-.thd-ce-row1{display:flex;gap:6px;align-items:center;}
-.thd-ce-name{flex:0 0 84px;min-width:0;border:1px solid #e8d3b5;border-radius:9px;padding:6px 7px;font-size:12.5px;outline:none;box-sizing:border-box;background:#fffdf8;}
-.thd-ce-time{flex:1;min-width:0;border:1px solid #e8d3b5;border-radius:9px;padding:6px 7px;font-size:11.5px;outline:none;box-sizing:border-box;background:#fffdf8;font-family:monospace;}
-.thd-ce-ava{flex:0 0 38px;width:38px;height:34px;border:1px solid #e8c89a;border-radius:9px;background:#ffe9c9;text-align:center;font-size:16px;padding:0;cursor:pointer;line-height:1;overflow:hidden;}
+.thd-ce{display:flex;gap:8px;align-items:flex-start;padding:9px 0;border-bottom:1px dashed #f2e4cf;}
+.thd-ce-ava{flex:0 0 36px;width:36px;height:36px;border:1px solid #e8c89a;border-radius:50%;background:#ffe9c9;text-align:center;font-size:16px;padding:0;cursor:pointer;line-height:1;overflow:hidden;display:flex;align-items:center;justify-content:center;}
 .thd-ce-ava img{width:100%;height:100%;object-fit:cover;}
 .thd-ce-ava-in{width:100%;height:100%;border:none;outline:none;background:transparent;text-align:center;font-size:15px;padding:0;}
-.thd-ce-row2{display:flex;gap:6px;align-items:flex-start;margin-top:6px;}
-.thd-ce-save{flex:0 0 auto;padding:7px 11px !important;font-size:12.5px !important;border-radius:10px !important;}
-.thd-ce-text{flex:1;min-width:0;min-height:36px;border:1px solid #e8d3b5;border-radius:9px;padding:7px;font-size:12.5px;outline:none;resize:vertical;box-sizing:border-box;font-family:inherit;background:#fffdf8;}
-.thd-ce-foot{text-align:right;font-size:11px;color:#a58a6c;margin-top:4px;cursor:pointer;}
+.thd-ce-body{flex:1;min-width:0;}
+.thd-ce-row1{display:flex;gap:6px;align-items:center;}
+.thd-ce-name{flex:0 0 88px;min-width:0;border:1px solid #e8d3b5;border-radius:9px;padding:6px 7px;font-size:12.5px;outline:none;box-sizing:border-box;background:#fffdf8;}
+.thd-ce-time{flex:1;min-width:0;border:1px solid #e8d3b5;border-radius:9px;padding:6px 7px;font-size:11.5px;outline:none;box-sizing:border-box;background:#fffdf8;font-family:monospace;}
+.thd-ce-text{width:100%;min-height:48px;margin-top:6px;border:1px solid #e8d3b5;border-radius:9px;padding:7px;font-size:12.5px;outline:none;resize:none;box-sizing:border-box;font-family:inherit;background:#fffdf8;line-height:1.5;}
+.thd-ce-acts{display:flex;gap:6px;margin-top:6px;}
+.thd-ce-acts .btn-pri,.thd-ce-acts .btn-sec{padding:6px 14px;font-size:12.5px;border-radius:10px;}
+.thd-quick-users{margin-top:9px;padding-top:9px;border-top:1px dashed #f2e4cf;}
 .thd-quick{display:flex;gap:6px;align-items:center;margin-top:8px;}
 .thd-quick textarea{flex:1;min-width:0;height:34px;max-height:96px;border:1px solid #e8d3b5;border-radius:10px;padding:7px 9px;font-size:12.5px;outline:none;resize:none;box-sizing:border-box;font-family:inherit;line-height:1.4;background:#fffdf8;overflow:hidden;scrollbar-width:none;}
 .thd-quick textarea::-webkit-scrollbar{display:none;}
@@ -214,6 +215,7 @@ body.dark .thd-time,body.dark .thd-cmt-time,body.dark .thd-cmt-title{color:#9aa0
 body.dark .thd-ava,body.dark .thd-cmt-ava,body.dark .thd-ce-ava{background:#33363f;border-color:#454a55;color:#e6e6e6;}
 body.dark .thd-divider{background:#33363f;}
 body.dark .thd-cmt,body.dark .thd-ce{border-color:#2e323b;}
+body.dark .thd-quick-users{border-top-color:#2e323b;}
 body.dark .thd-inline,body.dark .thd-ce-name,body.dark .thd-ce-time,body.dark .thd-ce-text,body.dark .thd-quick textarea{background:#2b2f38;border-color:#3a3f4a;color:#e6e6e6;}
 body.dark .thd-empty,body.dark .thd-blank{color:#7d838d;}
 body.dark .thd-ce-ava-in{color:#e6e6e6;}
@@ -509,7 +511,7 @@ select optgroup option{font-size:14px;color:#333;}
 /* 统一按钮样式 */
 .btn-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px;}
 .btn-pri{background:var(--primary);color:#fff;border:none;padding:8px 20px;border-radius:20px;cursor:pointer;font-size:14px;}
-.btn-pri:hover{filter:brightness(.94);}
+.btn-pri:hover{background:var(--primary);filter:brightness(.94);}
 .btn-sec{background:#f1f3f5;color:#555;border:none;padding:8px 16px;border-radius:20px;cursor:pointer;font-size:14px;}
 .btn-sec:hover{background:#e9ecef;}
 .btn-danger{background:#ffe3e3;color:#c92a2a;border:none;padding:8px 16px;border-radius:20px;cursor:pointer;font-size:14px;}
@@ -836,10 +838,7 @@ button{border-radius:12px;}
     <div class="thd-cmt-title">评论 <span id="thdCmtCount"></span></div>
     <div class="thd-cmt-list" id="thdCmtList"></div>
     <div class="thd-blank" id="thdBlank" onclick="thdNewCmt()">点这里写一条评论…</div>
-    <div class="thd-quick" id="thdQuick">
-      <textarea id="thdQuickInput" rows="1" placeholder="写评论…" oninput="this.style.height='34px';this.style.height=Math.min(96,this.scrollHeight+4)+'px'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();thdQuickSubmit();}"></textarea>
-      <button class="btn-pri" onclick="thdQuickSubmit()">发表</button>
-    </div>
+    <div class="th-quick thd-quick-users" id="thdQuickUsers"></div>
     <div class="thd-btns">
       <button class="btn-pri" onclick="thdSaveLocal()">保存本地</button>
       <button class="success" onclick="thdUpload()">上传云端</button>
@@ -4646,7 +4645,7 @@ function closeXzSearch(){
 }
 
 /* ===== 弹幕详情（朋友圈式）：点哪改哪 + 树形评论（最多三层） ===== */
-let thdCurId = null, thdEditCid = null, thdNewParent = null, thdConfirmCid = null, thdFieldEditing = null, thdDelBarConfirm = false;
+let thdCurId = null, thdEditCid = null, thdNewParent = null, thdConfirmCid = null, thdFieldEditing = null, thdDelBarConfirm = false, thdPreset = null;
 function thdNowStr(){
   const d = new Date();
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0") +
@@ -4677,9 +4676,8 @@ function thdOpen(id){
   const list = loadTreehole();
   const t = list.find(x => x.id === id);
   if(t){ thdNorm(t); saveTreehole(list); }
+  thdPreset = null;
   thdRender();
-  const qi = document.getElementById("thdQuickInput");
-  if(qi){ qi.value = ""; qi.style.height = "34px"; }
   document.getElementById("thdModal").style.display = "flex";
 }
 /* 按 parentId 组树，输出带层级的渲染顺序（层数最多 3） */
@@ -4738,7 +4736,8 @@ function thdRender(){
   const bk = document.getElementById("thdBlank");
   bk.textContent = cms.length ? "点这里写一条评论…" : "还没有评论，点这里写第一条…";
   bk.style.display = thdEditCid ? "none" : "";
-  document.getElementById("thdQuick").style.display = thdEditCid ? "none" : "flex";
+  thdRenderQuickUsers();
+  thdPreset = null;
   document.getElementById("thdDelBarBtn").textContent = thdDelBarConfirm ? "确认删除" : "删除";
 }
 function thdViewHtml(c, d){
@@ -4761,21 +4760,23 @@ function thdViewHtml(c, d){
 }
 function thdCeHtml(d, c){
   const ind = (d - 1) * 18;
-  const av = c ? (c.avatar || "🙂") : (thdLast().avatar || "🙂");
-  const nm = c ? (c.name || "") : (thdLast().name || "");
+  const av = c ? (c.avatar || "🙂") : (thdPreset ? (thdPreset.avatar || "🙂") : (thdLast().avatar || "🙂"));
+  const nm = c ? (c.name || "") : (thdPreset ? (thdPreset.name || "") : (thdLast().name || ""));
   const tm = c ? (c.time || "") : thdNowStr();
   const tx = c ? (c.text || "") : "";
   return `<div class="thd-ce" style="margin-left:${ind}px;">
-    <div class="thd-ce-row1">
-      <input class="thd-ce-name" id="thdCeName" value="${escapeHtml(nm)}" placeholder="名字" maxlength="12">
-      <input class="thd-ce-time" id="thdCeTime" value="${escapeHtml(tm)}" placeholder="时间（可改）">
-      <button class="thd-ce-ava" id="thdCeAva" data-ava="${escapeHtml(av)}" onclick="thdPickCmtAva()" title="点击更换头像">${thdAvaInner(av)}</button>
-    </div>
-    <div class="thd-ce-row2">
-      <button class="btn-pri thd-ce-save" onclick="thdSaveCmt()">保存</button>
+    <button class="thd-ce-ava" id="thdCeAva" data-ava="${escapeHtml(av)}" onclick="thdPickCmtAva()" title="点击更换头像">${thdAvaInner(av)}</button>
+    <div class="thd-ce-body">
+      <div class="thd-ce-row1">
+        <input class="thd-ce-name" id="thdCeName" value="${escapeHtml(nm)}" placeholder="名字" maxlength="12">
+        <input class="thd-ce-time" id="thdCeTime" value="${escapeHtml(tm)}" placeholder="时间（可改）">
+      </div>
       <textarea class="thd-ce-text" id="thdCeText" rows="2" placeholder="评论内容（回车换行）">${escapeHtml(tx)}</textarea>
+      <div class="thd-ce-acts">
+        <button class="btn-pri" onclick="thdSaveCmt()">保存</button>
+        <button class="btn-sec" onclick="thdCancelCmt()">取消</button>
+      </div>
     </div>
-    <div class="thd-ce-foot" onclick="thdCancelCmt()">取消</div>
   </div>`;
 }
 function thdPickCmtAva(){
@@ -4894,22 +4895,49 @@ function thdCommitField(f, v){
   if(f === "name" || f === "avatar") thSaveQuick(t.avatar, t.name);
   thdRender(); showToast("已保存到本地", 1.5);
 }
-/* 一行高的“写评论”框 + 右侧发表：用最近使用的名字/头像直接发 */
-function thdQuickSubmit(){
-  const it = thdCur(); if(!it) return;
-  const box = document.getElementById("thdQuickInput");
-  const txt = box.value.trim();
-  if(!txt){ showToast("先写点什么", 2); return; }
-  const last = thdLast();
-  const name = String(last.name || "").trim();
-  if(!name){ showToast("先点上方空白处填好名字", 2); thdNewCmt(); return; }
-  const list = loadTreehole();
-  const t = list.find(x => x.id === thdCurId); if(!t) return;
-  if(!Array.isArray(t.comments)) t.comments = [];
-  t.comments.push({ id: uid(), avatar: (last.avatar || "🙂"), name: name, time: thdNowStr(), text: txt, parentId: "" });
-  saveTreehole(list);
-  box.value = ""; box.style.height = "34px";
-  thdRender(); showToast("已发表", 2);
+/* 底部快捷用户：用过的头像+名字，点按直接以该身份写评论，长按删除 */
+function thdRenderQuickUsers(){
+  const box = document.getElementById("thdQuickUsers");
+  if(!box) return;
+  const q = thQuickList();
+  if(!q.length){
+    box.innerHTML = `<span class="th-q-hint">保存过的头像+名字会出现在这里</span>`;
+    return;
+  }
+  box.innerHTML = q.map((x, i) =>
+    `<span data-i="${i}" title="点按写评论 · 长按删除">${x.avatar || "🙂"} ${escapeHtml(x.name || "")} ×</span>`
+  ).join("");
+  box.querySelectorAll("span[data-i]").forEach(sp => {
+    sp.addEventListener("click", () => {
+      if(sp.dataset.long){ delete sp.dataset.long; return; }
+      thdUseQuick(+sp.dataset.i);
+    });
+    let t = null;
+    const clear = () => { if(t){ clearTimeout(t); t = null; } };
+    sp.addEventListener("pointerdown", () => {
+      t = setTimeout(() => {
+        t = null;
+        sp.dataset.long = "1";
+        const i = +sp.dataset.i;
+        const x = thQuickList()[i];
+        if(!x) return;
+        localStorage.setItem("jlt_th_quick", JSON.stringify(thQuickList().filter((_, j) => j !== i)));
+        thdRenderQuickUsers();
+        showToast("已删除快捷用户", 2);
+      }, 620);
+    });
+    sp.addEventListener("pointerup", clear);
+    sp.addEventListener("pointercancel", clear);
+    sp.addEventListener("pointerleave", clear);
+  });
+}
+function thdUseQuick(i){
+  const x = thQuickList()[i];
+  if(!x) return;
+  if(!thdEditCid){ thdEditCid = "__new__"; thdNewParent = ""; }
+  thdPreset = { avatar: x.avatar || "🙂", name: x.name || "" };
+  thdRender();
+  setTimeout(() => { const el = document.getElementById("thdCeText"); if(el) el.focus(); }, 60);
 }
 function thdSaveLocal(){
   if(thdEditCid){ thdSaveCmt(); return; }
@@ -4956,6 +4984,41 @@ function thDel(id){
   saveTreehole(loadTreehole().filter(x => x.id !== id));
   thStart(); thSearch();
 }
+/* 添加弹幕弹窗：头像行只放“弹幕库里出现过的头像 + 当前新输入的头像”，最近使用的排最左，一行内展示 */
+function thAvaRowList(){
+  const libSet = Array.from(new Set(loadTreehole().map(x => String(x.avatar || "").trim()).filter(Boolean)));
+  let list = thRecentAvatars().filter(a => libSet.indexOf(a) >= 0).slice(-14).reverse();
+  if(!list.length){
+    loadTreehole().slice().reverse().forEach(x => {
+      const a = String(x.avatar || "").trim();
+      if(a && list.indexOf(a) < 0) list.push(a);
+    });
+    list = list.slice(0, 14);
+  }
+  const cur = String((document.getElementById("thAvatarInput") || {}).value || "").trim();
+  if(cur && list.indexOf(cur) < 0) list.unshift(cur);
+  return list;
+}
+function renderThAvaRow(){
+  const box = document.getElementById("thAvatarQuick");
+  if(!box) return;
+  const cur = String((document.getElementById("thAvatarInput") || {}).value || "").trim();
+  const list = thAvaRowList();
+  if(!list.length){
+    box.innerHTML = `<span class="th-q-hint" style="font-size:11px;">还没有用过的头像</span>`;
+    return;
+  }
+  box.innerHTML = list.map(e => {
+    const on = (e === cur);
+    return `<span data-ava="${escapeHtml(e)}" title="点按使用" style="${on ? "background:#ffe9c9;border:1px solid #d9a566;" : ""}">${e}</span>`;
+  }).join("");
+  box.querySelectorAll("span[data-ava]").forEach(sp => {
+    sp.addEventListener("click", () => {
+      document.getElementById("thAvatarInput").value = sp.dataset.ava;
+      renderThAvaRow();
+    });
+  });
+}
 function openThModal(){
   document.getElementById("thModalTitle").textContent = thEditId ? "弹幕详情" : "添加弹幕";
   const it = thEditId ? loadTreehole().find(x => x.id === thEditId) : null;
@@ -4974,11 +5037,10 @@ function openThModal(){
   // 上传云端：所有模式可见（把本地已有+新增的弹幕同步到云端）
   // 删除按钮：仅编辑模式编辑已有弹幕时显示
   document.getElementById("thDelBtn").style.display = (thEditId !== null && isFunEditMode()) ? "" : "none";
-  // 头像快捷：整排按使用先后从左到右（用过的排前面，未用过的排后面）
-  const recent = thRecentAvatars();
-  document.getElementById("thAvatarQuick").innerHTML =
-    recent.map(e => `<span style="background:#ffe9c9;border:1px solid #d9a566;" onclick="document.getElementById('thAvatarInput').value='${e}'">${e}</span>`).join("") +
-    TH_EMOJIS.filter(e => !recent.includes(e)).map(e => `<span onclick="document.getElementById('thAvatarInput').value='${e}'">${e}</span>`).join("");
+  // 头像行：只显示弹幕库里真实用过的头像 + 当前新输入的头像，最近用的在最左，只占一行
+  renderThAvaRow();
+  const ai = document.getElementById("thAvatarInput");
+  if(ai && !ai.dataset.boundAvaRow){ ai.dataset.boundAvaRow = "1"; ai.addEventListener("input", renderThAvaRow); }
   const qbox = document.getElementById("thQuickNames");
   const q = thQuickList();
   qbox.innerHTML = q.length
