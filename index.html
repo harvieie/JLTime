@@ -4658,7 +4658,7 @@ function closeXzSearch(){
   document.removeEventListener("touchmove", xzOutsideTouch, {capture:true});
 }
 
-/* ===== 弹幕详情（朋友圈式）：点哪改哪 + 树形评论（最多三层） ===== */
+/* ===== 弹幕详情（朋友圈式）：点哪改哪 + 树形留言（最多五层） ===== */
 let thdCurId = null, thdEditCid = null, thdNewParent = null, thdConfirmCid = null, thdFieldEditing = null, thdDelBarConfirm = false, thdPreset = null;
 let thdOpenedAt = 0;   // 详情刚打开的一小段时间内屏蔽"点文字进编辑"，避免点弹幕那一下直接弹键盘
 function thdNowStr(){
