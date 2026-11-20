@@ -2918,29 +2918,23 @@ function cityKeyOf(c){
   const m = s.match(/^(.{2,6}?市)/);
   return m ? m[1] : s.slice(0, 6);
 }
-/* 日志聚合：每个市级位置至少保留一条最新的；总数不超过 10；整体按城市名首字排序 */
+/* 日志聚合：最近 10 条照旧；每个出现过的市级各留一条最新，超出的归到列表最后（不占 10 条名额） */
 function finalizeLog(base){
   const all = base.slice().sort((a,b) => b.ts - a.ts);
-  const groups = new Map();
+  const recent = all.slice(0,10).map(e => Object.assign({}, e, { archived: false }));
+  const recentTs = new Set(recent.map(e => e.ts));
+  // all 已按时间倒序，每个市级第一次遇到的就是该市最新一条
+  const byCity = new Map();
   all.forEach(e => {
     const k = cityKeyOf(e.city);
-    if(!groups.has(k)) groups.set(k, []);
-    groups.get(k).push(e);
+    if(!byCity.has(k)) byCity.set(k, e);
   });
-  const newestByCity = [];
-  groups.forEach(arr => newestByCity.push(arr[0]));      // 每个市级的最新一条
-  const byName = (a,b) => {
-    const k = cityKeyOf(a.city).localeCompare(cityKeyOf(b.city), "zh-CN");
-    return k !== 0 ? k : (b.ts - a.ts);
-  };
-  if(newestByCity.length > 10){
-    // 城市太多：只留最近出现的 10 个市级，各自最新一条
-    return newestByCity.sort((a,b) => b.ts - a.ts).slice(0,10).sort(byName);
-  }
-  // 名额还有余：按时间倒序补其它记录（同城市的旧记录）
-  const picked = new Set(newestByCity);
-  const rest = all.filter(e => !picked.has(e)).slice(0, 10 - newestByCity.length);
-  return newestByCity.concat(rest).sort(byName);
+  const arch = [];
+  byCity.forEach(e => {
+    if(!recentTs.has(e.ts)) arch.push(Object.assign({}, e, { archived: true }));
+  });
+  arch.sort((a,b) => cityKeyOf(a.city).localeCompare(cityKeyOf(b.city), "zh-CN"));
+  return recent.concat(arch.slice(0, 30));   // 城市太多时最多再归档 30 个
 }
 /* 核心提交：读取云端基线 → 合并本地积压与本次 entry → 确认 PUT 成功 → 再清本地、用云端权威内容覆盖。
    读取状态不明时绝不 PUT（避免空数组冲掉云端历史），仅把条目安全暂存本地，下次提交自动补传。 */
@@ -3028,11 +3022,12 @@ function renderLoginLogList(){
   const log = finalizeLog(loadLoginLog());   // 每次显示都按「市级优先保留 + 城市名排序」重排
   const box = document.getElementById("loginLogList");
   if(!box) return;
-  box.innerHTML = log.length ? log.map(r => {
+  box.innerHTML = log.length ? log.map((r, idx, arr) => {
     const d = new Date(r.ts);
     const pad = n => String(n).padStart(2,"0");
     const dt = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    return `<div style="padding:8px 4px;border-bottom:1px dashed #eee;font-size:13px;">
+    const gap = (r.archived && (idx === 0 || !arr[idx-1] || !arr[idx-1].archived)) ? '<div style="height:9px;"></div>' : "";
+    return gap + `<div style="padding:8px 4px;border-bottom:1px dashed #eee;font-size:13px;">
       <div>${dt}${r.city ? " · " + escapeHtml(cleanCityName(r.city)) : ""}${(r.acc && r.acc > 0) ? " ±" + (r.acc >= 1000 ? (r.acc/1000).toFixed(1) + "km" : r.acc + "m") : ""} · ${escapeHtml(r.device)}</div>
       <div style="color:#888;">${r.mode}模式 · ${escapeHtml(r.act)}</div>
     </div>`;
