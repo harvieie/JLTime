@@ -2744,15 +2744,20 @@ function preciseAmapGet(base,cb){
   return fetch(base).then(r=>r.json()).catch(()=>
     preciseJsonp(base+(base.includes("?")?"&":"?")+"output=json&callback="+cb,cb));
 }
-// GPS 经纬度逆地理，优先格式化地址（含街道），否则拼省市区
+// GPS 经纬度逆地理：拼「市/区/街道」，不用格式化地址（里面会带 POI 名，看着像假地址）
 function regeoPrecise(lng,lat){
   const ak=getAmapKey();
   const url=`https://restapi.amap.com/v3/geocode/regeo?key=${ak}&location=${lng.toFixed(6)},${lat.toFixed(6)}&extensions=base`;
   return preciseAmapGet(url,"__jltPReCb").then(r=>{
     if(!r||r.status!=="1") throw new Error("regeo fail");
-    const g=r.regeocode||{}, c=g.addressComponent||{};
+    const c=((r.regeocode||{}).addressComponent)||{};
     const pk=v=>Array.isArray(v)?(v[0]||""):(v||"");
-    return g.formatted_address || ((pk(c.city)||pk(c.province))+(pk(c.district)||""));
+    const prov=pk(c.province), city=pk(c.city), dist=pk(c.district), town=pk(c.township), street=pk(c.street);
+    const head = city || prov;
+    let out = head;
+    if(dist && dist !== head) out += dist;
+    out += (town || street || "");
+    return out || head || "";
   });
 }
 /* 精确定位开关：开启后默认自动走 GPS，可随时取消回到静默 IP 模式 */
@@ -2812,8 +2817,9 @@ function requestPreciseLocation(targetTs, quiet, onFail){
   }).then(pos=>regeoPrecise(pos.coords.longitude,pos.coords.latitude)
     .then(addr=>{
       localStorage.setItem("jlt_precise_ever","1");     // 记住“拿到过精确位置”，下次登录自动；不动开关显示
-      setPreciseLast("ok");
-      applyLoginCity(ts,addr);
+      const acc = Math.round(pos.coords.accuracy || 0);
+      setPreciseLast("ok", acc);
+      applyLoginCity(ts, addr, acc);
       if(!quiet) showToast("已更新精确位置",2);
     }))
     .catch(err=>{
@@ -2836,8 +2842,8 @@ function requestPreciseLocation(targetTs, quiet, onFail){
     });
 }
 requestPreciseLocation._retryTs = {};
-function setPreciseLast(res){
-  try{ localStorage.setItem("jlt_precise_last", JSON.stringify({ res, ts: Date.now() })); }catch(e){}
+function setPreciseLast(res, acc){
+  try{ localStorage.setItem("jlt_precise_last", JSON.stringify({ res, acc: (typeof acc==="number"?acc:null), ts: Date.now() })); }catch(e){}
   updatePreciseHint();
 }
 function updatePreciseHint(){
@@ -2851,7 +2857,8 @@ function updatePreciseHint(){
       const d = new Date(o.ts), p = n => String(n).padStart(2,"0");
       const t = `${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
       const map = { ok:"成功", denied:"浏览器拒绝授权", timeout:"超时", fail:"失败" };
-      last = " · 上次精确：" + (map[o.res] || o.res) + " " + t;
+      const accTxt = (o.acc && o.acc > 0) ? (o.acc >= 1000 ? " 约±" + (o.acc/1000).toFixed(1) + "km" : " ±" + o.acc + "m") : "";
+      last = " · 上次精确：" + (map[o.res] || o.res) + accTxt + " " + t;
     }
   }catch(e){}
   el.textContent = "定位模式：" + mode + last;
@@ -2946,21 +2953,31 @@ async function pushLoginLog(act){
 // 定位结果待处理缓存：回调可能早于条目首次写本地，先缓存，写入后补刷
 let pendingCity = null;
 // 对外：定位回来更新指定条目的 city（静默再提交一次）
-function applyLoginCity(ts, city){
+/* 老数据里高德格式化地址会带 POI 名（如“…南京东路街道上海市人民政府”），显示前一并截掉 */
+function cleanCityName(c){
+  c = String(c || "").trim();
+  if(!c) return c;
+  const m = c.match(/^(.*?(?:街道|镇|乡))/);
+  return (m ? m[1] : c).trim();
+}
+function applyLoginCity(ts, city, acc){
   if(!city) return;
-  pendingCity = { ts, city };
+  city = cleanCityName(city);
+  pendingCity = { ts, city, acc: (typeof acc === "number" && isFinite(acc)) ? Math.round(acc) : null };
   flushPendingCity();
 }
 // 把待处理定位落到对应条目；指定 ts 尚不存在则回退到最新一条
 function flushPendingCity(){
   if(!pendingCity) return;
-  const { ts, city } = pendingCity;
+  const { ts, city, acc } = pendingCity;
   const log = loadLoginLog();
   const cur = log.find(x => x.ts === ts) || log[0];
   if(!cur) return;                       // 本地还没任何条目，等下次 commit 后再 flush
-  if(cur.city === city){ pendingCity = null; return; }
+  if(cur.city === city && (acc == null || cur.acc === acc)){ pendingCity = null; return; }
   pendingCity = null;
-  commitLoginLog(Object.assign({}, cur, { city }));
+  const patch = { city };
+  if(acc != null) patch.acc = acc;       // 精度（米），用来判断是真定位还是粗略估算
+  commitLoginLog(Object.assign({}, cur, patch));
 }
 // 旧调用名兼容：提交逻辑已由 commitLoginLog 串行接管，空实现避免外部误触发并发重传
 function syncLoginLogCloud(){ }
@@ -2971,9 +2988,10 @@ async function pullLoginLogCloud(){
     const local = loadLoginLog();
     // 同一条记录：本地地址更详细（例如刚 GPS 到的街道级）则保留本地，避免被云端旧的城市级覆盖
     const clean = finalizeLog(cloud.arr).map(e=>{
+      let city = cleanCityName(e.city);
       const l = local.find(x => x.ts === e.ts);
-      if(l && String(l.city||"").length > String(e.city||"").length) return Object.assign({}, e, { city: l.city });
-      return e;
+      if(l && String(l.city||"").length > String(city||"").length) city = cleanCityName(l.city);
+      return Object.assign({}, e, { city });
     });
     localStorage.setItem("jlt_login_log", JSON.stringify(clean));
     renderLoginLogList();
@@ -2988,7 +3006,7 @@ function renderLoginLogList(){
     const pad = n => String(n).padStart(2,"0");
     const dt = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
     return `<div style="padding:8px 4px;border-bottom:1px dashed #eee;font-size:13px;">
-      <div>${dt}${r.city ? " · " + escapeHtml(r.city) : ""} · ${escapeHtml(r.device)}</div>
+      <div>${dt}${r.city ? " · " + escapeHtml(cleanCityName(r.city)) : ""}${(r.acc && r.acc > 0) ? " ±" + (r.acc >= 1000 ? (r.acc/1000).toFixed(1) + "km" : r.acc + "m") : ""} · ${escapeHtml(r.device)}</div>
       <div style="color:#888;">${r.mode}模式 · ${escapeHtml(r.act)}</div>
     </div>`;
   }).join("") : '<div style="color:#999;text-align:center;padding:16px;">暂无记录</div>';
