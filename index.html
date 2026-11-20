@@ -2666,15 +2666,10 @@ function getAmapKey(){
 function refreshLoginCity(targetTs){
   const ts = targetTs || (loadLoginLog()[0] || {}).ts;
   const ak = getAmapKey();
-  // 精确定位开关已开启且已授权：自动静默走 GPS（不再弹授权）；否则走下面的 IP 静默方案
-  // 只要这个网页曾经被授权过精确位置，就记住并静默自动获取（下次登录不用再点）
-  if(navigator.geolocation && navigator.permissions){
-    navigator.permissions.query({name:"geolocation"}).then(st=>{
-      if(st.state === "granted"){
-        setPreciseEnabled(true); updatePreciseBtn();
-        requestPreciseLocation(ts, true);
-      }
-    }).catch(()=>{});
+  // 登录后后台静默“点一下”精确定位：不弹提示、不改按钮状态，只把日志里的地址刷成街道级
+  // 规则：曾成功获取过精确位置（ever）或手动开启过（on），且没有被手动关闭过（off）→ 自动跑一次
+  if(navigator.geolocation && preciseAutoAllowed()){
+    requestPreciseLocation(ts, true);
   }
   let settled = false;
   const applyCity = (c, force) => {
@@ -2764,35 +2759,46 @@ function regeoPrecise(lng,lat){
   });
 }
 /* 精确定位开关：开启后默认自动走 GPS，可随时取消回到静默 IP 模式 */
-function preciseEnabled(){ return localStorage.getItem("jlt_precise_on") === "1"; }
+/* 精确定位默认就是「自动」：每次登录后台静默获取一次。
+   手动关掉（jlt_precise_off=1）→ 以后不再自动；手动打开 → 一直自动。 */
+function preciseManualOff(){ return localStorage.getItem("jlt_precise_off") === "1"; }
+function preciseEnabled(){ return !preciseManualOff(); }        // 默认视为开启
 function setPreciseEnabled(on){
-  if(on) localStorage.setItem("jlt_precise_on","1");
-  else localStorage.removeItem("jlt_precise_on");
+  if(on){ localStorage.removeItem("jlt_precise_off"); localStorage.setItem("jlt_precise_on","1"); }
+  else { localStorage.setItem("jlt_precise_off","1"); localStorage.removeItem("jlt_precise_on"); }
 }
+function preciseAutoAllowed(){ return !preciseManualOff(); }
 // 刷新按钮显示：开启时高亮「精确✓」，关闭时普通「精确定位」
 function updatePreciseBtn(){
   const b = document.getElementById("preciseToggleBtn");
   if(!b) return;
-  if(preciseEnabled()){
-    b.textContent = "精确✓";
-    b.style.background = "#1976d2";
+  if(preciseManualOff()){
+    b.textContent = "精确定位 已关";
+    b.style.background = "#9aa7b1";
     b.style.color = "#fff";
+    b.style.border = "1px solid #9aa7b1";
+  }else if(localStorage.getItem("jlt_precise_on") === "1"){
+    b.textContent = "精确定位 已开✓";
+    b.style.background = "#10b981";
+    b.style.color = "#fff";
+    b.style.border = "1px solid #10b981";
   }else{
-    b.textContent = "精确定位";
-    b.style.background = "";
-    b.style.color = "";
+    b.textContent = "精确定位 自动";
+    b.style.background = "#4a90c2";
+    b.style.color = "#fff";
+    b.style.border = "1px solid #4a90c2";
   }
 }
 // 点按开关：未开启→开启并请求（首次弹授权）；已开启→取消并回到静默 IP
 function togglePrecise(){
   if(!navigator.geolocation){ showToast("该浏览器不支持精确定位",2); return; }
   if(preciseEnabled()){
-    setPreciseEnabled(false);
+    setPreciseEnabled(false);                     // 写入 off=1：以后登录不再自动
     updatePreciseBtn();
-    showToast("已取消精确定位",2);
-    refreshLoginCity();
+    showToast("已关闭精确定位，以后登录不再自动获取",2.5);
+    refreshLoginCity();                           // 立刻回落到城市级
   }else{
-    setPreciseEnabled(true);
+    setPreciseEnabled(true);                      // 清 off、置 on：以后一直自动
     updatePreciseBtn();
     requestPreciseLocation();
   }
@@ -2807,7 +2813,7 @@ function requestPreciseLocation(targetTs, quiet){
       {enableHighAccuracy:true,timeout:12000,maximumAge:30000});
   }).then(pos=>regeoPrecise(pos.coords.longitude,pos.coords.latitude)
     .then(addr=>{
-      setPreciseEnabled(true); updatePreciseBtn();      // 拿到过精确位置就记住，以后自动
+      localStorage.setItem("jlt_precise_ever","1");     // 记住“拿到过精确位置”，下次登录自动；不动开关显示
       applyLoginCity(ts,addr);
       if(!quiet) showToast("已更新精确位置",2);
     }))
