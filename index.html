@@ -331,7 +331,13 @@ body.dark .th-search-item .th-t-sub{color:#c9a8b8;}
 .gs-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
 .gs-tx b{font-size:13px;color:#6b3a4d;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .gs-tx i{font-size:11px;color:#a893a0;font-style:normal;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.gs-ar{color:#d5b8c8;font-size:15px;flex-shrink:0;}
+.gs-ar{color:#c9a3b8;font-size:15px;flex-shrink:0;padding:2px 6px;border-radius:8px;cursor:pointer;}
+.gs-ar:hover{background:#f4e3ec;color:#a5577d;}
+.gs-open .gs-ar{transform:rotate(90deg);}
+.gs-full{font-size:12px;color:#7a5566;background:#fff8fb;border:1px dashed #f0d8e2;border-radius:10px;padding:9px 11px;margin:0 0 6px;white-space:pre-wrap;word-break:break-word;line-height:1.55;}
+body.dark .gs-full{background:#262a32;color:#cbb6c2;border-color:#3a3e48;}
+body.dark .gs-ar{color:#9b8593;}
+body.dark .gs-ar:hover{background:#333844;color:#e0aec4;}
 .gs-more{font-size:11px;color:#c0a8b4;padding:6px 2px;text-align:center;}
 .gs-flash{animation:gsFlash 1.5s ease;border-radius:12px;}
 @keyframes gsFlash{0%,100%{box-shadow:none;}20%,70%{box-shadow:0 0 0 3px rgba(126,87,194,.55);}}
@@ -697,12 +703,14 @@ button{border-radius:12px;}
 
 <!-- 全局搜索（简驭 → 搜索）：文字 / 数字 / 日期 / 图标，点结果直接跳转 -->
 <div class="modal-overlay" id="gsModal" onclick="if(event.target===this) closeGlobalSearch()">
-  <div class="modal-box" style="max-width:430px;max-height:82vh;display:flex;flex-direction:column;text-align:left;">
+  <div class="modal-box" style="max-width:430px;max-height:76vh;display:flex;flex-direction:column;text-align:left;">
     <div class="modal-title" style="text-align:center;">搜索</div>
-    <input type="text" id="gsInput" placeholder="搜文字 / 数字 / 日期 / 图标" autocomplete="off" oninput="gsRender()"
-      style="width:100%;margin:10px 0 8px;padding:9px 12px;border:1px solid #e9ecef;border-radius:12px;box-sizing:border-box;outline:none;">
-    <div id="gsRes" style="flex:1;overflow:auto;-webkit-overflow-scrolling:touch;min-height:70px;max-height:60vh;"></div>
-    <div class="modal-buttons" style="margin-top:10px;"><button style="background:#999;flex:1;" onclick="closeGlobalSearch()">关闭</button></div>
+    <div style="display:flex;align-items:center;gap:8px;margin:10px 0 8px;">
+      <input type="text" id="gsInput" placeholder="搜文字 / 数字 / 日期 / 图标" autocomplete="off" oninput="gsRender()"
+        style="flex:1;min-width:0;margin:0;padding:9px 12px;border:1px solid #e9ecef;border-radius:12px;box-sizing:border-box;outline:none;">
+      <button onclick="closeGlobalSearch()" style="flex-shrink:0;background:#b8a9b0;color:#fff;padding:9px 14px;border-radius:12px;white-space:nowrap;">取消</button>
+    </div>
+    <div id="gsRes" style="flex:1;overflow:auto;-webkit-overflow-scrolling:touch;min-height:60px;max-height:58vh;"></div>
   </div>
 </div>
 
@@ -2659,9 +2667,13 @@ function refreshLoginCity(targetTs){
   const ts = targetTs || (loadLoginLog()[0] || {}).ts;
   const ak = getAmapKey();
   // 精确定位开关已开启且已授权：自动静默走 GPS（不再弹授权）；否则走下面的 IP 静默方案
-  if(preciseEnabled() && navigator.geolocation && navigator.permissions){
+  // 只要这个网页曾经被授权过精确位置，就记住并静默自动获取（下次登录不用再点）
+  if(navigator.geolocation && navigator.permissions){
     navigator.permissions.query({name:"geolocation"}).then(st=>{
-      if(st.state === "granted") requestPreciseLocation(ts);
+      if(st.state === "granted"){
+        setPreciseEnabled(true); updatePreciseBtn();
+        requestPreciseLocation(ts, true);
+      }
     }).catch(()=>{});
   }
   let settled = false;
@@ -2786,23 +2798,27 @@ function togglePrecise(){
   }
 }
 // 用户主动点「精确定位」：首次弹浏览器原生授权，成功后逆地理到街道并更新日志
-function requestPreciseLocation(targetTs){
-  if(!navigator.geolocation){ showToast("该浏览器不支持精确定位",2); return; }
+function requestPreciseLocation(targetTs, quiet){
+  if(!navigator.geolocation){ if(!quiet) showToast("该浏览器不支持精确定位",2); return; }
   const ts=targetTs||(loadLoginLog()[0]||{}).ts;
-  showToast("正在获取精确位置…",2);
+  if(!quiet) showToast("正在获取精确位置…",2);
   new Promise((resolve,reject)=>{
     navigator.geolocation.getCurrentPosition(resolve,reject,
       {enableHighAccuracy:true,timeout:12000,maximumAge:30000});
   }).then(pos=>regeoPrecise(pos.coords.longitude,pos.coords.latitude)
-    .then(addr=>{ applyLoginCity(ts,addr); showToast("已更新精确位置",2); }))
+    .then(addr=>{
+      setPreciseEnabled(true); updatePreciseBtn();      // 拿到过精确位置就记住，以后自动
+      applyLoginCity(ts,addr);
+      if(!quiet) showToast("已更新精确位置",2);
+    }))
     .catch(err=>{
       const code=err&&err.code;
       if(code===1){
         // 开关保留（代表用户意图），仅提示；权限恢复后下次自动 GPS
-        showToast("已拒绝授权，可在浏览器设置中开启",3);
+        if(!quiet) showToast("已拒绝授权，可在浏览器设置中开启",3);
       }
-      else if(code===3) showToast("定位超时，请到开阔处再试",3);
-      else showToast("精确定位失败",2);
+      else if(!quiet && code===3) showToast("定位超时，请到开阔处再试",3);
+      else if(!quiet) showToast("精确定位失败",2);
     });
 }
 /* ============ 登录日志：强一致云端同步（云端为准 · 串行提交 · 全程静默） ============ */
@@ -5361,7 +5377,8 @@ function gsScanUnknown(hit, out){
       const txt = [it.title, it.text, it.name, it.label, it.note, it.desc, it.date, it.time, it.icon].filter(Boolean).join(" ");
       if(!txt || !hit(txt)) return;
       out.push({ group: "其他", icon: "📦", title: String(it.title || it.name || it.text || it.label || "(条目)").split("\n")[0],
-        sub: k.replace(/^jlt_/, "") + (it.date || it.time ? " · " + (it.date || it.time) : ""), kind: "raw", key: k + "#" + idx });
+        sub: k.replace(/^jlt_/, "") + (it.date || it.time ? " · " + (it.date || it.time) : ""), full: txt,
+        kind: "raw", key: k + "#" + idx });
     });
   }
 }
@@ -5373,7 +5390,7 @@ function gsQuery(q){
   GS_SOURCES.forEach(src => {
     let rows = [];
     try{ rows = src.collect(q, hit) || []; }catch(e){ rows = []; }
-    rows.forEach(r => out.push({ group: r.group || src.group, icon: r.icon || src.icon || "•", title: r.title, sub: r.sub, kind: r.kind, key: String(r.key == null ? "" : r.key) }));
+    rows.forEach(r => out.push({ group: r.group || src.group, icon: r.icon || src.icon || "•", title: r.title, sub: r.sub, full: r.full || "", kind: r.kind, key: String(r.key == null ? "" : r.key) }));
   });
   gsScanUnknown(hit, out);      // 新模块（未注册的新数据）自动兜底可搜
   return out;
@@ -5385,21 +5402,25 @@ registerGlobalSearchSource({ group: "时迹", icon: "📷", collect: (q, hit) =>
   (loadCards() || []).forEach(c => {
     const locs = (c.locs || []).join(" / ");
     if(hit(c.date) || hit(locs) || hit(c.note) || hit(c.link))
-      rows.push({ title: c.date + (locs ? " · " + locs : ""), sub: String(c.note || "").split("\n")[0].slice(0, 40), kind: "card", key: c.id });
+      rows.push({ title: c.date + (locs ? " · " + locs : ""), sub: String(c.note || "").split("\n")[0].slice(0, 40),
+        full: c.date + (locs ? "\n地点：" + locs : "") + (c.note ? "\n备注：" + c.note : "") + (c.link ? "\n链接：" + c.link : "") + ((c.imgs || []).length ? "\n图片：" + c.imgs.length + " 张" : ""),
+        kind: "card", key: c.id });
   });
   return rows;
 } });
 registerGlobalSearchSource({ group: "纪念日", icon: "💛", collect: (q, hit) => {
   const rows = [];
   (typeof loadAnniversaries === "function" ? loadAnniversaries() : []).forEach(a => {
-    if(hit(a.label) || hit(a.date) || hit(a.icon)) rows.push({ icon: a.icon || "💛", title: a.label || "纪念日", sub: a.date || "", kind: "anni", key: a.id });
+    if(hit(a.label) || hit(a.date) || hit(a.icon)) rows.push({ icon: a.icon || "💛", title: a.label || "纪念日", sub: a.date || "",
+      full: (a.icon || "💛") + " " + (a.label || "纪念日") + (a.date ? "\n日期：" + a.date : ""), kind: "anni", key: a.id });
   });
   return rows;
 } });
 registerGlobalSearchSource({ group: "移步", icon: "🔗", collect: (q, hit) => {
   const rows = [];
   (typeof loadFunItems === "function" ? loadFunItems() : []).forEach(f => {
-    if(hit(f.name) || hit(f.url)) rows.push({ title: f.name || "", sub: f.url || "", kind: "fun", key: f.name || "" });
+    if(hit(f.name) || hit(f.url)) rows.push({ title: f.name || "", sub: f.url || "",
+      full: (f.name || "") + (f.url ? "\n链接：" + f.url : ""), kind: "fun", key: f.name || "" });
   });
   return rows;
 } });
@@ -5407,10 +5428,14 @@ registerGlobalSearchSource({ group: "耳语", icon: "💬", collect: (q, hit) =>
   const rows = [];
   (typeof loadTreehole === "function" ? loadTreehole() : []).forEach(it => {
     if(hit(it.name) || hit(it.text) || hit(it.time) || hit(it.avatar))
-      rows.push({ icon: it.avatar || "💬", title: (it.name || "") + " · " + (it.text || ""), sub: it.time || "", kind: "dm", key: it.id });
+      rows.push({ icon: it.avatar || "💬", title: (it.name || "") + " · " + (it.text || ""), sub: it.time || "",
+        full: (it.avatar || "") + " " + (it.name || "") + " · " + (it.time || "") + "\n" + (it.text || "") + ((it.comments || []).length ? "\n留言 " + it.comments.length + " 条" : ""),
+        kind: "dm", key: it.id });
     (it.comments || []).forEach(c => {
       if(hit(c.name) || hit(c.text) || hit(c.time) || hit(c.avatar))
-        rows.push({ group: "留言", icon: c.avatar || "💬", title: (c.name || "") + " · " + (c.text || ""), sub: c.time || "", kind: "cmt", key: it.id });
+        rows.push({ group: "留言", icon: c.avatar || "💬", title: (c.name || "") + " · " + (c.text || ""), sub: c.time || "",
+          full: (c.avatar || "") + " " + (c.name || "") + " · " + (c.time || "") + "\n" + (c.text || "") + "\n（在「" + (it.name || "") + "」的弹幕下）",
+          kind: "cmt", key: it.id });
     });
   });
   return rows;
@@ -5422,7 +5447,9 @@ registerGlobalSearchSource({ group: "心喜簿", icon: "❓", collect: (q, hit) 
     const users = (it.votes || []).map(v => v.name || "").filter(Boolean).join(" ");
     if(hit(it.text) || hit(it.icon) || hit(notes) || hit(users))
       rows.push({ icon: it.isImg ? "🖼" : (it.icon || "❓"), title: String(it.text || "").split("\n")[0] || "(无文字)",
-        sub: notes ? "备注：" + notes.slice(0, 30) : (users ? "选择过：" + users.slice(0, 24) : ""), kind: "xz", key: it.id });
+        sub: notes ? "备注：" + notes.slice(0, 30) : (users ? "选择过：" + users.slice(0, 24) : ""),
+        full: (it.isImg ? "🖼 图片图标\n" : (it.icon || "") + " ") + String(it.text || "") + (notes ? "\n备注：" + notes : "") + (users ? "\n选择过：" + users : ""),
+        kind: "xz", key: it.id });
   });
   return rows;
 } });
@@ -5445,14 +5472,30 @@ function gsRender(){
     html += '<div class="gs-g">' + escapeHtml(g) + '<span>' + arr.length + '</span></div>';
     arr.slice(0, 8).forEach(r => {
       const act = r.kind + ":" + encodeURIComponent(r.key);
-      html += '<div class="gs-item" onclick="gsGo(\'' + act + '\')">'
+      const full = r.full || (String(r.title || "") + (r.sub ? "\n" + r.sub : ""));
+      html += '<div class="gs-item" data-full="' + escapeHtml(encodeURIComponent(full)) + '" onclick="gsGo(\'' + act + '\')">'
         + '<span class="gs-ic">' + escapeHtml(r.icon) + '</span>'
         + '<span class="gs-tx"><b>' + escapeHtml(r.title) + '</b>' + (r.sub ? '<i>' + escapeHtml(r.sub) + '</i>' : "") + '</span>'
-        + '<span class="gs-ar">›</span></div>';
+        + '<span class="gs-ar" title="预览完整内容" onclick="gsPeek(event)">›</span></div>';
     });
     if(arr.length > 8) html += '<div class="gs-more">还有 ' + (arr.length - 8) + ' 条，输入更具体的关键词试试</div>';
   });
   box.innerHTML = html;
+}
+/* 点结果行右侧的小箭头：就地展开这条被省略的完整内容（不跳转） */
+function gsPeek(e){
+  if(e){ e.stopPropagation(); e.preventDefault(); }
+  const el = e && e.currentTarget;
+  const it = el && el.closest ? el.closest(".gs-item") : null;
+  if(!it) return;
+  const next = it.nextElementSibling;
+  if(next && next.classList.contains("gs-full")){ next.remove(); it.classList.remove("gs-open"); return; }
+  const full = decodeURIComponent(it.dataset.full || "");
+  const div = document.createElement("div");
+  div.className = "gs-full";
+  div.textContent = full || "(无更多内容)";
+  if(it.parentNode) it.parentNode.insertBefore(div, it.nextSibling);
+  it.classList.add("gs-open");
 }
 function gsGo(act){
   const str = String(act || "");
