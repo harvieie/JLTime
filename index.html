@@ -1098,10 +1098,9 @@ button{border-radius:12px;}
   <div class="modal-box" style="max-width:380px;">
     <div class="modal-title">最近登录记录</div>
     <div id="loginLogList" style="max-height:50vh;overflow:auto;text-align:left;margin:10px 0;"></div>
-    <div id="preciseHint" style="font-size:11px;color:#9aa4ac;text-align:center;margin:0 0 8px;line-height:1.5;"></div>
     <div style="display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;">
       <button class="btn-sec" id="preciseToggleBtn" onclick="togglePrecise()">精确定位</button>
-      <button class="btn-sec" onclick="editAmapKey()">改定位Key</button>
+      <button class="btn-sec" onclick="editAmapKey()">Key</button>
       <button class="btn-sec" onclick="closeLoginLogModal()">关闭</button>
     </div>
   </div>
@@ -2912,9 +2911,36 @@ function mergeLogEntry(base, entry){
   if(i >= 0) base[i] = Object.assign({}, base[i], entry);
   else base.unshift(entry);
 }
+/* 市级归类：取地址里到第一个“市”为止（如“上海市黄浦区…”→“上海市”） */
+function cityKeyOf(c){
+  const s = String(c || "").trim();
+  if(!s) return "未定位";
+  const m = s.match(/^(.{2,6}?市)/);
+  return m ? m[1] : s.slice(0, 6);
+}
+/* 日志聚合：每个市级位置至少保留一条最新的；总数不超过 10；整体按城市名首字排序 */
 function finalizeLog(base){
-  base.sort((a,b) => b.ts - a.ts);
-  return base.slice(0, 10);
+  const all = base.slice().sort((a,b) => b.ts - a.ts);
+  const groups = new Map();
+  all.forEach(e => {
+    const k = cityKeyOf(e.city);
+    if(!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(e);
+  });
+  const newestByCity = [];
+  groups.forEach(arr => newestByCity.push(arr[0]));      // 每个市级的最新一条
+  const byName = (a,b) => {
+    const k = cityKeyOf(a.city).localeCompare(cityKeyOf(b.city), "zh-CN");
+    return k !== 0 ? k : (b.ts - a.ts);
+  };
+  if(newestByCity.length > 10){
+    // 城市太多：只留最近出现的 10 个市级，各自最新一条
+    return newestByCity.sort((a,b) => b.ts - a.ts).slice(0,10).sort(byName);
+  }
+  // 名额还有余：按时间倒序补其它记录（同城市的旧记录）
+  const picked = new Set(newestByCity);
+  const rest = all.filter(e => !picked.has(e)).slice(0, 10 - newestByCity.length);
+  return newestByCity.concat(rest).sort(byName);
 }
 /* 核心提交：读取云端基线 → 合并本地积压与本次 entry → 确认 PUT 成功 → 再清本地、用云端权威内容覆盖。
    读取状态不明时绝不 PUT（避免空数组冲掉云端历史），仅把条目安全暂存本地，下次提交自动补传。 */
@@ -2999,7 +3025,7 @@ async function pullLoginLogCloud(){
   }
 }
 function renderLoginLogList(){
-  const log = loadLoginLog().slice(0, 10);
+  const log = finalizeLog(loadLoginLog());   // 每次显示都按「市级优先保留 + 城市名排序」重排
   const box = document.getElementById("loginLogList");
   if(!box) return;
   box.innerHTML = log.length ? log.map(r => {
