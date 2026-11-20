@@ -2744,19 +2744,26 @@ function preciseAmapGet(base,cb){
   return fetch(base).then(r=>r.json()).catch(()=>
     preciseJsonp(base+(base.includes("?")?"&":"?")+"output=json&callback="+cb,cb));
 }
-// GPS 经纬度逆地理：拼「市/区/街道」，不用格式化地址（里面会带 POI 名，看着像假地址）
+// GPS 经纬度逆地理：优先高德完整格式化地址（含街道/门牌/POI，越精确越好），失败才拼省市区街道
 function regeoPrecise(lng,lat){
   const ak=getAmapKey();
   const url=`https://restapi.amap.com/v3/geocode/regeo?key=${ak}&location=${lng.toFixed(6)},${lat.toFixed(6)}&extensions=base`;
   return preciseAmapGet(url,"__jltPReCb").then(r=>{
     if(!r||r.status!=="1") throw new Error("regeo fail");
-    const c=((r.regeocode||{}).addressComponent)||{};
+    const g=r.regeocode||{}, c=g.addressComponent||{};
     const pk=v=>Array.isArray(v)?(v[0]||""):(v||"");
     const prov=pk(c.province), city=pk(c.city), dist=pk(c.district), town=pk(c.township), street=pk(c.street);
+    const sn = c.streetNumber || {};
+    const num = pk(sn.number);
+    if(g.formatted_address){
+      const fa = String(g.formatted_address);
+      if(num && !fa.includes(num)) return fa + num;   // 有门牌号就补上，尽量精确
+      return fa;
+    }
     const head = city || prov;
     let out = head;
     if(dist && dist !== head) out += dist;
-    out += (town || street || "");
+    out += (town || street || "") + num;
     return out || head || "";
   });
 }
@@ -2780,7 +2787,7 @@ function updatePreciseBtn(){
     b.style.color = "#fff";
     b.style.border = "1px solid #9aa7b1";
   }else if(localStorage.getItem("jlt_precise_on") === "1"){
-    b.textContent = "精确定位 已开✓";
+    b.textContent = "精确定位 已开";
     b.style.background = "#10b981";
     b.style.color = "#fff";
     b.style.border = "1px solid #10b981";
@@ -2953,13 +2960,8 @@ async function pushLoginLog(act){
 // 定位结果待处理缓存：回调可能早于条目首次写本地，先缓存，写入后补刷
 let pendingCity = null;
 // 对外：定位回来更新指定条目的 city（静默再提交一次）
-/* 老数据里高德格式化地址会带 POI 名（如“…南京东路街道上海市人民政府”），显示前一并截掉 */
-function cleanCityName(c){
-  c = String(c || "").trim();
-  if(!c) return c;
-  const m = c.match(/^(.*?(?:街道|镇|乡))/);
-  return (m ? m[1] : c).trim();
-}
+/* 地址原样保留（POI/门牌也算精度的一部分），只做首尾空格清理 */
+function cleanCityName(c){ return String(c || "").trim(); }
 function applyLoginCity(ts, city, acc){
   if(!city) return;
   city = cleanCityName(city);
@@ -2988,10 +2990,9 @@ async function pullLoginLogCloud(){
     const local = loadLoginLog();
     // 同一条记录：本地地址更详细（例如刚 GPS 到的街道级）则保留本地，避免被云端旧的城市级覆盖
     const clean = finalizeLog(cloud.arr).map(e=>{
-      let city = cleanCityName(e.city);
       const l = local.find(x => x.ts === e.ts);
-      if(l && String(l.city||"").length > String(city||"").length) city = cleanCityName(l.city);
-      return Object.assign({}, e, { city });
+      if(l && String(l.city||"").length > String(e.city||"").length) return Object.assign({}, e, { city: l.city });
+      return e;
     });
     localStorage.setItem("jlt_login_log", JSON.stringify(clean));
     renderLoginLogList();
