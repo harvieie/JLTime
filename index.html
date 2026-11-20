@@ -1098,6 +1098,7 @@ button{border-radius:12px;}
   <div class="modal-box" style="max-width:380px;">
     <div class="modal-title">最近登录记录</div>
     <div id="loginLogList" style="max-height:50vh;overflow:auto;text-align:left;margin:10px 0;"></div>
+    <div id="preciseHint" style="font-size:11px;color:#9aa4ac;text-align:center;margin:0 0 8px;line-height:1.5;"></div>
     <div style="display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;">
       <button class="btn-sec" id="preciseToggleBtn" onclick="togglePrecise()">精确定位</button>
       <button class="btn-sec" onclick="editAmapKey()">改定位Key</button>
@@ -2784,6 +2785,7 @@ function updatePreciseBtn(){
     b.style.color = "#fff";
     b.style.border = "1px solid #4a90c2";
   }
+  updatePreciseHint();
 }
 // 点按开关：未开启→开启并请求（首次弹授权）；已开启→取消并回到静默 IP
 function togglePrecise(){
@@ -2810,12 +2812,14 @@ function requestPreciseLocation(targetTs, quiet, onFail){
   }).then(pos=>regeoPrecise(pos.coords.longitude,pos.coords.latitude)
     .then(addr=>{
       localStorage.setItem("jlt_precise_ever","1");     // 记住“拿到过精确位置”，下次登录自动；不动开关显示
+      setPreciseLast("ok");
       applyLoginCity(ts,addr);
       if(!quiet) showToast("已更新精确位置",2);
     }))
     .catch(err=>{
       const code=err&&err.code;
       if(code===1){
+        setPreciseLast("denied");
         if(!quiet) showToast("已拒绝授权，可在浏览器设置中开启",3);
         if(onFail) onFail();
       }else{
@@ -2826,11 +2830,32 @@ function requestPreciseLocation(targetTs, quiet, onFail){
           setTimeout(()=>requestPreciseLocation(ts, true, onFail), 6000);
           return;
         }
+        setPreciseLast(code===3 ? "timeout" : "fail");
         if(onFail) onFail();
       }
     });
 }
 requestPreciseLocation._retryTs = {};
+function setPreciseLast(res){
+  try{ localStorage.setItem("jlt_precise_last", JSON.stringify({ res, ts: Date.now() })); }catch(e){}
+  updatePreciseHint();
+}
+function updatePreciseHint(){
+  const el = document.getElementById("preciseHint");
+  if(!el) return;
+  const mode = preciseManualOff() ? "已关（不再自动）" : (localStorage.getItem("jlt_precise_on")==="1" ? "已开（一直自动）" : "自动");
+  let last = "";
+  try{
+    const o = JSON.parse(localStorage.getItem("jlt_precise_last") || "null");
+    if(o){
+      const d = new Date(o.ts), p = n => String(n).padStart(2,"0");
+      const t = `${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+      const map = { ok:"成功", denied:"浏览器拒绝授权", timeout:"超时", fail:"失败" };
+      last = " · 上次精确：" + (map[o.res] || o.res) + " " + t;
+    }
+  }catch(e){}
+  el.textContent = "定位模式：" + mode + last;
+}
 /* ============ 登录日志：强一致云端同步（云端为准 · 串行提交 · 全程静默） ============ */
 // 串行队列：所有提交排队执行，杜绝并发 PUT 拿旧 sha 互相覆盖
 let loginLogChain = Promise.resolve();
@@ -2971,6 +2996,7 @@ function renderLoginLogList(){
 function openLoginLogModal(){
   renderLoginLogList();
   updatePreciseBtn();
+  updatePreciseHint();
   document.getElementById("loginLogModal").style.display = "flex";
   pullLoginLogCloud();   // 静默拉云端最新覆盖（非空才覆盖，不弹窗）
 }
