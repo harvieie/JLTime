@@ -989,7 +989,7 @@ button{border-radius:12px;}
 <!-- 编辑日期/地点/图片/外部链接 -->
 <div class="link-modal" id="linkModal">
   <div class="link-box">
-    <h3>修改日期 · 地点 · 图片 · 外部链接</h3>
+    <h3>修改日期 · 地点 · 图片 · 链接 · 备注</h3>
     <label>日期(YYYY-MM-DD)</label>
     <input type="text" id="editComboDate">
     <label>地点 <span class="tip-small">多个地点用英文逗号分隔，最多5个</span></label>
@@ -1002,6 +1002,9 @@ button{border-radius:12px;}
     </div>
     <label>外部链接</label>
     <input type="text" id="linkInput" placeholder="https://...">
+    <label>备注 <span class="tip-small">可留空，之后随时补充</span></label>
+    <textarea id="editComboNote" placeholder="记录旅途美好瞬间" rows="3"
+      style="width:100%;min-height:76px;padding:10px;border:1px solid #e9ecef;border-radius:10px;font-size:14px;line-height:1.5;box-sizing:border-box;resize:vertical;font-family:inherit;"></textarea>
     <div class="link-buttons">
       <button onclick="openLinkNow()">打开</button>
       <button onclick="copyLink()">复制</button>
@@ -1722,6 +1725,8 @@ function openComboEdit(id){
   document.getElementById("editComboLoc").value = card.locs.join(",");
   document.getElementById("editComboImgs").value = card.imgs.join(",");
   document.getElementById("linkInput").value = card.link || "";
+  const noteBox = document.getElementById("editComboNote");
+  if(noteBox) noteBox.value = card.note || "";
   document.getElementById("linkModal").style.display = "flex";
 }
 function openComboView(id){
@@ -1751,6 +1756,8 @@ function saveComboAll(){
   card.locs = locRaw.split(",").map(s => s.trim()).filter(Boolean).slice(0, 5);
   card.imgs = imgRaw.split(",").map(s => s.trim()).filter(Boolean);
   card.link = link;
+  const noteBox = document.getElementById("editComboNote");
+  if(noteBox) card.note = noteBox.value.replace(/\s+$/,"") === "" ? "" : noteBox.value;
   saveCards(cards);
   closeLinkModal();
   renderAllCards();
