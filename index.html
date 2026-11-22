@@ -87,7 +87,7 @@ button.ghost:hover{background:rgba(255,255,255,.15);}
   transition:transform .25s,box-shadow .25s;
 }
 .card:hover{transform:translateY(-4px);box-shadow:0 10px 24px rgba(0,0,0,.09);}
-.card img{width:100%;aspect-ratio:4/3;border-radius:12px;object-fit:cover;max-height:320px;cursor:pointer;}
+.card img{width:100%;aspect-ratio:4/3;border-radius:12px;object-fit:cover;max-height:320px;cursor:pointer;background-color:#f6eef3;background-position:center;background-size:cover;background-repeat:no-repeat;}
 .card .date{font-weight:bold;color:var(--primary);margin:8px 0;cursor:pointer;font-size:15px;text-indent:2em;}
 #cloudUploadBtn{background:var(--primary);}
 #cloudUploadBtn:hover{filter:brightness(.92);}
@@ -1364,14 +1364,26 @@ const IMG_PLACEHOLDER = "data:image/svg+xml;utf8," + encodeURIComponent(
 );
 /* 图片加载失败：3 秒后自动重试一次（绕缓存）；再失败若有原图地址就直接显示原图，否则占位 */
 function imgFallback(img){
+  const full = img.dataset.full || "";
+  const cur = img.getAttribute("src") || "";
+  // 正在显示的是原图却没加载出来：可能是慢网/断网，也可能云端图被删了
+  // 先退回缩略图保底显示；是否真的被删由 verifyFullCache 的 404 判定来清记录，避免网络抖动误删
+  if(full && cur.indexOf(full) === 0){
+    img.dataset.retried = "";
+    img.dataset.fellBack = "1";
+    const thumb = getThumbnailUrl(full);
+    img.dataset.src = thumb;
+    img.src = thumb + (thumb.includes("?") ? "&" : "?") + "_r=" + Date.now();
+    return;
+  }
   if(!img.dataset.retried){
     img.dataset.retried = "1";
-    const u = img.dataset.src || img.src.split("?")[0];
+    const u = img.dataset.src || cur.split("?")[0];
     setTimeout(() => { img.src = u + (u.includes("?") ? "&" : "?") + "_retry=" + Date.now(); }, 2000);
-  }else if(img.dataset.full && !img.dataset.fellBack){
+  }else if(full && !img.dataset.fellBack){
     // 缩略图真的 404（.thumb 没生成），直接 fallback 到原图
     img.dataset.fellBack = "1";
-    img.src = img.dataset.full;
+    img.src = full;
   }else{
     img.src = IMG_PLACEHOLDER;
   }
@@ -1580,12 +1592,22 @@ function renderAllCards(){
       ? `<input type="checkbox" class="card-checkbox" data-card-id="${card.id}">`
       : "";
 
+    // 封面：原图本地缓存过就直接用原图；没下过用缩略图。
+    // 用原图时先把缩略图垫在图片下面，慢网下不会空白，原图到了自动盖上去。
+    const coverFull = (card.imgs && card.imgs[0]) || "";
+    const coverThumb = getThumbnailUrl(coverFull);
+    const coverCached = !!coverFull && loadFullUrlSet().has(coverFull);
+    const coverSrc = coverCached ? coverFull : coverThumb;
+    const coverStyle = coverCached
+      ? ` style="background-image:url(&quot;${escapeHtml(coverThumb)}&quot;)"`
+      : "";
+
     itemDiv.innerHTML = `
       <div class="card">
         ${checkbox}
         <div class="date" onclick="${viewMode === "view" ? `openComboView('${card.id}')` : `openComboEdit('${card.id}')`}">${makeCardLabel(card.date, card.locs)}</div>
         <div class="card-imgs" data-imgs='${JSON.stringify(card.imgs)}'>
-          <img loading="lazy" decoding="async" src="${getThumbnailUrl(card.imgs[0])}" data-src="${getThumbnailUrl(card.imgs[0])}" data-full="${card.imgs[0]}" onerror="imgFallback(this)" onclick="openGallery(this)" alt="${card.locs.join(',')}">
+          <img loading="lazy" decoding="async" src="${escapeHtml(coverSrc)}" data-src="${escapeHtml(coverSrc)}" data-full="${escapeHtml(coverFull)}"${coverStyle} onerror="imgFallback(this)" onclick="openGallery(this)" alt="${card.locs.join(',')}">
         </div>
         <div class="card-note">
           <p class="desc" ${viewMode === "view" ? "" : `onclick="openNote(this)"`}>${linkifyNote(card.note)}</p>
@@ -2106,15 +2128,94 @@ function bindLightboxSwipe(){
   });
 }
 
-/* 已加载过原图的 URL 记忆（未清缓存前再打开直接显示原图，不用再点） */
+/* 已加载过原图的 URL 记忆（未清缓存前再打开直接显示原图，不用再点）
+   这份记录只在登录页点「清空」时才整体清除；云端拉取/恢复数据都不动它。 */
+let _fullSetCache = null, _fullSetRaw = null;
 function loadFullUrlSet(){
-  try{ return new Set(JSON.parse(localStorage.getItem("loaded_full_urls") || "[]")); }
-  catch(e){ return new Set(); }
+  let raw = "[]";
+  try{ raw = localStorage.getItem("loaded_full_urls") || "[]"; }catch(e){}
+  if(_fullSetCache && _fullSetRaw === raw) return _fullSetCache;
+  try{ _fullSetCache = new Set(JSON.parse(raw)); }catch(e){ _fullSetCache = new Set(); }
+  _fullSetRaw = raw;
+  return _fullSetCache;
+}
+function saveFullUrlSet(s){
+  _fullSetCache = s;
+  _fullSetRaw = JSON.stringify([...s]);
+  try{ localStorage.setItem("loaded_full_urls", _fullSetRaw); }catch(e){}
 }
 function rememberFullUrl(u){
+  if(!u) return;
   const s = loadFullUrlSet();
+  if(s.has(u)) return;
   s.add(u);
-  try{ localStorage.setItem("loaded_full_urls", JSON.stringify([...s])); }catch(e){}
+  saveFullUrlSet(s);
+}
+/* 丢掉某张图的本地原图记录（云端文件已删/已换时用） */
+function forgetFullUrl(u){
+  if(!u) return;
+  const s = loadFullUrlSet();
+  if(s.delete(u)) saveFullUrlSet(s);
+  const meta = loadFullMeta();
+  if(meta[u]){ delete meta[u]; saveFullMeta(meta); }
+}
+
+/* 原图指纹：etag / 文件大小，用来判断云端同一路径的图是否已被换掉 */
+function loadFullMeta(){
+  try{ return JSON.parse(localStorage.getItem("loaded_full_meta") || "{}") || {}; }
+  catch(e){ return {}; }
+}
+function saveFullMeta(o){
+  try{ localStorage.setItem("loaded_full_meta", JSON.stringify(o)); }catch(e){}
+}
+
+/* 卡片封面用哪张：这张图的原图本地缓存过 → 直接原图；没下过 → 缩略图 */
+function cardCoverUrl(u){
+  if(!u) return u;
+  return loadFullUrlSet().has(u) ? u : getThumbnailUrl(u);
+}
+
+/* 只有自家仓库图能可靠校验（HEAD 会老实返回 200/404）；外链/CDN 常把 HEAD 当 404，不能据此清掉 */
+function fullCacheCheckable(u){
+  if(!u) return false;
+  return /^https:\/\/[\w.-]+\.github\.io\//.test(u) || u.indexOf("raw.githubusercontent.com") !== -1 || u.indexOf("jsdelivr.net") !== -1;
+}
+
+/* 静默校验本地原图是否还和云端一致：404/被删 → 清掉记录；etag/大小变了 → 也清掉
+   网络异常一律不动本地记录。返回被清掉的条数。 */
+let _verifyingFull = false;
+async function verifyFullCache(){
+  if(_verifyingFull) return 0;
+  const urls = [...loadFullUrlSet()].filter(fullCacheCheckable);
+  if(!urls.length) return 0;
+  _verifyingFull = true;
+  let changed = 0;
+  const one = async (u) => {
+    try{
+      const res = await fetch(u, { method: "HEAD", cache: "no-store" });
+      if(res.status === 404 || res.status === 410){ forgetFullUrl(u); changed++; return; }   // 云端已经删了
+      if(!res.ok) return;                                                                     // 405/403/5xx：判断不了，保留
+      const etag = res.headers.get("etag") || "";
+      const len = res.headers.get("content-length") || "";
+      const rec = loadFullMeta()[u];
+      if(rec){
+        const etagDiff = rec.etag && etag && rec.etag !== etag;
+        const lenDiff = rec.len && len && rec.len !== len;
+        if(etagDiff || lenDiff){ forgetFullUrl(u); changed++; return; }                        // 同路径换了别的图
+      }else if(etag || len){
+        const m2 = loadFullMeta();
+        m2[u] = { etag: etag, len: len, ts: Date.now() };   // 首次只登记指纹
+        saveFullMeta(m2);
+      }
+    }catch(e){ /* 断网/超时：保留本地原图 */ }
+  };
+  // 并发 4 慢慢过，避免一次性打爆
+  for(let i = 0; i < urls.length; i += 4){
+    await Promise.all(urls.slice(i, i + 4).map(one));
+  }
+  _verifyingFull = false;
+  if(changed){ try{ renderAllCards(); }catch(e){} }
+  return changed;
 }
 
 function showGalleryImage(){
@@ -2129,8 +2230,10 @@ function showGalleryImage(){
   btn.textContent = "查看原图";
   btn.disabled = false;
   const cur = state.galleryImages[state.galleryIndex];
+  if(!cur){ img.dataset.src = ""; img.dataset.full = ""; img.src = IMG_PLACEHOLDER; btn.style.display = "none"; return; }
   const thumb = getThumbnailUrl(cur);
   img.dataset.src = thumb;
+  img.dataset.full = cur || "";
   img.onerror = () => imgFallback(img);
   if(loadFullUrlSet().has(cur)){
     // 这张原图之前已加载过（浏览器有缓存），直接显示原图
@@ -2263,10 +2366,7 @@ function saveImgUrl(){
   const newUrl = document.getElementById("editImgUrl").value.trim();
   if(!newUrl) return alert("链接不能为空");
   state.galleryImages[state.galleryIndex] = newUrl;
-  document.getElementById("galleryImg").src = getThumbnailUrl(newUrl);
-  state.fullImageLoaded = false;
-  document.getElementById("loadFullBtn").style.display = "inline-block";
-  updateGalleryPageInfo();
+  showGalleryImage();
   persistGalleryImages();
   closeImgEditModal();
 }
@@ -2279,10 +2379,7 @@ function addImgLink(){
   state.galleryIndex = idx + 1;
   persistGalleryImages();
   document.getElementById("editImgUrl").value = newUrl;
-  document.getElementById("galleryImg").src = getThumbnailUrl(newUrl);
-  state.fullImageLoaded = false;
-  document.getElementById("loadFullBtn").style.display = "inline-block";
-  updateGalleryPageInfo();
+  showGalleryImage();
 }
 
 /* 待删云端图清单：删除照片时先记下，下次「上传」时统一把云端原图移入回收站 */
@@ -2324,10 +2421,7 @@ function deleteLocalImgOnly(){
   persistGalleryImages();
   const current = state.galleryImages[state.galleryIndex];
   document.getElementById("editImgUrl").value = current;
-  document.getElementById("galleryImg").src = getThumbnailUrl(current);
-  state.fullImageLoaded = false;
-  document.getElementById("loadFullBtn").style.display = "inline-block";
-  updateGalleryPageInfo();
+  showGalleryImage();
 }
 
 // 删除仓库 images/ 下的文件（按路径先取 sha 再 DELETE）
@@ -2546,13 +2640,22 @@ document.getElementById("importFileInput").addEventListener("change", function()
 });
 
 // 统一应用导入数据（本地导入 / 云端下载 / 云端恢复共用）
-// 清除浏览器本地缓存（Service Worker 缓存的旧页面/图片）
+// 仅清理页面本体缓存，已缓存的图片（含原图）一律保留——拉取/恢复数据不该清掉原图
 async function clearLocalBrowserCache(){
   try{
-    if(window.caches){
-      const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k)));
-    }
+    if(!window.caches) return;
+    const keys = await caches.keys();
+    await Promise.all(keys.map(async k => {
+      try{
+        const c = await caches.open(k);
+        const reqs = await c.keys();
+        await Promise.all(reqs.map(req => {
+          const u = req.url;
+          const isPage = u.endsWith("/") || /\/index\.html(\?|$)/.test(u) || /\/sw\.js(\?|$)/.test(u);
+          return isPage ? c.delete(req) : Promise.resolve();
+        }));
+      }catch(e){}
+    }));
   }catch(e){}
 }
 
@@ -5842,6 +5945,7 @@ function clearLocalCache(){
   localStorage.removeItem(STORAGE.title);
   localStorage.removeItem("cloud_loaded");
   localStorage.removeItem("loaded_full_urls");   // 清缓存后原图需重新点「查看原图」
+  localStorage.removeItem("loaded_full_meta");
   sessionStorage.setItem("cache_prompt_shown", "1");
   if("caches" in window){
     caches.keys().then(keys => keys.forEach(key => caches.delete(key)));
@@ -5854,7 +5958,7 @@ function clearLocalCache(){
 function confirmClearCache(){
   [
     STORAGE.cards, STORAGE.title, "anniversaries", "jlt_theme", "jlt_fun", "jlt_treehole",
-    "jlt_daynight", "card_badges", "last_music", "cloud_loaded", "loaded_full_urls",
+    "jlt_daynight", "card_badges", "last_music", "cloud_loaded", "loaded_full_urls", "loaded_full_meta",
     "jlt_th_quick", "jlt_th_recent_avatars", "jlt_th_first_done", "jlt_fun_edit", "jlt_captions", "jlt_xinze"
   ].forEach(k => { try{ localStorage.removeItem(k); }catch(e){} });
   if("caches" in window){
@@ -5894,24 +5998,14 @@ async function enterWithPwd(){
   sessionStorage.setItem("cache_prompt_shown", "1");
   closeCacheConfirm();   // 立即关闭弹窗，随后 cloudPullAfterClear 显示进度遮罩
   // 密码正确后：先清掉本地旧业务数据（保留 jlt_mode 与 gh_* 仓库配置），再从云端拉最新，避免旧数据残留
+  // 注意：loaded_full_urls / loaded_full_meta 是「原图本地缓存记录」，不属于业务数据，登录与云端拉取都不清
   [
     STORAGE.cards, STORAGE.title, "anniversaries", "jlt_theme", "jlt_fun", "jlt_treehole",
-    "jlt_daynight", "card_badges", "last_music", "cloud_loaded", "loaded_full_urls",
+    "jlt_daynight", "card_badges", "last_music", "cloud_loaded",
     "jlt_th_quick", "jlt_th_recent_avatars", "jlt_th_first_done", "jlt_fun_edit", "jlt_captions", "jlt_xinze"
   ].forEach(k => { try{ localStorage.removeItem(k); }catch(e){} });
-  // 先清掉旧版页面缓存与旧 Service Worker（下次打开自动拿最新版），再直接拉取云端数据
-  try{
-    if("caches" in window){
-      const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k)));
-    }
-  }catch(e){}
-  try{
-    if("serviceWorker" in navigator){
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map(r => r.unregister()));
-    }
-  }catch(e){}
+  // 只清页面本体缓存，图片（含已缓存的原图）保留；Service Worker 保持注册，交给它自己的版本更新
+  await clearLocalBrowserCache();
   cloudPullAfterClear();   // 直接拉取云端最新数据，不 reload（避免弹窗反复）
 }
 
@@ -5957,6 +6051,8 @@ async function cloudPullAfterClear(){
     showToast("云端拉取失败，已保留本地数据：" + err.message, 5);
   }finally{
     setTimeout(()=>showCloudLoading(false), 400);
+    // 拉完顺带核对一次：本地缓存过的原图在云端是否还在、有没有被换成别的图（不匹配就清掉本地记录）
+    setTimeout(() => { verifyFullCache().catch(() => {}); }, 2500);
   }
 }
 
@@ -7135,6 +7231,8 @@ function init(){
   thSearch();
   startSurprises();
   checkAnniToday();
+  // 打开页面静默核对一次本地原图缓存（只影响「用原图还是缩略图」，不弹任何提示）
+  setTimeout(() => { if(isAuthGranted()) verifyFullCache().catch(() => {}); }, 2000);
 }
 if(document.readyState === "loading"){
   document.addEventListener("DOMContentLoaded", init);
