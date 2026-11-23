@@ -3937,10 +3937,14 @@ async function trashRestoreSelected(){
   if(nodes.length){
     const one = nodes.slice().sort((a, b) => b.ts - a.ts)[0];
     if(nodes.length > 1) showToast("数据节点同时只能恢复一个，已选最新那个", 3);
-    try{
-      await wdRestoreNode(one.raw.name);
-      ok++;
-    }catch(e){ fail.push(one.title + "：" + e.message); }
+    if(!confirm("恢复数据节点会把当前卡片和大标题回滚到该时间点，确定恢复？")){
+      showToast("已取消恢复数据节点", 2);
+    }else{
+      try{
+        await wdRestoreNode(one.raw.name);
+        ok++;
+      }catch(e){ fail.push(one.title + "：" + e.message); }
+    }
   }
   _trashSel.clear();
   if(cimgs.length || nodes.length){
