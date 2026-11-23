@@ -192,6 +192,13 @@ body.dark .th-tools::after{background:#8a8f9a;}
 .thd-cmt-name{font-size:12.5px;font-weight:700;color:#8b5a2b;cursor:pointer;}
 .thd-cmt-time{font-size:10.5px;color:#a58a6c;cursor:pointer;}
 .thd-cmt-text{font-size:13px;color:#4d3a21;line-height:1.6;margin-top:2px;white-space:pre-wrap;word-break:break-word;cursor:pointer;}
+/* 长文本折叠：正文最多 5 行、留言最多 3 行，右下角点「展开」看全文 */
+.thd-fold{max-height:7em;overflow:hidden;}
+.thd-cmt-text.thd-fold{max-height:4.8em;}
+.thd-fold-btn{display:inline-block;margin:3px 0 0;font-size:12px;color:#c2567f;cursor:pointer;user-select:none;padding:2px 8px;border-radius:9px;background:rgba(194,86,127,.1);}
+.thd-fold-btn:hover{background:rgba(194,86,127,.2);}
+#thdFoldBtn{margin-left:52px;}
+body.dark .thd-fold-btn{color:#ffb3cd;background:rgba(255,179,205,.14);}
 .thd-cmt-side{margin-left:auto;display:flex;gap:6px;align-items:center;flex-shrink:0;font-size:12px;color:#c2567f;}
 .thd-cmt-side span{cursor:pointer;user-select:none;white-space:nowrap;font-size:12px;line-height:1.3;padding:4px 9px;border-radius:999px;background:rgba(194,86,127,.1);}
 .thd-cmt-side span:hover{background:rgba(194,86,127,.2);}
@@ -436,6 +443,33 @@ body.dark .gs-tx i{color:#9a8f97;}
 .restore-item button{flex:none;}
 .restore-tip{font-size:12px;color:#888;text-align:center;padding:10px 0;}
 .restore-current{font-size:12px;color:#0e7490;background:#e6f7f9;border-radius:8px;padding:8px 12px;margin-bottom:10px;text-align:center;line-height:1.6;}
+
+/* ===== 回收站 ===== */
+.trash-box{max-width:600px;width:94%;}
+.trash-tip{font-size:12px;color:#888;line-height:1.7;margin-bottom:8px;}
+.trash-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;}
+.trash-selall{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#555;cursor:pointer;user-select:none;}
+.trash-selall input{flex:0 0 auto !important;min-width:0 !important;width:15px;height:15px;accent-color:#c2567f;}
+.trash-count{font-size:12px;color:#0e7490;background:#e6f7f9;border-radius:8px;padding:3px 10px;}
+.trash-list{max-height:52vh;overflow-y:auto;padding-right:2px;}
+.trash-group{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;color:#0e7490;margin:10px 0 6px;}
+.trash-group em{font-style:normal;font-weight:400;color:#9aa7b1;margin-left:6px;}
+.trash-item{display:flex;align-items:flex-start;gap:9px;padding:8px 10px;border:1px solid #eef2f7;border-radius:9px;margin-bottom:6px;background:#fafbfd;}
+.trash-item input[type=checkbox]{margin:2px 0 0;flex:0 0 auto !important;min-width:0 !important;width:15px;height:15px;padding:0;accent-color:#c2567f;}
+.trash-item .ti-main{flex:1;min-width:0;}
+.trash-item .ti-title{font-size:13px;color:#333;font-weight:600;word-break:break-all;line-height:1.5;}
+.trash-item .ti-sub{font-size:11.5px;color:#8a94a0;margin-top:2px;word-break:break-all;line-height:1.5;}
+.trash-item .ti-type{flex:none;font-size:10.5px;padding:2px 7px;border-radius:6px;background:#eef4ff;color:#3b6ea5;margin-top:1px;}
+body.dark .trash-box{background:#1a2029;}
+body.dark .trash-box h3{color:#e6e6e6;}
+body.dark .trash-tip{color:#9aa7b1;}
+body.dark .trash-selall{color:#c9d1da;}
+body.dark .trash-count{background:#123a44;color:#7fd6e6;}
+body.dark .trash-group{color:#7fd6e6;}
+body.dark .trash-item{background:#20262f;border-color:#2a333e;}
+body.dark .trash-item .ti-title{color:#e6e6e6;}
+body.dark .trash-item .ti-sub{color:#98a3af;}
+body.dark .trash-item .ti-type{background:#1d2b3d;color:#8fb8dd;}
 .empty-tip{text-align:center;color:#aaa;padding:90px 0;font-size:15px;line-height:2.1;}
 
 /* ===== 自动关闭提示条 ===== */
@@ -891,7 +925,7 @@ button{border-radius:12px;}
         <div class="thd-time" id="thdTime" onclick="thdEditField('time')" title="点击修改时间"></div>
       </div>
     </div>
-    <div class="thd-content" id="thdContent" onclick="thdEditField('text')" title="点击修改内容"></div>
+    <div class="thd-content" id="thdContent" onclick="thdContentTap()" title="点击修改内容"></div>
     <div class="thd-divider"></div>
     <div class="thd-cmt-title">留言 <span id="thdCmtCount"></span></div>
     <div class="thd-cmt-list" id="thdCmtList"></div>
@@ -1223,10 +1257,28 @@ function editAmapKey(){
     <div class="restore-current" id="restoreCurrent">当前载入：本地数据</div>
     <div class="restore-list" id="restoreList"><div class="restore-tip">加载中…</div></div>
     <div class="link-buttons">
-      <button class="checked-mode" onclick="wdRefreshRestore()">刷新</button>
       <button class="checked-mode" onclick="ghSettings()">云端登录</button>
-      <button class="danger" onclick="emptyTrash()">清空回收站</button>
+      <button class="checked-mode" onclick="openTrashModal()">回收站</button>
+      <button class="checked-mode" onclick="wdRefreshRestore()">刷新</button>
       <button onclick="closeRestoreModal()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 回收站：本地删过的内容 + 云端图片 + 云端数据节点，可多选恢复 / 彻底删除 -->
+<div class="restore-modal" id="trashModal">
+  <div class="restore-box trash-box">
+    <h3>回收站</h3>
+    <p class="trash-tip">这里收着网页里删过的卡片 / 图片链接 / 弹幕 / 心喜簿 / 纪念日，以及云端删掉的图片和旧数据节点。勾选后可恢复，也可彻底删除。</p>
+    <div class="trash-toolbar">
+      <label class="trash-selall"><input type="checkbox" id="trashSelAll" onchange="trashToggleAll(this.checked)"> 全选</label>
+      <span class="trash-count" id="trashCount">0 项</span>
+    </div>
+    <div class="trash-list" id="trashList"><div class="restore-tip">加载中…</div></div>
+    <div class="link-buttons">
+      <button class="success" onclick="trashRestoreSelected()">恢复选中</button>
+      <button class="danger" onclick="trashDeleteSelected()">彻底删除</button>
+      <button onclick="closeTrashModal()">关闭</button>
     </div>
   </div>
 </div>
@@ -1729,8 +1781,14 @@ function toggleMultiDelete(){
   const checkedIds = Array.from(document.querySelectorAll(".card-checkbox:checked"))
     .map(cb => cb.dataset.cardId);
   if(checkedIds.length > 0){
-    if(confirm(`确定删除选中的 ${checkedIds.length} 条记录？删除后不可恢复！`)){
-      saveCards(loadCards().filter(c => !checkedIds.includes(c.id)));
+    if(confirm(`确定删除选中的 ${checkedIds.length} 条记录？删掉的可去「恢复 → 回收站」里找回。`)){
+      const all = loadCards();
+      all.filter(c => checkedIds.includes(c.id)).forEach(c => {
+        trashAdd("card", makeCardLabel(c.date, c.locs),
+          ((c.note || "").replace(/\n/g, " ").slice(0, 40) || ((c.imgs && c.imgs.length) ? c.imgs.length + " 张图" : "")),
+          { card: JSON.parse(JSON.stringify(c)) });
+      });
+      saveCards(all.filter(c => !checkedIds.includes(c.id)));
     }
   }
   btn.textContent = "选删";
@@ -2416,6 +2474,15 @@ function deleteImgLink(){
 
 // 仅从当前卡片移除链接（不涉及云端）
 function deleteLocalImgOnly(){
+  // 先记进回收站（含原卡片和位置），之后可恢复
+  const gone = state.galleryImages[state.galleryIndex];
+  const cardId = state.activeCardDom ? (state.activeCardDom.dataset.cardId || "") : "";
+  if(gone){
+    let label = "";
+    try{ const c = cardId ? findCardById(cardId) : null; label = c ? makeCardLabel(c.date, c.locs) : ""; }catch(e){}
+    const base = String(gone).split("/").pop().split("?")[0];
+    trashAdd("img", base || gone, label, { url: gone, cardId: cardId });
+  }
   state.galleryImages.splice(state.galleryIndex, 1);
   if(state.galleryIndex >= state.galleryImages.length) state.galleryIndex = state.galleryImages.length - 1;
   persistGalleryImages();
@@ -3583,6 +3650,330 @@ async function wdRefreshRestore(){
   }
 }
 function closeRestoreModal(){ document.getElementById("restoreModal").style.display = "none"; }
+
+/* ==================== 回收站（本地删除 + 云端图片 + 云端数据节点） ==================== */
+const TRASH_KEY = "jlt_trash";
+const TRASH_TYPE_LABEL = { card: "卡片", img: "图片", barrage: "弹幕", xinze: "心喜簿", anni: "纪念日", cimg: "图片", node: "数据节点" };
+const TRASH_TYPE_ORDER = ["card", "img", "barrage", "xinze", "anni", "cimg", "node"];
+let _trashSel = new Set();
+let _trashCloudImgs = [];
+let _trashNodes = [];
+let _trashBusy = false;
+
+function loadTrashLocal(){
+  try{ const a = JSON.parse(localStorage.getItem(TRASH_KEY) || "[]"); return Array.isArray(a) ? a : []; }catch(e){ return []; }
+}
+function saveTrashLocal(a){
+  try{ localStorage.setItem(TRASH_KEY, JSON.stringify(a.slice(0, 300))); }catch(e){}
+}
+// 记一条删除（本地回收站）：type + 标题 + 副标题 + 完整数据，供恢复时原样放回
+function trashAdd(type, title, sub, payload){
+  const a = loadTrashLocal();
+  a.unshift({
+    id: "tr" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+    type: type, title: String(title || "") || "(无标题)", sub: String(sub || ""),
+    ts: Date.now(), payload: payload || null
+  });
+  saveTrashLocal(a);
+}
+function trashRemoveLocal(id){
+  saveTrashLocal(loadTrashLocal().filter(x => x.id !== id));
+}
+
+// 读云端文件内容（base64），大文件走 download_url
+async function ghReadB64(path){
+  const res = await ghFetch(ghApi() + path + "?ref=" + encodeURIComponent(GH.branch), { headers: ghHeaders() }, 25000);
+  if(!res.ok) throw new Error("读取云端文件失败（" + res.status + "）");
+  const meta = await res.json();
+  if(meta.content) return String(meta.content).replace(/\s/g, "");
+  const dl = await fetch(meta.download_url);
+  if(!dl.ok) throw new Error("读取文件内容失败（" + dl.status + "）");
+  const bytes = new Uint8Array(await dl.arrayBuffer());
+  let bin = "";
+  for(let i = 0; i < bytes.length; i += 0x8000){
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(bin);
+}
+
+// 扫云端各日期目录下的 .trash 图片
+async function trashScanCloudImgs(){
+  const out = [];
+  const root = await ghFetch(ghApi() + "images/?ref=" + encodeURIComponent(GH.branch), { headers: ghHeaders() }, 20000);
+  if(!root.ok) return out;
+  const dirs = (await root.json()).filter(d => d.type === "dir" && d.name !== ".trash");
+  for(const d of dirs){
+    let files;
+    try{
+      const tr = await ghFetch(ghApi() + "images/" + d.name + "/.trash?ref=" + encodeURIComponent(GH.branch), { headers: ghHeaders() }, 15000);
+      if(!tr.ok) continue;
+      files = await tr.json();
+    }catch(e){ continue; }
+    for(const f of files){
+      const m = String(f.name).match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})_/);
+      out.push({
+        date: d.name, name: f.name, sha: f.sha, size: f.size,
+        ts: m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime() : 0
+      });
+      if(out.length >= 80) break;
+    }
+    if(out.length >= 80) break;
+  }
+  out.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  return out;
+}
+
+async function trashRefreshCloud(){
+  if(isCloudLocked()) { _trashCloudImgs = []; _trashNodes = []; return; }
+  try{ _trashCloudImgs = await trashScanCloudImgs(); }catch(e){ _trashCloudImgs = []; }
+  try{
+    const files = await wdList();
+    _trashNodes = files.filter(f => !(f.label + "").startsWith("树洞") && !(f.label + "").startsWith("心喜簿"));
+  }catch(e){ _trashNodes = []; }
+}
+
+function trashGroups(){
+  const local = loadTrashLocal();
+  const fmt = ts => { try{ return formatNodeTime(ts); }catch(e){ return new Date(ts).toLocaleString(); } };
+  return TRASH_TYPE_ORDER.map(t => {
+    let items = [];
+    if(t === "cimg"){
+      items = _trashCloudImgs.map(x => ({
+        key: "cimg:" + x.date + "/" + x.name, type: "cimg",
+        title: String(x.name).replace(/^\d{14}_/, ""),
+        sub: "云端图片 · " + x.date + (x.size ? " · " + Math.max(1, Math.round(x.size / 1024)) + " KB" : ""),
+        ts: x.ts, raw: x
+      }));
+    }else if(t === "node"){
+      items = _trashNodes.map(x => ({
+        key: "node:" + x.name, type: "node",
+        title: fmt(x.ts), sub: "云端数据节点 · " + x.name + (x.label ? " · " + x.label : ""),
+        ts: +x.ts || 0, raw: x
+      }));
+    }else{
+      items = local.filter(x => x.type === t).map(x => ({
+        key: "local:" + x.id, type: t, title: x.title, sub: fmt(x.ts) + (x.sub ? " · " + x.sub : ""), ts: x.ts, raw: x
+      }));
+    }
+    return { type: t, items: items };
+  }).filter(g => g.items.length);
+}
+
+function renderTrashList(){
+  const box = document.getElementById("trashList");
+  if(!box) return;
+  const groups = trashGroups();
+  const total = groups.reduce((n, g) => n + g.items.length, 0);
+  const cnt = document.getElementById("trashCount");
+  if(cnt) cnt.textContent = total + " 项";
+  if(!total){
+    box.innerHTML = '<div class="restore-tip">回收站是空的</div>';
+    const all = document.getElementById("trashSelAll");
+    if(all) all.checked = false;
+    return;
+  }
+  let html = "";
+  groups.forEach(g => {
+    html += `<div class="trash-group"><span>${g.type === "cimg" || g.type === "node" ? "云端 · " : "本地 · "}${TRASH_TYPE_LABEL[g.type]}<em>${g.items.length}</em></span></div>`;
+    g.items.forEach(it => {
+      const checked = _trashSel.has(it.key) ? " checked" : "";
+      html += `<div class="trash-item">
+        <input type="checkbox" value="${escapeHtml(it.key)}"${checked} onchange="trashToggleOne(this)">
+        <div class="ti-main">
+          <div class="ti-title">${escapeHtml(it.title || "")}</div>
+          <div class="ti-sub">${escapeHtml(it.sub || "")}</div>
+        </div>
+      </div>`;
+    });
+  });
+  box.innerHTML = html;
+  const all = document.getElementById("trashSelAll");
+  if(all) all.checked = groups.every(g => g.items.every(it => _trashSel.has(it.key)));
+}
+
+function trashToggleOne(cb){
+  if(cb.checked) _trashSel.add(cb.value); else _trashSel.delete(cb.value);
+  renderTrashList();
+}
+function trashToggleAll(on){
+  if(on){
+    trashGroups().forEach(g => g.items.forEach(it => _trashSel.add(it.key)));
+  }else{
+    _trashSel.clear();
+  }
+  renderTrashList();
+}
+
+async function openTrashModal(){
+  _trashSel.clear();
+  document.getElementById("trashModal").style.display = "flex";
+  document.getElementById("trashList").innerHTML = '<div class="restore-tip">加载中…</div>';
+  renderTrashList();                       // 本地记录先出来，不等云端
+  if(!isCloudLocked()){
+    const box = document.getElementById("trashList");
+    if(box && !trashGroups().length) box.innerHTML = '<div class="restore-tip">正在读取云端回收站…</div>';
+    await trashRefreshCloud();
+    renderTrashList();
+  }
+}
+function closeTrashModal(){
+  document.getElementById("trashModal").style.display = "none";
+  _trashSel.clear();
+}
+
+// 本地项恢复：原样放回各自的数据里
+function trashRestoreLocalItem(item){
+  const rec = item.raw || item;
+  const p = (rec && rec.payload) || {};
+  switch(item.type){
+    case "card": {
+      if(!p.card) return "数据缺失";
+      const cards = loadCards();
+      if(cards.some(c => c.id === p.card.id)) return "卡片已存在";
+      cards.push(p.card); saveCards(cards);
+      if(typeof renderAllCards === "function") renderAllCards();
+      return true;
+    }
+    case "img": {
+      if(!p.url) return "数据缺失";
+      const cards = loadCards();
+      const card = cards.find(c => c.id === p.cardId);
+      if(!card) return "原卡片已不在了，无法放回";
+      card.imgs = Array.isArray(card.imgs) ? card.imgs : [];
+      if(!card.imgs.includes(p.url)) card.imgs.push(p.url);
+      saveCards(cards);
+      if(typeof renderAllCards === "function") renderAllCards();
+      return true;
+    }
+    case "barrage": {
+      if(!p.item) return "数据缺失";
+      const list = loadTreehole();
+      if(list.some(x => x.id === p.item.id)) return "弹幕已存在";
+      list.push(p.item); saveTreehole(list);
+      if(typeof thStart === "function"){ thStart(); }
+      if(typeof thSearch === "function"){ thSearch(); }
+      return true;
+    }
+    case "xinze": {
+      if(!p.item) return "数据缺失";
+      const list = loadXinze();
+      if(list.some(x => x.id === p.item.id)) return "条目已存在";
+      list.push(p.item); saveXinze(list);
+      if(typeof xzRender === "function") xzRender();
+      return true;
+    }
+    case "anni": {
+      if(!p.item) return "数据缺失";
+      const list = loadAnniversaries();
+      if(list.some(x => x.id === p.item.id)) return "纪念日已存在";
+      list.push(p.item); saveAnniversaries(list);
+      if(typeof renderAnniChips === "function") renderAnniChips();
+      if(typeof renderAnniList === "function") renderAnniList();
+      return true;
+    }
+  }
+  return "类型未知";
+}
+
+// 云端图片从 .trash 放回原目录
+async function trashRestoreCloudImg(img){
+  const base = String(img.name).replace(/^\d{14}_/, "");
+  const from = "images/" + img.date + "/.trash/" + img.name;
+  const to = "images/" + img.date + "/" + base;
+  const b64 = await ghReadB64(from);
+  const body = { message: "从回收站恢复: " + base, content: b64, branch: GH.branch };
+  const ex = await ghFetch(ghApi() + to + "?ref=" + encodeURIComponent(GH.branch), { headers: ghHeaders() }, 15000);
+  if(ex.ok){ try{ body.sha = (await ex.json()).sha; }catch(e){} }
+  const put = await ghFetch(ghApi() + to, {
+    method: "PUT", headers: Object.assign({ "Content-Type": "application/json" }, ghHeaders()),
+    body: JSON.stringify(body)
+  }, 25000);
+  if(!put.ok) throw new Error("放回原位置失败（" + put.status + "）");
+  const del = await ghFetch(ghApi() + from, {
+    method: "DELETE", headers: Object.assign({ "Content-Type": "application/json" }, ghHeaders()),
+    body: JSON.stringify({ message: "已从回收站恢复: " + base, sha: img.sha, branch: GH.branch })
+  }, 15000);
+  if(!del.ok) throw new Error("清理回收站条目失败（" + del.status + "）");
+}
+
+async function trashDeleteCloudImg(img){
+  const del = await ghFetch(ghApi() + "images/" + img.date + "/.trash/" + img.name, {
+    method: "DELETE", headers: Object.assign({ "Content-Type": "application/json" }, ghHeaders()),
+    body: JSON.stringify({ message: "回收站彻底删除: " + img.name, sha: img.sha, branch: GH.branch })
+  }, 15000);
+  if(!del.ok && del.status !== 404) throw new Error("删除失败（" + del.status + "）");
+}
+
+async function trashRestoreSelected(){
+  if(_trashBusy) return;
+  const keys = [..._trashSel];
+  if(!keys.length) return showToast("先勾选要恢复的内容", 2);
+  if(viewMode === "view") return showToast("访客模式只能查看", 3);
+  const groups = trashGroups();
+  const all = [];
+  groups.forEach(g => g.items.forEach(it => { if(_trashSel.has(it.key)) all.push(it); }));
+  const localItems = all.filter(i => i.type !== "cimg" && i.type !== "node");
+  const cimgs = all.filter(i => i.type === "cimg");
+  const nodes = all.filter(i => i.type === "node");
+  let ok = 0, fail = [];
+  const doLocal = it => {
+    try{
+      const r = trashRestoreLocalItem(it);
+      if(r === true){ trashRemoveLocal(it.raw.id); ok++; }
+      else fail.push(it.title + "：" + r);
+    }catch(e){ fail.push(it.title + "：" + e.message); }
+  };
+  localItems.forEach(doLocal);
+  if(cimgs.length){
+    _trashBusy = true;
+    try{
+      for(const it of cimgs){
+        try{ await trashRestoreCloudImg(it.raw); ok++; }catch(e){ fail.push(it.title + "：" + e.message); }
+      }
+    }finally{ _trashBusy = false; }
+  }
+  if(nodes.length){
+    const one = nodes.slice().sort((a, b) => b.ts - a.ts)[0];
+    if(nodes.length > 1) showToast("数据节点同时只能恢复一个，已选最新那个", 3);
+    try{
+      await wdRestoreNode(one.raw.name);
+      ok++;
+    }catch(e){ fail.push(one.title + "：" + e.message); }
+  }
+  _trashSel.clear();
+  if(cimgs.length || nodes.length){
+    await trashRefreshCloud();
+  }
+  renderTrashList();
+  showToast(fail.length ? `已恢复 ${ok} 项，${fail.length} 项没成功：${fail[0]}` : `已恢复 ${ok} 项`, 4);
+}
+
+async function trashDeleteSelected(){
+  if(_trashBusy) return;
+  const keys = [..._trashSel];
+  if(!keys.length) return showToast("先勾选要彻底删除的内容", 2);
+  if(viewMode === "view") return showToast("访客模式只能查看", 3);
+  if(!confirm(`彻底删除选中的 ${keys.length} 项？删除后无法恢复。`)) return;
+  const groups = trashGroups();
+  const all = [];
+  groups.forEach(g => g.items.forEach(it => { if(_trashSel.has(it.key)) all.push(it); }));
+  let ok = 0, fail = [];
+  _trashBusy = true;
+  try{
+    for(const it of all){
+      try{
+        if(it.type === "cimg"){ await trashDeleteCloudImg(it.raw); }
+        else if(it.type === "node"){ await wdDeleteFile(it.raw); }
+        else{ trashRemoveLocal(it.raw.id); }
+        ok++;
+      }catch(e){ fail.push(it.title + "：" + e.message); }
+    }
+  }finally{ _trashBusy = false; }
+  _trashSel.clear();
+  await trashRefreshCloud();
+  renderTrashList();
+  showToast(fail.length ? `已删除 ${ok} 项，${fail.length} 项没成功：${fail[0]}` : `已彻底删除 ${ok} 项`, 4);
+}
 
 // 恢复指定节点并覆盖本地
 async function wdRestoreNode(name){
@@ -4825,8 +5216,14 @@ function xzSave(){
 }
 function xzDel(){
   if(!xzEditId || !isFunEditMode()) return;
-  if(!confirm("删除这条心喜簿条目？")) return;
-  saveXinze(loadXinze().filter(x=>x.id!==xzEditId));
+  if(!confirm("删除这条心喜簿条目？（可在回收站找回）")) return;
+  const list = loadXinze();
+  const item = list.find(x => x.id === xzEditId);
+  if(item){
+    const first = String(item.text || "").split("\n")[0].slice(0, 50);
+    trashAdd("xinze", first || "（心喜簿条目）", (item.votes && item.votes.length) ? item.votes.length + " 条记录" : "", { item: JSON.parse(JSON.stringify(item)) });
+  }
+  saveXinze(list.filter(x => x.id !== xzEditId));
   closeXzModal(); xzRender();
 }
 function closeXzModal(){
@@ -5089,13 +5486,52 @@ function thdAutoGrow(el){
   const h = Math.min(cap, Math.max(el.dataset.minH ? +el.dataset.minH : 48, el.scrollHeight + 2));
   el.style.height = h + "px";
 }
+/* 长文本折叠：正文/留言超过 110 字或 4 行就先折起来，点「展开」看全文 */
+const THD_FOLD_CHARS = 80;
+function thdNeedFold(t){
+  t = String(t == null ? "" : t);
+  if(!t) return false;
+  return t.length > THD_FOLD_CHARS || t.split("\n").length > 3;
+}
+function thdToggleFold(el, btn){
+  if(!el) return;
+  const folded = el.classList.toggle("thd-fold");
+  if(btn) btn.textContent = folded ? (el.classList.contains("thd-cmt-text") ? "展开 ▾" : "展开全文 ▾") : "收起 ▴";
+}
+function thdCmtTap(el, cid){
+  if(!el) return;
+  if(el.classList.contains("thd-fold")){
+    const btn = el.nextElementSibling;
+    thdToggleFold(el, (btn && btn.classList.contains("thd-fold-btn")) ? btn : null);
+    return;
+  }
+  thdEditCmt(cid);
+}
+function thdContentTap(){
+  const el = document.getElementById("thdContent");
+  if(!el) return;
+  if(el.classList.contains("thd-fold")){ thdToggleFold(el, document.getElementById("thdFoldBtn")); return; }
+  thdEditField("text");
+}
+
 function thdRender(){
   const it = thdCur(); if(!it) return;
   thdNorm(it);
   document.getElementById("thdAva").innerHTML = thdAvaInner(it.avatar);
   document.getElementById("thdName").textContent = it.name || "";
   document.getElementById("thdTime").textContent = it.time || "";
-  document.getElementById("thdContent").textContent = it.text || "";
+  const _ct = document.getElementById("thdContent");
+  const _txt = it.text || "";
+  _ct.textContent = _txt;
+  _ct.classList.toggle("thd-fold", thdNeedFold(_txt));
+  const _oldFold = document.getElementById("thdFoldBtn");
+  if(_oldFold) _oldFold.remove();
+  if(thdNeedFold(_txt)){
+    const fb = document.createElement("div");
+    fb.id = "thdFoldBtn"; fb.className = "thd-fold-btn"; fb.textContent = "展开全文 ▾";
+    fb.onclick = (ev) => { ev.stopPropagation(); thdToggleFold(_ct, fb); };
+    _ct.after(fb);
+  }
   const cms = it.comments || [];
   document.getElementById("thdCmtCount").textContent = cms.length ? "(" + cms.length + ")" : "";
   const nodes = cms.slice();
@@ -5124,6 +5560,7 @@ function thdRender(){
 function thdViewHtml(c, d){
   const ind = (d - 1) * 14;
   const cmf = thdConfirmCid === c.id;
+  const fold = thdNeedFold(c.text || "");
   return `<div class="thd-cmt" style="margin-left:${ind}px;">
     <div class="thd-cmt-ava" onclick="thdEditCmt('${c.id}')">${thdAvaInner(c.avatar)}</div>
     <div class="thd-cmt-body">
@@ -5135,7 +5572,8 @@ function thdViewHtml(c, d){
           ${isFunEditMode() ? `<span class="thd-cmt-del" style="color:${cmf ? "#e0567a" : "#c2567f"};" onclick="thdDelCmt('${c.id}')">${cmf ? "确认删除?" : "删除"}</span>` : ""}
         </span>
       </div>
-      <div class="thd-cmt-text" onclick="thdEditCmt('${c.id}')">${escapeHtml(c.text || "").replace(/\n/g, "<br>")}</div>
+      <div class="thd-cmt-text${fold ? " thd-fold" : ""}" onclick="thdCmtTap(this,'${c.id}')">${escapeHtml(c.text || "").replace(/\n/g, "<br>")}</div>
+      ${fold ? `<div class="thd-fold-btn" onclick="event.stopPropagation();thdToggleFold(this.previousElementSibling,this)">展开 ▾</div>` : ""}
     </div>
   </div>`;
 }
@@ -5274,6 +5712,11 @@ function thdEditField(f){
   if(thdFieldEditing) return;
   const it = thdCur(); if(!it) return;
   const el = document.getElementById(THD_FIELD_IDS[f]); if(!el) return;
+  if(f === "text"){
+    // 编辑正文时先把折叠展开，否则输入框会被裁掉
+    const fb = document.getElementById("thdFoldBtn"); if(fb) fb.remove();
+    el.classList.remove("thd-fold");
+  }
   const val = it[f] || "";
   thdFieldEditing = f;
   if(f === "text"){
@@ -5376,7 +5819,10 @@ function thdDelBarrage(){
     showToast("再点一次确认删除这条弹幕", 2);
     return;
   }
-  saveTreehole(loadTreehole().filter(x => x.id !== thdCurId));
+  const _list = loadTreehole();
+  const _it = _list.find(x => x.id === thdCurId);
+  if(_it) trashAdd("barrage", thBarrageLabel(_it), _it.time || "", { item: JSON.parse(JSON.stringify(_it)) });
+  saveTreehole(_list.filter(x => x.id !== thdCurId));
   thdDelBarConfirm = false;
   thdClose();
   if(typeof thStart === "function") thStart();
@@ -5404,9 +5850,17 @@ function thSaveRecentAvatar(avatar){
   localStorage.setItem("jlt_th_recent_avatars", JSON.stringify(a.slice(-15)));
 }
 function thDel(id){
-  if(!confirm("确定删除这条弹幕吗？")) return;
-  saveTreehole(loadTreehole().filter(x => x.id !== id));
+  if(!confirm("确定删除这条弹幕吗？（可在回收站找回）")) return;
+  const list = loadTreehole();
+  const item = list.find(x => x.id === id);
+  if(item) trashAdd("barrage", thBarrageLabel(item), item.time || "", { item: JSON.parse(JSON.stringify(item)) });
+  saveTreehole(list.filter(x => x.id !== id));
   thStart(); thSearch();
+}
+function thBarrageLabel(item){
+  if(!item) return "弹幕";
+  const t = String(item.text || "").replace(/\n/g, " ").slice(0, 50);
+  return (item.name ? item.name + "：" : "") + (t || "（无内容）");
 }
 /* 添加弹幕弹窗：头像行只放“弹幕库里出现过的头像 + 当前新输入的头像”，最近使用的排最左，一行内展示 */
 function thAvaRowList(){
@@ -5760,8 +6214,11 @@ function thOpenFromSearch(id){
 }
 function thDelModal(){
   if(!thEditId) return;
-  if(confirm("确定删除这条弹幕吗？")){
-    saveTreehole(loadTreehole().filter(it => it.id !== thEditId));
+  if(confirm("确定删除这条弹幕吗？（可在回收站找回）")){
+    const _list = loadTreehole();
+    const _it = _list.find(it => it.id === thEditId);
+    if(_it) trashAdd("barrage", thBarrageLabel(_it), _it.time || "", { item: JSON.parse(JSON.stringify(_it)) });
+    saveTreehole(_list.filter(it => it.id !== thEditId));
     closeThModal();
     thStart(); thSearch();
   }
@@ -6590,8 +7047,11 @@ function saveAnni(){
   renderAnniList();
 }
 function delAnni(id){
-  if(!confirm("确定删除这个纪念日？")) return;
-  saveAnniversaries(loadAnniversaries().filter(x => x.id !== id));
+  if(!confirm("确定删除这个纪念日？（可在回收站找回）")) return;
+  const list = loadAnniversaries();
+  const a = list.find(x => x.id === id);
+  if(a) trashAdd("anni", a.label || "纪念日", a.date || "", { item: JSON.parse(JSON.stringify(a)) });
+  saveAnniversaries(list.filter(x => x.id !== id));
   renderAnniChips();
   renderAnniList();
 }
