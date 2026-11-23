@@ -446,7 +446,8 @@ body.dark .gs-tx i{color:#9a8f97;}
 
 /* ===== 回收站 ===== */
 .trash-box{max-width:600px;width:94%;display:flex;flex-direction:column;max-height:86vh;overflow:hidden;}
-.trash-box .link-buttons{flex:0 0 auto;margin-top:10px;justify-content:flex-end;}
+.trash-box .link-buttons{flex:0 0 auto;margin-top:10px;justify-content:center;}
+#restoreModal .link-buttons{justify-content:center;}
 .trash-box h3,.trash-box .trash-tip,.trash-box .trash-toolbar{flex:0 0 auto;}
 .trash-tip{font-size:12px;color:#888;line-height:1.7;margin-bottom:8px;}
 .trash-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;}
@@ -455,6 +456,8 @@ body.dark .gs-tx i{color:#9a8f97;}
 .trash-count{font-size:12px;color:#0e7490;background:#e6f7f9;border-radius:8px;padding:3px 10px;}
 .trash-list{flex:1 1 auto;min-height:90px;overflow-y:auto;padding-right:2px;}
 .trash-group{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;color:#0e7490;margin:10px 0 6px;}
+.trash-group label{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;}
+.trash-group input[type=checkbox]{flex:0 0 auto !important;min-width:0 !important;width:15px;height:15px;margin:0;padding:0;accent-color:#0e7490;}
 .trash-group em{font-style:normal;font-weight:400;color:#9aa7b1;margin-left:6px;}
 .trash-item{display:flex;align-items:flex-start;gap:9px;padding:8px 10px;border:1px solid #eef2f7;border-radius:9px;margin-bottom:6px;background:#fafbfd;}
 .trash-item input[type=checkbox]{margin:2px 0 0;flex:0 0 auto !important;min-width:0 !important;width:15px;height:15px;padding:0;accent-color:#c2567f;}
@@ -3776,11 +3779,12 @@ function renderTrashList(){
   }
   let html = "";
   groups.forEach(g => {
-    html += `<div class="trash-group"><span>${g.type === "cimg" || g.type === "node" ? "云端 · " : "本地 · "}${TRASH_TYPE_LABEL[g.type]}<em>${g.items.length}</em></span></div>`;
+    const groupChecked = g.items.every(it => _trashSel.has(it.key));
+    html += `<div class="trash-group"><label><input type="checkbox" data-group="${g.type}"${groupChecked ? " checked" : ""} onchange="trashToggleGroup('${g.type}', this.checked)"><span>${g.type === "cimg" || g.type === "node" ? "云端 · " : "本地 · "}${TRASH_TYPE_LABEL[g.type]}<em>${g.items.length}</em></span></label></div>`;
     g.items.forEach(it => {
       const checked = _trashSel.has(it.key) ? " checked" : "";
       html += `<div class="trash-item">
-        <input type="checkbox" value="${escapeHtml(it.key)}"${checked} onchange="trashToggleOne(this)">
+        <input type="checkbox" value="${escapeHtml(it.key)}" data-group="${g.type}"${checked} onchange="trashToggleOne(this)">
         <div class="ti-main">
           <div class="ti-title">${escapeHtml(it.title || "")}</div>
           <div class="ti-sub">${escapeHtml(it.sub || "")}</div>
@@ -3793,9 +3797,34 @@ function renderTrashList(){
   if(all) all.checked = groups.every(g => g.items.every(it => _trashSel.has(it.key)));
 }
 
+function syncTrashChecks(){
+  const groups = trashGroups();
+  const total = groups.reduce((n, g) => n + g.items.length, 0);
+  document.querySelectorAll("#trashList .trash-item input[type=checkbox]").forEach(cb => {
+    cb.checked = _trashSel.has(cb.value);
+  });
+  document.querySelectorAll("#trashList .trash-group input[type=checkbox]").forEach(cb => {
+    const g = groups.find(x => x.type === cb.dataset.group);
+    if(!g) return;
+    const picked = g.items.filter(it => _trashSel.has(it.key)).length;
+    cb.checked = picked > 0 && picked === g.items.length;
+    cb.indeterminate = picked > 0 && picked < g.items.length;
+  });
+  const all = document.getElementById("trashSelAll");
+  if(all){
+    all.checked = total > 0 && groups.every(g => g.items.every(it => _trashSel.has(it.key)));
+    all.indeterminate = !all.checked && _trashSel.size > 0;
+  }
+}
 function trashToggleOne(cb){
   if(cb.checked) _trashSel.add(cb.value); else _trashSel.delete(cb.value);
-  renderTrashList();
+  syncTrashChecks();
+}
+function trashToggleGroup(type, on){
+  const g = trashGroups().find(x => x.type === type);
+  if(!g) return;
+  g.items.forEach(it => { if(on) _trashSel.add(it.key); else _trashSel.delete(it.key); });
+  syncTrashChecks();
 }
 function trashToggleAll(on){
   if(on){
@@ -3803,7 +3832,7 @@ function trashToggleAll(on){
   }else{
     _trashSel.clear();
   }
-  renderTrashList();
+  syncTrashChecks();
 }
 
 async function openTrashModal(){
