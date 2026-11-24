@@ -425,6 +425,10 @@ body.dark .gs-tx i{color:#9a8f97;}
 }
 #noteText,#importText{min-height:160px;resize:vertical;}
 #exportText{min-height:320px;resize:both;}
+/* ===== 弹窗统一封锁：任何弹窗打开时，背景不能滚、不能点 ===== */
+body.modal-open{overflow:hidden;overscroll-behavior:none;}
+body.modal-open .music-fab,body.modal-open .theme-fab{pointer-events:none;opacity:.25;}
+
 .link-buttons,.note-buttons,.add-buttons,.img-edit-buttons,.export-buttons,.import-buttons,.title-buttons{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px;}
 .md-btn{
   border:1px solid #e9ecef;background:#fafbfc;color:#555;font-size:13px;
@@ -2256,20 +2260,22 @@ async function verifyFullCache(){
   const one = async (u) => {
     try{
       const res = await fetch(u, { method: "HEAD", cache: "no-store" });
-      if(res.status === 404 || res.status === 410){ forgetFullUrl(u); changed++; return; }   // 云端已经删了
-      if(!res.ok) return;                                                                     // 405/403/5xx：判断不了，保留
-      const etag = res.headers.get("etag") || "";
-      const len = res.headers.get("content-length") || "";
-      const rec = loadFullMeta()[u];
-      if(rec){
-        const etagDiff = rec.etag && etag && rec.etag !== etag;
-        const lenDiff = rec.len && len && rec.len !== len;
-        if(etagDiff || lenDiff){ forgetFullUrl(u); changed++; return; }                        // 同路径换了别的图
-      }else if(etag || len){
+      if(!res.ok && res.status !== 404 && res.status !== 410) return;   // 405/403/5xx：判断不了，保留
+      if(res.ok){   // 图还在：把之前的 miss 计数清零
         const m2 = loadFullMeta();
-        m2[u] = { etag: etag, len: len, ts: Date.now() };   // 首次只登记指纹
-        saveFullMeta(m2);
+        if(m2[u] && m2[u].miss){ m2[u].miss = 0; saveFullMeta(m2); }
+        return;
       }
+      // 只按「云端确实没有了」判断，不再比 etag/文件大小：
+      // 跨域时 etag 读不到、Pages 的响应头也会变，拿它比对会把好好的记录误删，
+      // 表现就是「看过原图，过一阵再打开又变回缩略图」。
+      // 而且 404 要连着两次才算真删，避免构建/网络抖动误清。
+      const m = loadFullMeta();
+      const rec = m[u] || {};
+      rec.miss = (rec.miss || 0) + 1;
+      m[u] = rec;
+      saveFullMeta(m);
+      if(rec.miss >= 2){ forgetFullUrl(u); changed++; }
     }catch(e){ /* 断网/超时：保留本地原图 */ }
   };
   // 并发 4 慢慢过，避免一次性打爆
@@ -6424,6 +6430,68 @@ function saveFunModal(){
   saveFunItems(items);
   closeFunModal();
 }
+
+
+/* ===== 弹窗统一封锁 =====
+   任何弹窗（含以后新加的）显示时：页面不加滚动条、手指拖不动背景、也点不到弹窗后面的内容。
+   原理：监听 DOM 变化，发现可见弹窗就给 body 加 modal-open；弹窗全关掉自动解除。 */
+(function(){
+  const MODAL_SEL = ".modal-overlay,.link-modal,.lightbox,.note-modal,.add-modal,.img-edit-modal,.export-modal,.import-modal,.restore-modal,.title-modal,[id$='Modal']";
+  function anyModalOpen(){
+    const list = document.querySelectorAll(MODAL_SEL);
+    for(let i = 0; i < list.length; i++){
+      const n = list[i];
+      if(n.closest(".modal-box") || n.closest(".restore-box")) continue;   // 只管遮罩层，不管里面板
+      const cs = getComputedStyle(n);
+      if(cs.display === "none" || cs.visibility === "hidden") continue;
+      if(n.offsetWidth < 2 || n.offsetHeight < 2) continue;
+      return true;
+    }
+    return false;
+  }
+  let raf = 0;
+  function sync(){
+    if(raf) return;
+    raf = requestAnimationFrame(function(){
+      raf = 0;
+      const open = anyModalOpen();
+      document.body.classList.toggle("modal-open", open);
+    });
+  }
+  window.__syncModalLock = sync;
+  // 只盯着弹窗节点本身的 style/class 变化（防止大量动画/卡片渲染每个都触发检查）；
+  // 同时守 body 的增删，新加进来的弹窗也会被自动纳入，以后加弹窗不用再改这里。
+  const attrMo = new MutationObserver(sync);
+  function watchModal(n){
+    if(!n || n.nodeType !== 1) return;
+    if(n.matches && n.matches(MODAL_SEL) && !n.__lockWatched){
+      n.__lockWatched = 1;
+      attrMo.observe(n, { attributes: true, attributeFilter: ["style","class"] });
+    }
+  }
+  document.querySelectorAll(MODAL_SEL).forEach(watchModal);
+  new MutationObserver(function(recs){
+    let hit = false;
+    recs.forEach(function(r){
+      (r.addedNodes || []).forEach(function(n){
+        if(n.nodeType !== 1) return;
+        if(n.matches && n.matches(MODAL_SEL)){ watchModal(n); hit = true; }
+        else if(n.querySelectorAll){ const inner = n.querySelectorAll(MODAL_SEL); if(inner.length){ inner.forEach(watchModal); hit = true; } }
+      });
+    });
+    if(hit) sync();
+  }).observe(document.body, { childList: true, subtree: true });
+  document.addEventListener("DOMContentLoaded", sync, { once: true });
+  window.addEventListener("load", sync);
+  setTimeout(sync, 0);
+  // 手机端：弹窗打开时，手指不在可滚面板里就不让背景跟着滑
+  document.addEventListener("touchmove", function(e){
+    if(!document.body.classList.contains("modal-open")) return;
+    const sc = e.target.closest ? e.target.closest(".modal-box,.restore-box,.link-box,.note-box,.add-box,.img-edit-box,.export-box,.import-box,.title-box,.lightbox,.lightbox-inner") : null;
+    if(sc && sc.scrollHeight > sc.clientHeight + 2) return;   // 面板自己还要滚
+    e.preventDefault();
+  }, { passive: false });
+})();
 
 // 授权状态：只有输入正确暗号「进入」后才为 1，未授权时不显示任何数据、编辑与云端操作不可用
 function isAuthGranted(){ return sessionStorage.getItem("auth_granted") === "1"; }
