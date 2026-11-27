@@ -400,7 +400,8 @@ body.dark .gs-tx i{color:#9a8f97;}
 .mosaic-grid img[draggable="true"]:active{cursor:grabbing;}
 
 /* ===== 通用弹窗 ===== */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;padding:20px;display:none;align-items:center;justify-content:center;animation:overlayFade .25s ease;}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;padding:20px;display:none;align-items:flex-start;justify-content:center;animation:overlayFade .25s ease;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
+.modal-overlay>.modal-box{margin-top:auto;margin-bottom:auto;}
 .modal-box{background:#fff;padding:28px 32px;border-radius:16px;max-width:440px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,.18);animation:boxPop .28s ease;}
 @keyframes overlayFade{from{opacity:0}to{opacity:1}}
 @keyframes boxPop{from{opacity:0;transform:scale(.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
@@ -426,7 +427,7 @@ body.dark .gs-tx i{color:#9a8f97;}
 #noteText,#importText{min-height:160px;resize:vertical;}
 #exportText{min-height:320px;resize:both;}
 /* ===== 弹窗统一封锁：任何弹窗打开时，背景不能滚、不能点 ===== */
-body.modal-open{overflow:hidden;overscroll-behavior:none;}
+html.modal-open,body.modal-open{overflow:hidden;overscroll-behavior:none;}
 body.modal-open .music-fab,body.modal-open .theme-fab{pointer-events:none;opacity:.25;}
 
 .link-buttons,.note-buttons,.add-buttons,.img-edit-buttons,.export-buttons,.import-buttons,.title-buttons{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px;}
@@ -5436,44 +5437,10 @@ function thdOpen(id){
   thdLockBg(true);
   thdSwallowClicks(320);
 }
-/* 任意弹窗打开时：锁住背后页面滚动 + 阻止滑动穿透（所有弹窗通用） */
-let modLockOn = false;
-function modAnyOpen(){
-  const els = document.querySelectorAll(".modal-overlay, #lightbox, #mosaicModal");
-  for(const el of els){
-    const st = getComputedStyle(el);
-    if(st.display !== "none" && st.visibility !== "hidden" && el.getBoundingClientRect().height > 0) return true;
-  }
-  return false;
-}
-function syncModalLock(){
-  const open = modAnyOpen();
-  if(open === modLockOn) return;
-  modLockOn = open;
-  document.documentElement.style.overflow = open ? "hidden" : "";
-  document.body.style.overflow = open ? "hidden" : "";
-  document.body.classList.toggle("modal-open", open);
-}
+/* 任意弹窗打开时：锁住背后页面滚动 + 阻止滑动穿透（统一由文件末尾的弹窗封锁模块负责） */
+function syncModalLock(){ if(window.__syncModalLock) window.__syncModalLock(); }
 window.syncModalLock = syncModalLock;
-setInterval(syncModalLock, 250);
-(function bindModalTouchGuard(){
-  function touchScrollable(n){
-    while(n && n !== document.body){
-      if(n.nodeType === 1){
-        const st = getComputedStyle(n);
-        if(n.classList && n.classList.contains("modal-overlay")) return false;
-        if(/(auto|scroll)/.test(st.overflowY) && n.scrollHeight > n.clientHeight + 2) return true;
-      }
-      n = n.parentElement;
-    }
-    return false;
-  }
-  document.addEventListener("touchmove", function(e){
-    if(!modLockOn) return;
-    if(touchScrollable(e.target)) return;
-    if(e.cancelable) e.preventDefault();
-  }, {passive:false});
-})();
+setInterval(syncModalLock, 1200);   // 兜底：万一某处弹窗状态变化没被观察到
 /* 兼容旧调用 */
 function thdLockBg(on){ syncModalLock(); }
 /* 键盘弹出/收起、窗口尺寸变化时，重算弹窗高度并保持编辑块可见 */
@@ -6456,6 +6423,7 @@ function saveFunModal(){
       raf = 0;
       const open = anyModalOpen();
       document.body.classList.toggle("modal-open", open);
+      document.documentElement.classList.toggle("modal-open", open);
     });
   }
   window.__syncModalLock = sync;
@@ -6484,11 +6452,33 @@ function saveFunModal(){
   document.addEventListener("DOMContentLoaded", sync, { once: true });
   window.addEventListener("load", sync);
   setTimeout(sync, 0);
-  // 手机端：弹窗打开时，手指不在可滚面板里就不让背景跟着滑
+  // 手机端：弹窗打开时，背景不能滑，但弹窗里（任何一层能滚的容器）必须能滑。
+  // 做法：记下手指按下的元素，移动时从它往上找最近的可滚动容器；找到就放行，找不到才拦。
+  let __touchStartEl = null;
+  document.addEventListener("touchstart", function(e){
+    __touchStartEl = e.target || null;
+  }, { passive: true, capture: true });
+
+  function __findScroller(node){
+    let n = node;
+    while(n && n.nodeType === 1){
+      if(n === document.body || n === document.documentElement) return null;
+      if(n.classList && (n.classList.contains("lightbox") || n.classList.contains("lightbox-inner"))) return n; // 灯箱手势全放行
+      const cs = window.getComputedStyle(n);
+      const oy = cs.overflowY;
+      if((oy === "auto" || oy === "scroll" || oy === "overlay") && n.scrollHeight > n.clientHeight + 1) return n;
+      n = n.parentElement;
+    }
+    return null;
+  }
+
   document.addEventListener("touchmove", function(e){
     if(!document.body.classList.contains("modal-open")) return;
-    const sc = e.target.closest ? e.target.closest(".modal-box,.restore-box,.link-box,.note-box,.add-box,.img-edit-box,.export-box,.import-box,.title-box,.lightbox,.lightbox-inner") : null;
-    if(sc && sc.scrollHeight > sc.clientHeight + 2) return;   // 面板自己还要滚
+    if(e.touches && e.touches.length > 1) return;              // 双指缩放放行
+    const start = __touchStartEl || e.target;
+    // 手指起点在弹窗里（或遮罩上）：一律放行，弹窗内容该滚就滚
+    if(start && start.closest && start.closest(MODAL_SEL)) return;
+    // 起点完全在弹窗外的背景：拦住，不让背景跟着动
     e.preventDefault();
   }, { passive: false });
 })();
